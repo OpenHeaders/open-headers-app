@@ -181,7 +181,7 @@ class CliApiService {
   }
 
   getStatus() {
-    const running = this.server?.listening ?? false;
+    const running = !!this.server?.listening;
     return {
       running,
       port: this.port,
