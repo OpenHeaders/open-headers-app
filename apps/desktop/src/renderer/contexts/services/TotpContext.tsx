@@ -63,8 +63,8 @@ export const TotpProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const checkAllCooldowns = async (): Promise<boolean> => {
       const allSourceIds = new Set<string>();
-      Object.keys(cooldowns).forEach((id) => allSourceIds.add(id));
-      trackedSourcesRef.current.forEach((id) => allSourceIds.add(id));
+      Object.keys(cooldowns).forEach((id) => { allSourceIds.add(id); });
+      trackedSourcesRef.current.forEach((id) => { allSourceIds.add(id); });
 
       if (allSourceIds.size === 0) return false;
 

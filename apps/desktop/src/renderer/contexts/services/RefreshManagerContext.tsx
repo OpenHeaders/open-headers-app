@@ -129,7 +129,7 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
     cleanupRefs.current = [cleanupStatus, cleanupSchedule];
 
     return () => {
-      cleanupRefs.current.forEach((fn) => fn());
+      cleanupRefs.current.forEach((fn) => { fn(); });
       cleanupRefs.current = [];
     };
   }, []);

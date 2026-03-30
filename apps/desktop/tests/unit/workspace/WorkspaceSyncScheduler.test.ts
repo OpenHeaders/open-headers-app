@@ -102,7 +102,7 @@ function createMockNetworkService(isOnline = true) {
     }),
     getState: vi.fn().mockReturnValue({ isOnline }),
     _emit(event: string, ...args: unknown[]) {
-      (listeners.get(event) || []).forEach((fn) => fn(...args));
+      (listeners.get(event) || []).forEach((fn) => { fn(...args); });
     },
   } satisfies NetworkService & { _emit: (event: string, ...args: unknown[]) => void };
 }

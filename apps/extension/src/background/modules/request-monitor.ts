@@ -53,7 +53,7 @@ export function setupRequestMonitoring(updateBadgeCallback: () => void): void {
         // Clean up old pending requests periodically
         if (pendingRequests.size > 1000) {
           const oldRequests = Array.from(pendingRequests.keys()).slice(0, 500);
-          oldRequests.forEach((id) => pendingRequests.delete(id));
+          oldRequests.forEach((id) => { pendingRequests.delete(id); });
         }
 
         // Skip if this is not a main frame or sub frame request

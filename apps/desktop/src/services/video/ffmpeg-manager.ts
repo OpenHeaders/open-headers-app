@@ -204,7 +204,7 @@ class FFmpegManager {
       log.info('FFmpeg downloaded and verified successfully');
 
       // Notify all waiting callbacks
-      this.downloadCallbacks.forEach((cb) => cb.resolve(this.ffmpegPath!));
+      this.downloadCallbacks.forEach((cb) => { cb.resolve(this.ffmpegPath!); });
 
       return this.ffmpegPath;
     } catch (error: unknown) {
@@ -212,7 +212,7 @@ class FFmpegManager {
 
       // Notify all waiting callbacks
       const err = error instanceof Error ? error : new Error(String(error));
-      this.downloadCallbacks.forEach((cb) => cb.reject(err));
+      this.downloadCallbacks.forEach((cb) => { cb.reject(err); });
 
       throw error;
     } finally {

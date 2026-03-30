@@ -521,7 +521,7 @@ function deduplicateInitialStorage(storageEvents: StorageRecord[]) {
         }
 
         // Remove cleared keys from tracking
-        clearedKeys.forEach(({ key }) => seenKeys.delete(key));
+        clearedKeys.forEach(({ key }) => { seenKeys.delete(key); });
 
         processedEvents.push({
           ...event,

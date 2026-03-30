@@ -1003,11 +1003,11 @@ async function prefetchResources(
 ): Promise<void> {
   const allResources: PrefetchResource[] = [];
 
-  staticResources.stylesheets.forEach((url) => allResources.push({ url, type: 'stylesheet', priority: 1 }));
-  staticResources.fonts.forEach((url) => allResources.push({ url, type: 'font', priority: 2 }));
-  staticResources.scripts.forEach((url) => allResources.push({ url, type: 'script', priority: 3 }));
-  staticResources.images.forEach((url) => allResources.push({ url, type: 'image', priority: 4 }));
-  staticResources.other.forEach((url) => allResources.push({ url, type: 'other', priority: 5 }));
+  staticResources.stylesheets.forEach((url) => { allResources.push({ url, type: 'stylesheet', priority: 1 }); });
+  staticResources.fonts.forEach((url) => { allResources.push({ url, type: 'font', priority: 2 }); });
+  staticResources.scripts.forEach((url) => { allResources.push({ url, type: 'script', priority: 3 }); });
+  staticResources.images.forEach((url) => { allResources.push({ url, type: 'image', priority: 4 }); });
+  staticResources.other.forEach((url) => { allResources.push({ url, type: 'other', priority: 5 }); });
 
   allResources.sort((a, b) => a.priority - b.priority);
 

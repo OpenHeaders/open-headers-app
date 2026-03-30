@@ -111,6 +111,7 @@ type MessageListener = (
   message: unknown,
   sender: chrome.runtime.MessageSender,
   sendResponse: (response?: unknown) => void,
+  // biome-ignore lint/suspicious/noConfusingVoidType: matches Chrome extension API — void for sync listeners, true for async
 ) => boolean | void;
 
 // Cross-browser runtime API with improved error handling

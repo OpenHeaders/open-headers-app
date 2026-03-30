@@ -160,7 +160,7 @@ const Header: React.FC<HeaderProps> = ({ onOpenSetupGuide }) => {
           <Switch
             size="small"
             checked={isCompactMode}
-            onClick={(checked: boolean, e: React.MouseEvent | React.KeyboardEvent) => {
+            onClick={(_checked: boolean, e: React.MouseEvent | React.KeyboardEvent) => {
               if ('stopPropagation' in e) e.stopPropagation();
               toggleCompactMode();
             }}
