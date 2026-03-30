@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Workspace, WorkspaceSyncStatus } from '../../../types/workspace';
 import { isSyncableWorkspace } from '../../../types/workspace';
 import { useWorkspaces } from '../../hooks/workspace';

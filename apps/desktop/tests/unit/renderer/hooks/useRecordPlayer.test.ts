@@ -14,7 +14,7 @@ vi.stubGlobal('rrwebPlayer', undefined);
 
 import type { ProxyStatus, RecordData } from '../../../../src/renderer/components/record/player/hooks/usePlayerManager';
 import { useRecordPlayer } from '../../../../src/renderer/hooks/useRecordPlayer';
-import type { Recording, RRWebEvent } from '../../../../src/types/recording';
+import type { Recording } from '../../../../src/types/recording';
 
 function makeProxyStatus(overrides: Partial<ProxyStatus> = {}): ProxyStatus {
   return {

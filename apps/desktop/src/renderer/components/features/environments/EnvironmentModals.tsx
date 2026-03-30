@@ -5,7 +5,6 @@
 
 import type { FormInstance } from 'antd';
 import { Form, Input, Modal, Radio } from 'antd';
-import React from 'react';
 import { ENVIRONMENT_NAME_RULES, VARIABLE_NAME_RULES, VARIABLE_VALUE_RULES } from './EnvironmentTypes';
 import SecretInput from './SecretInput';
 

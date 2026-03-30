@@ -13,7 +13,7 @@
 import { FilterOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { Button, Checkbox, Dropdown, Tooltip } from 'antd';
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import type { GlobalToken } from './types';
 
 interface BodyFilters {

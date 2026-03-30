@@ -4,7 +4,7 @@
  */
 
 import { Empty, Table, Typography, theme } from 'antd';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { PreprocessProgressDetails, WorkflowRecordingEntry, WorkflowTag } from '../../../../../types/recording';
 import { useNavigation } from '../../../../contexts';
 import { showMessage } from '../../../../utils';

@@ -22,17 +22,10 @@ import {
   Tooltip,
   Typography,
 } from 'antd';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { TeamWorkspaceInvite } from '../../../types/workspace';
 import { useWorkspaces } from '../../hooks/workspace';
-import {
-  AUTH_TYPES,
-  DEFAULT_VALUES,
-  prepareAuthData,
-  SSH_KEY_SOURCES,
-  TOKEN_TYPES,
-  WORKSPACE_TYPES,
-} from '../features/workspaces';
+import { AUTH_TYPES, DEFAULT_VALUES, prepareAuthData, SSH_KEY_SOURCES, TOKEN_TYPES } from '../features/workspaces';
 import ConnectionProgressModal from '../features/workspaces/components/ConnectionProgressModal';
 import GitStatusAlert from '../features/workspaces/components/GitStatusAlert';
 import { useWorkspaceCreation } from '../features/workspaces/hooks/useWorkspaceCreation';

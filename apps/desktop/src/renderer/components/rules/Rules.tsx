@@ -6,7 +6,7 @@ import {
   LinkOutlined,
 } from '@ant-design/icons';
 import { Tabs } from 'antd';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigation } from '../../contexts';
 import HeaderRules from './HeaderRules';
 import MoreRules from './MoreRules';

@@ -1,5 +1,5 @@
-import { CopyOutlined, PlusOutlined, QuestionCircleOutlined, TeamOutlined, UserAddOutlined } from '@ant-design/icons';
-import { Alert, App, Button, Card, Checkbox, Divider, Input, Modal, Segmented, Space, Tooltip, Typography } from 'antd';
+import { CopyOutlined, PlusOutlined, QuestionCircleOutlined, TeamOutlined } from '@ant-design/icons';
+import { Alert, App, Button, Card, Checkbox, Divider, Input, Segmented, Space, Tooltip, Typography } from 'antd';
 import React, { useCallback, useState } from 'react';
 import type { Workspace } from '../../../../../types/workspace';
 import { useSettings, useWorkspaces } from '../../../../contexts';

@@ -1,6 +1,6 @@
 import { DownloadOutlined, LoadingOutlined } from '@ant-design/icons';
 import { Button, Modal, Space } from 'antd';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 /**
  * RecordingExportModal component for exporting recorded sessions
  *

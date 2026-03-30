@@ -30,7 +30,6 @@ import { useEffect, useRef, useState } from 'react';
 import type { DomainValidation } from './DomainTagDisplay';
 // Import extracted modules and components
 import {
-  createInputChangeHandler,
   createInputConfirmHandler,
   createKeyboardHandler,
   // Input handling functions
@@ -38,7 +37,6 @@ import {
   createShowInputHandler,
   // Utility functions
   createTagCloseHandler,
-  createTagEditHandlers,
   // Action components
   DomainActionsHeader,
   DomainInputHelp,

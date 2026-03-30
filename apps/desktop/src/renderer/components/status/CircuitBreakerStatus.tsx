@@ -1,6 +1,6 @@
 import { SyncOutlined } from '@ant-design/icons';
 import { Badge, Card, Space, Tag, Typography, theme } from 'antd';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRefreshManager, useSettings } from '../../contexts';
 import { useSources } from '../../hooks/workspace';
 

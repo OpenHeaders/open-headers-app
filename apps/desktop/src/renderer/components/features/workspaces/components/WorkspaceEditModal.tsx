@@ -9,7 +9,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { Alert, App, Button, Collapse, Form, Input, Modal, Radio, Space, Switch, Tooltip, Typography } from 'antd';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Workspace } from '../../../../../types/workspace';
 import { useWorkspaces } from '../../../../hooks/workspace';
 import { DEFAULT_VALUES, WORKSPACE_TYPES } from '../constants';

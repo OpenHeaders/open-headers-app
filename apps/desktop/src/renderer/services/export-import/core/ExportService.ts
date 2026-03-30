@@ -5,7 +5,6 @@
  * handles file operations, and provides comprehensive error handling.
  */
 
-import type { Source } from '../../../../types/source';
 import { createLogger } from '../../../utils/error-handling/logger';
 import { showMessage } from '../../../utils/ui/messageUtil';
 import { EnvironmentsHandler } from '../handlers/EnvironmentsHandler';
@@ -20,7 +19,7 @@ import {
 } from '../utilities/FileOperations';
 import { generateExportSuccessMessage } from '../utilities/MessageGeneration';
 import { DEFAULTS, FILE_FORMATS } from './ExportImportConfig';
-import type { ExportData, ExportImportDependencies, ExportOptions, RuleEntry } from './types';
+import type { ExportData, ExportImportDependencies, ExportOptions } from './types';
 
 const log = createLogger('ExportService');
 

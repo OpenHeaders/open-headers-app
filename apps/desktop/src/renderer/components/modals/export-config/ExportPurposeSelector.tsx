@@ -1,6 +1,5 @@
 import { TeamOutlined, UserOutlined } from '@ant-design/icons';
 import { Segmented, Space, Typography } from 'antd';
-import React from 'react';
 
 const { Text, Title } = Typography;
 

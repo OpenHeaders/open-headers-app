@@ -6,7 +6,7 @@
 
 import path from 'path';
 import { DATA_FORMAT_VERSION } from '../../../config/version';
-import type { EnvironmentMap, EnvironmentsFile } from '../../../types/environment';
+import type { EnvironmentsFile } from '../../../types/environment';
 import type { ProxyRule } from '../../../types/proxy';
 import type { RulesCollection, RulesStorage } from '../../../types/rules';
 import type { Source } from '../../../types/source';

@@ -1,5 +1,4 @@
 import { Alert, Card, InputNumber, Space, Tag, Typography } from 'antd';
-import React from 'react';
 
 const { Title, Text } = Typography;
 

@@ -5,7 +5,7 @@
 
 import { LinkOutlined, TagOutlined } from '@ant-design/icons';
 import { Form, Input, Modal, Space, Typography } from 'antd';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { WorkflowTag } from '../../../../../types/recording';
 
 const { Text } = Typography;

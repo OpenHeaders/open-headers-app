@@ -10,7 +10,6 @@
  */
 
 import { Space, Typography } from 'antd';
-import React from 'react';
 import type { GlobalToken, NetworkRecord } from '../types';
 
 const { Text } = Typography;

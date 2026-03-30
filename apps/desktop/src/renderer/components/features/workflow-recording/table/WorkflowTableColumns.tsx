@@ -12,14 +12,13 @@ import {
   EyeOutlined,
   FileOutlined,
   GlobalOutlined,
-  LoadingOutlined,
   PlayCircleOutlined,
   ShareAltOutlined,
   VideoCameraOutlined,
 } from '@ant-design/icons';
-import { Button, Input, Popconfirm, Progress, Space, Spin, Tag, Tooltip } from 'antd';
+import { Button, Input, Popconfirm, Space, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { PreprocessProgressDetails, WorkflowRecordingEntry } from '../../../../../types/recording';
 import { formatDuration, formatFileSize, formatTimeAgo, formatTimestamp } from '../../../../utils';
 

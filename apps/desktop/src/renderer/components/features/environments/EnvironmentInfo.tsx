@@ -4,7 +4,6 @@
  */
 
 import { Alert, Divider, Space, Tag, Typography } from 'antd';
-import React from 'react';
 import type { Source } from '../../../../types/source';
 import { getSourcesUsingVariables } from './EnvironmentUtils';
 

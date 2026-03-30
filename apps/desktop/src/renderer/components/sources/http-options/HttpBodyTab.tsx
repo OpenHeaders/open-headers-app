@@ -15,7 +15,6 @@
  */
 
 import { Col, Form, Input, Row, Select } from 'antd';
-import React from 'react';
 
 const { Option } = Select;
 const { TextArea } = Input;

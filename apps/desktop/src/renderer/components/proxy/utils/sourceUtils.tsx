@@ -1,5 +1,4 @@
 import { ApiOutlined, CodeSandboxOutlined, FileTextOutlined, GlobalOutlined } from '@ant-design/icons';
-import React from 'react';
 import type { Source } from '../../../../types/source';
 
 export const getSourceIcon = (source: Pick<Source, 'sourceType'>) => {

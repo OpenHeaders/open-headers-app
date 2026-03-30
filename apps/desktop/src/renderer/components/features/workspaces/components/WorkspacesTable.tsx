@@ -16,7 +16,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { App, Button, Space, Switch, Table, Tag, Tooltip, Typography } from 'antd';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Workspace, WorkspaceSyncStatus } from '../../../../../types/workspace';
 import TeamWorkspaceShareInviteModal from '../../../modals/TeamWorkspaceShareInviteModal';
 import { AUTH_TYPES, WORKSPACE_TYPES } from '../constants';

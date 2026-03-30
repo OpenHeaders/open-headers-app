@@ -7,7 +7,7 @@ import {
   TeamOutlined,
 } from '@ant-design/icons';
 import { Alert, Tabs } from 'antd';
-import React, { lazy, Suspense } from 'react';
+import { lazy, Suspense } from 'react';
 import type { Recording } from '../../../types/recording';
 import type { Source } from '../../../types/source';
 import {

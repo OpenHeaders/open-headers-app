@@ -5,7 +5,6 @@
 
 import { LoadingOutlined } from '@ant-design/icons';
 import { Progress, Space, Spin } from 'antd';
-import React from 'react';
 
 interface ProcessingDetails {
   eventCount?: number;

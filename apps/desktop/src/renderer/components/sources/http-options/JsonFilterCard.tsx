@@ -16,7 +16,6 @@
 
 import type { FormInstance } from 'antd';
 import { Card, Form, Input, Switch, Typography } from 'antd';
-import React from 'react';
 
 const { Text } = Typography;
 

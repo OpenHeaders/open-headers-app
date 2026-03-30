@@ -10,7 +10,6 @@
  */
 
 import { Tag, Tooltip } from 'antd';
-import React from 'react';
 import type { StorageRecord } from '../../../../types/recording';
 import { getActionColor, getActionTooltip } from './StorageUtils';
 

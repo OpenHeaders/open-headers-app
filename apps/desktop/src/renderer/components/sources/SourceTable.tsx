@@ -1,5 +1,5 @@
 import { Empty, Table, Typography, theme } from 'antd';
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Source } from '../../../types/source';
 import { useEnvironments, useRefreshManager } from '../../contexts';
 import timeManager from '../../services/TimeManager';

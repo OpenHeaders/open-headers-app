@@ -1,6 +1,5 @@
 import { LoadingOutlined } from '@ant-design/icons';
 import { Progress, Space, Typography } from 'antd';
-import React from 'react';
 
 const { Text } = Typography;
 

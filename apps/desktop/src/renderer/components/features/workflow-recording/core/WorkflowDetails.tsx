@@ -4,7 +4,6 @@
  */
 
 import { Card } from 'antd';
-import React from 'react';
 import type { Recording } from '../../../../../types/recording';
 import { VIEW_MODES, WorkflowViewer } from '../viewer';
 

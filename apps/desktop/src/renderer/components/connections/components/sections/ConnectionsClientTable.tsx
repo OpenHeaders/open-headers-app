@@ -1,6 +1,5 @@
 import { ApiOutlined, ChromeOutlined, CompassOutlined, GlobalOutlined, IeOutlined } from '@ant-design/icons';
 import { Card, Empty, Space, Table, Tag, Typography } from 'antd';
-import React from 'react';
 
 const { Title, Text } = Typography;
 

@@ -1,6 +1,5 @@
 import { InfoCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import { Alert, Typography } from 'antd';
-import React from 'react';
 
 const { Text } = Typography;
 

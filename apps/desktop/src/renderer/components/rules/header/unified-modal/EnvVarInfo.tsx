@@ -1,5 +1,4 @@
 import { Alert, Space, Typography } from 'antd';
-import React from 'react';
 import type { EnvVarValidation } from '../../../../utils/validation/environment-variables';
 
 const { Text } = Typography;

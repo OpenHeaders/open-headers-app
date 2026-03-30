@@ -6,7 +6,7 @@
 
 import { EnvironmentOutlined } from '@ant-design/icons';
 import { Card, Form, Space, theme } from 'antd';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { HeaderRule } from '../../../../types/rules';
 import { useEnvironments, useSettings, useSources } from '../../../contexts';
 import { useHeaderRules } from '../../../hooks/useCentralizedWorkspace';

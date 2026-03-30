@@ -1,6 +1,6 @@
 import { EditOutlined } from '@ant-design/icons';
 import { Form, Modal } from 'antd';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Source, SourceHeader } from '../../../../types/source';
 import { useEnvironments, useTotpState } from '../../../contexts';
 import { showMessage } from '../../../utils';

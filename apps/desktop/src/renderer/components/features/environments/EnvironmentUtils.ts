@@ -6,7 +6,6 @@ import type { EnvironmentMap, EnvironmentVariables } from '../../../../types/env
 import type { HeaderRule } from '../../../../types/rules';
 import type { Source } from '../../../../types/source';
 import { createLogger } from '../../../utils/error-handling/logger';
-import { showMessage } from '../../../utils/ui/messageUtil';
 import { VARIABLE_TEMPLATE_REGEX } from './EnvironmentTypes';
 
 const log = createLogger('EnvironmentUtils');

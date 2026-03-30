@@ -22,7 +22,6 @@
 
 import { CheckOutlined, CopyOutlined } from '@ant-design/icons';
 import { Button, Tabs, Typography } from 'antd';
-import React from 'react';
 import type { Source } from '../../../../types/source';
 import { formatContent, formatJson } from './ContentFormatter';
 import { HeadersTable } from './HeadersTable';

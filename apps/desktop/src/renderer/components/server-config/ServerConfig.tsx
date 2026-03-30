@@ -1,6 +1,6 @@
 import { CodeOutlined, DatabaseOutlined, LinkOutlined } from '@ant-design/icons';
 import { Tabs } from 'antd';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import CliServer from '../cli/CliServer';
 import ConnectionsServer from '../connections/ConnectionsServer';
 import ProxyServer from '../proxy/ProxyServer';

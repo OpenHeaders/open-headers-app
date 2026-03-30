@@ -12,7 +12,7 @@
 
 import { CloseOutlined } from '@ant-design/icons';
 import { Button, Space, Tabs, Typography, theme } from 'antd';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import NetworkHeadersTab from './tabs/NetworkHeadersTab';
 import NetworkPayloadTab from './tabs/NetworkPayloadTab';
 import NetworkResponseTab from './tabs/NetworkResponseTab';

@@ -4,7 +4,6 @@
  */
 
 import fs from 'fs';
-import path from 'path';
 import { errorMessage, toErrno } from '../../../../types/common';
 import type { WorkspaceAuthData } from '../../../../types/workspace';
 import mainLogger from '../../../../utils/mainLogger';

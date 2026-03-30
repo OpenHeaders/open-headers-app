@@ -1,4 +1,3 @@
-import React from 'react';
 import { CliServerControls, CliServerLogs } from './components';
 import { useCliServer } from './hooks';
 

@@ -19,7 +19,6 @@ import type {
   RecordingMetadata,
   RRWebAdd,
   RRWebEvent,
-  RRWebInnerData,
   Snapshot,
   StaticResources,
 } from '../../../types/recording';

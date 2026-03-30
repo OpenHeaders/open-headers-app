@@ -1,6 +1,5 @@
 import { InfoCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import { Alert } from 'antd';
-import React from 'react';
 
 /**
  * ExportWarnings component for displaying contextual warnings and information alerts

@@ -1,7 +1,7 @@
 import { CloseOutlined, CopyrightTwoTone, RightCircleTwoTone, SaveOutlined } from '@ant-design/icons';
 import { Button, Form, Modal, Segmented, Space, theme } from 'antd';
 import dayjs from 'dayjs';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { HeaderRule } from '../../../../../types/rules';
 import { useEnvironments } from '../../../../contexts';
 import { showMessage } from '../../../../utils';

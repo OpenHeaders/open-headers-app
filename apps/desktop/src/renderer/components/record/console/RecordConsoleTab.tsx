@@ -18,13 +18,7 @@ import type React from 'react';
 import { useState } from 'react';
 import type { ConsoleRecord, Recording } from '../../../../types/recording';
 import { formatConsoleArg } from '../../../utils';
-import {
-  createCopyButton,
-  createSearchableColumnHeader,
-  createStandardTableProps,
-  createTimestampColumn,
-  createViewButton,
-} from '../shared';
+import { createCopyButton, createStandardTableProps, createTimestampColumn, createViewButton } from '../shared';
 import SearchOverlay from '../shared/SearchOverlay';
 import TimestampCell from '../shared/TimestampCell';
 import { useSearchFilter } from '../shared/useSearchFilter';

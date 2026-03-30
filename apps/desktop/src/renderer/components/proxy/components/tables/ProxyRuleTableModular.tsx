@@ -1,5 +1,4 @@
 import { Table } from 'antd';
-import React from 'react';
 import { createAllColumns, type HeaderRule, type ProxyRule, type ProxySource } from './ProxyRuleTableColumns';
 import ProxyRuleTableEmpty from './ProxyRuleTableEmpty';
 

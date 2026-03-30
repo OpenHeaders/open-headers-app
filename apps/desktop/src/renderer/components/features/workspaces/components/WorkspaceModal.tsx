@@ -25,7 +25,7 @@ import {
   Tooltip,
   Typography,
 } from 'antd';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Workspace } from '../../../../../types/workspace';
 import {
   useCentralizedWorkspace,

@@ -39,8 +39,6 @@
     }
   };
 })();
-
-import React from 'react';
 import { createRoot } from 'react-dom/client';
 import AppComponent from './App';
 import { AppProvider } from './contexts';

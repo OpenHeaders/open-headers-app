@@ -6,8 +6,7 @@
  * individually: EnvironmentVariableManager, plus pure
  * state-management patterns that mirror CES behaviour.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { EnvironmentVariable } from '../../../../src/types/environment';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock logger for all sub-module imports
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({

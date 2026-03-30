@@ -11,7 +11,6 @@
  */
 
 import { Space, Typography } from 'antd';
-import React from 'react';
 import { format24HTimeWithMs } from '../../../../utils';
 import type { GlobalToken, NetworkRecord, NetworkTimingData, RecordData } from '../types';
 

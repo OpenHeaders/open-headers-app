@@ -25,7 +25,7 @@
 
 import type { FormInstance } from 'antd';
 import { Tabs } from 'antd';
-import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import type { TestResponseContent } from '../../../types/http';
 import { useEnvironments, useTotpState } from '../../contexts';
 import { useWorkspaces } from '../../hooks/useCentralizedWorkspace';

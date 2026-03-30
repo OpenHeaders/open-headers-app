@@ -13,7 +13,6 @@
 
 import { CopyOutlined } from '@ant-design/icons';
 import { Button, Modal, Space, Tag, Typography, theme } from 'antd';
-import React from 'react';
 import type { StorageRecord } from '../../../../types/recording';
 import { formatRelativeTimeWithSmallMs } from '../../../utils';
 import { formatValue, getActionColor, getTypeColor } from './StorageUtils';

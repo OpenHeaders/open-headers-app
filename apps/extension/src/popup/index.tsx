@@ -1,5 +1,4 @@
 import { App as AntApp } from 'antd';
-import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { ThemeProvider } from '../context/ThemeContext';
 import App from './App';

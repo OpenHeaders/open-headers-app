@@ -1,5 +1,5 @@
 import { App } from 'antd';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { createLogger } from '../../../../../utils/error-handling/logger';
 import type { WorkspaceContextType } from '../../services/WorkspaceServiceAdapter';
 import { prepareAuthData, prepareWorkspaceData } from '../../utils';

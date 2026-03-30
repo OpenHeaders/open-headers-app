@@ -1,10 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type {
-  NetworkInterfaceInfo,
-  NetworkQualityInput,
-  NetworkState,
-  StateChangeRecord,
-} from '../../../src/services/network/NetworkService';
+import type { NetworkInterfaceInfo } from '../../../src/services/network/NetworkService';
 import { NetworkService } from '../../../src/services/network/NetworkService';
 
 describe('NetworkService', () => {

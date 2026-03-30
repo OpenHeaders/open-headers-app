@@ -8,7 +8,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { Button, Dropdown, Space, Tag, Tooltip } from 'antd';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useWorkspaces } from '../../contexts';
 import TeamWorkspaceShareInviteModal from '../modals/TeamWorkspaceShareInviteModal';
 

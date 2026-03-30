@@ -13,7 +13,6 @@ import {
   WarningOutlined,
 } from '@ant-design/icons';
 import { Badge, Tag, Tooltip } from 'antd';
-import React from 'react';
 
 /**
  * CircuitBreakerIndicator - Shows circuit breaker state in the UI

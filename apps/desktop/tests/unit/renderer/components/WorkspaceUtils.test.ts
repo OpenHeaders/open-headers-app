@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { PROVIDER_ICONS } from '../../../../src/renderer/components/features/workspaces/constants/WorkspaceConstants';
 import type { WorkspaceFormValues } from '../../../../src/renderer/components/features/workspaces/utils/WorkspaceUtils';
 import {

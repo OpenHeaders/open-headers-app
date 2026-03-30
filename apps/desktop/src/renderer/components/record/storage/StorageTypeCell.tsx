@@ -9,7 +9,6 @@
  */
 
 import { Tag, Tooltip } from 'antd';
-import React from 'react';
 import { getTypeColor, getTypeTooltip } from './StorageUtils';
 
 interface StorageTypeCellProps {

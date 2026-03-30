@@ -1,4 +1,3 @@
-import React from 'react';
 import { useSettings } from '../../contexts';
 import { ConnectionsClientTable, ConnectionsServerStatus } from './components';
 import { useConnectionsServer } from './hooks';

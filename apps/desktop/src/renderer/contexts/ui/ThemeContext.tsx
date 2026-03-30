@@ -1,4 +1,4 @@
-import { ConfigProvider, type ThemeConfig, theme } from 'antd';
+import { ConfigProvider, theme } from 'antd';
 import type { MappingAlgorithm } from 'antd/es/theme/interface';
 import type React from 'react';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';

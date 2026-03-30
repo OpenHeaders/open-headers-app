@@ -1,4 +1,3 @@
-import React from 'react';
 import { ProxyCacheSection, ProxyRulesSection, ProxyServerControls } from './components';
 import { useProxyServer } from './hooks';
 

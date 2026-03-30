@@ -1,6 +1,6 @@
 import { CloseOutlined, SaveOutlined } from '@ant-design/icons';
 import { Button, Divider, Form, Input, Modal, Space, Typography } from 'antd';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Source } from '../../../../../types/source';
 import { errorMessage } from '../../../../utils';
 import type { HeaderRule, ProxyRule } from '../tables/ProxyRuleTableColumns';

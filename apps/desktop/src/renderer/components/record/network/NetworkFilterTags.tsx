@@ -12,7 +12,6 @@
 
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { Tag, Tooltip } from 'antd';
-import React from 'react';
 
 interface NetworkFilterTagsProps {
   showInverseTag: boolean;

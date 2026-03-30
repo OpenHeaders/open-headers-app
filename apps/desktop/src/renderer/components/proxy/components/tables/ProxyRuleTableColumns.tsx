@@ -1,12 +1,11 @@
 import { DeleteOutlined, EditOutlined, EnvironmentOutlined, LinkOutlined, SolutionOutlined } from '@ant-design/icons';
 import { Button, Popconfirm, Space, Switch, Tag, Tooltip, Typography } from 'antd';
-import React from 'react';
 import type { ProxyRule } from '../../../../../types/proxy';
 import type { HeaderRule } from '../../../../../types/rules';
 import type { Source } from '../../../../../types/source';
 import { useEnvironments } from '../../../../contexts';
 import { checkRuleActivation, getResolvedPreview } from '../../../../utils/validation/environment-variables';
-import { getSourceName, truncateDomain, truncateValue } from '../../utils';
+import { truncateValue } from '../../utils';
 
 export type { ProxyRule } from '../../../../../types/proxy';
 export type { HeaderRule } from '../../../../../types/rules';

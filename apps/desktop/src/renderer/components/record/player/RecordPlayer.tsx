@@ -17,7 +17,7 @@
 
 import { InfoCircleOutlined, TableOutlined } from '@ant-design/icons';
 import { Button, Space, Spin, Tooltip, Typography, theme } from 'antd';
-import React, { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { format24HTimeWithMs, formatDuration } from '../../../utils';
 import { createLogger } from '../../../utils/error-handling/logger';
 import DOMPlayerContainer from './components/DOMPlayerContainer';

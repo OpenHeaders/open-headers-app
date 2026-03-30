@@ -1,5 +1,4 @@
 import { Card, Skeleton, Space } from 'antd';
-import React from 'react';
 import './WorkspaceSkeleton.less';
 
 /**

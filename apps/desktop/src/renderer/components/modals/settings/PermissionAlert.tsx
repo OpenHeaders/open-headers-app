@@ -1,5 +1,4 @@
 import { Alert, Button, Space, Typography } from 'antd';
-import React from 'react';
 
 const { Text } = Typography;
 

@@ -1,6 +1,5 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { Button, Empty, Typography } from 'antd';
-import React from 'react';
 
 const { Text } = Typography;
 

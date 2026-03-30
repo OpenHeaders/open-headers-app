@@ -5,12 +5,7 @@ import path from 'path';
 import zlib from 'zlib';
 import { isVersionCompatible as checkVersionCompatible, DATA_FORMAT_VERSION } from '../../../config/version';
 import { errorMessage } from '../../../types/common';
-import type {
-  EnvironmentConfigData,
-  EnvironmentSchema,
-  EnvironmentSchemaEntry,
-  EnvironmentVariable,
-} from '../../../types/environment';
+import type { EnvironmentSchema, EnvironmentVariable } from '../../../types/environment';
 import type { AppSettings } from '../../../types/settings';
 import mainLogger from '../../../utils/mainLogger';
 import windowsFocusHelper from '../utils/windowsFocus';

@@ -1,6 +1,5 @@
 import type React from 'react';
 import { createContext, useCallback, useEffect, useRef, useState } from 'react';
-import { getBrowserAPI } from '../types/browser';
 import type { HeaderEntry } from '../types/header';
 import { runtime, storage } from '../utils/browser-api';
 import { sendMessageWithCallback } from '../utils/messaging';

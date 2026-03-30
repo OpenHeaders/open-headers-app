@@ -1,6 +1,5 @@
 import { CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined, SyncOutlined } from '@ant-design/icons';
 import { Alert, Modal, Progress, Space, Steps, Typography } from 'antd';
-import React from 'react';
 
 const { Text } = Typography;
 

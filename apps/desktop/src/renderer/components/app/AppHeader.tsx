@@ -11,9 +11,8 @@ import {
   SettingOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
-import { Button, Dropdown, Layout, Space, Tag, Typography } from 'antd';
+import { Button, Dropdown, Layout, Space, Typography } from 'antd';
 import type { GlobalToken } from 'antd/es/theme/interface';
-import React from 'react';
 
 const { Header } = Layout;
 const { Title } = Typography;

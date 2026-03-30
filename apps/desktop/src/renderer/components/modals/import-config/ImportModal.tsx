@@ -1,10 +1,9 @@
 import { ImportOutlined, UploadOutlined } from '@ant-design/icons';
 import { Button, Modal, message, Space, Typography, theme } from 'antd';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DATA_FORMAT_VERSION } from '../../../../config/version.esm';
 import { errorMessage } from '../../../../types/common';
 import type { EnvironmentConfigData, EnvironmentMap } from '../../../../types/environment';
-import type { Workspace } from '../../../../types/workspace';
 import { useWorkspaces } from '../../../contexts';
 import type { ImportOptions, WorkspaceData } from '../../../services/export-import/core/types';
 import ImportEnvironmentSelector from './ImportEnvironmentSelector';

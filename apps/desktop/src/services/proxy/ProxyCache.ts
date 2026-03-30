@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import electron from 'electron';
 import fs from 'fs';
 import path from 'path';
-import { errorMessage, toErrno } from '../../types/common';
+import { toErrno } from '../../types/common';
 import atomicWriter from '../../utils/atomicFileWriter';
 import mainLogger from '../../utils/mainLogger';
 

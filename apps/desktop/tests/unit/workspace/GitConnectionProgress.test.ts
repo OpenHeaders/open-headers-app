@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { ProgressStep } from '../../../src/services/workspace/git/utils/GitConnectionProgress';
 import { GitConnectionProgress } from '../../../src/services/workspace/git/utils/GitConnectionProgress';
 
 describe('GitConnectionProgress', () => {

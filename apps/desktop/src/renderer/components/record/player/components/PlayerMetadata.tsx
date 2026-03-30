@@ -11,7 +11,6 @@
 
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { Space, Tooltip, Typography } from 'antd';
-import React from 'react';
 import type { Recording } from '../../../../../types/recording';
 import { format24HTimeWithMs, formatDuration } from '../../../../utils';
 

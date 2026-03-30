@@ -5,7 +5,7 @@
 
 import { EditOutlined, EyeOutlined } from '@ant-design/icons';
 import { Button, Form, Input, Modal, Space, Tag, Typography } from 'antd';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const { TextArea } = Input;
 const { Text } = Typography;

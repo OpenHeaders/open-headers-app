@@ -14,7 +14,6 @@
 import { ArrowRightOutlined, CopyOutlined, EyeOutlined } from '@ant-design/icons';
 import { Button, Tooltip, Typography } from 'antd';
 import type { GlobalToken } from 'antd/es/theme/interface';
-import React from 'react';
 import type { StorageRecord } from '../../../../types/recording';
 import { formatValue } from './StorageUtils';
 

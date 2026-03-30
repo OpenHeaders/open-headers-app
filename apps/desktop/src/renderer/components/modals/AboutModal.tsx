@@ -1,6 +1,6 @@
 import { CompassOutlined, GlobalOutlined } from '@ant-design/icons';
 import { Button, Divider, Modal, Space, Typography, theme } from 'antd';
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 const { Title, Text, Paragraph } = Typography;
 

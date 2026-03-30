@@ -1,6 +1,5 @@
 import { FileOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import { Radio, Space, Typography, theme } from 'antd';
-import React from 'react';
 
 const { Text } = Typography;
 const { useToken } = theme;

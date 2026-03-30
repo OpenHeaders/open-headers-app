@@ -1,6 +1,5 @@
 import { InfoCircleOutlined, PauseCircleOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import { Alert, Button, Card, Divider, InputNumber, Space, Tag, Typography } from 'antd';
-import React from 'react';
 
 const { Title, Text } = Typography;
 

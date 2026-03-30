@@ -1,6 +1,5 @@
 import { DeleteOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { Button, Card, Progress, Space, Switch, Table, Tooltip, Typography } from 'antd';
-import React from 'react';
 import { formatBytes } from '../../utils';
 
 const { Title, Text } = Typography;

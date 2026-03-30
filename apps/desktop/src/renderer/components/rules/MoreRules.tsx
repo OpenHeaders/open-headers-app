@@ -1,6 +1,5 @@
 import { FileMarkdownOutlined } from '@ant-design/icons';
 import { Card, Empty, Typography } from 'antd';
-import React from 'react';
 
 const { Title, Text } = Typography;
 

@@ -1,6 +1,5 @@
 import { InfoCircleOutlined, QuestionCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import { Alert, Badge, Card, Checkbox, Space, Tooltip, Typography } from 'antd';
-import React from 'react';
 
 const { Text, Title } = Typography;
 

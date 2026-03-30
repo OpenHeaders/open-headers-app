@@ -11,7 +11,7 @@ import type { AppSettings } from './settings';
 import type { NetworkInterfaceInfo } from 'os';
 import type { HttpRequestSpec, HttpRequestResult, TotpCooldownInfo } from './http';
 import type { ProxyRule, CacheStats, CacheEntry } from './proxy';
-import type { HeaderRule, RulesStorage } from './rules';
+import type { HeaderRule } from './rules';
 import type {
   Workspace,
   WorkspaceAuthData,

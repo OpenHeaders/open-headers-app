@@ -1,6 +1,6 @@
 import { ExportOutlined } from '@ant-design/icons';
 import { Button, Modal, Space, theme } from 'antd';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useEnvironments, useWorkspaces } from '../../../contexts';
 /**
  * ExportModal component for exporting workspace configuration

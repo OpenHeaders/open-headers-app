@@ -1,6 +1,6 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { Button, Card, Space, Typography } from 'antd';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import type { Source } from '../../../../../types/source';
 import { ProxyRuleFormModular } from '../forms';
 import { ProxyRuleTableModular } from '../tables';

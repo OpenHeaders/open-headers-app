@@ -2,7 +2,7 @@ import electron from 'electron';
 import type { ProgressStep } from '../../../../services/workspace/git/utils/GitConnectionProgress';
 import type { IpcInvokeEvent, OperationResult } from '../../../../types/common';
 import { errorMessage } from '../../../../types/common';
-import type { AuthType, WorkspaceAuthData } from '../../../../types/workspace';
+import type { WorkspaceAuthData } from '../../../../types/workspace';
 import mainLogger from '../../../../utils/mainLogger';
 import appLifecycle from '../../app/lifecycle';
 

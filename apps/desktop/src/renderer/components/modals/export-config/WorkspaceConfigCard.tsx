@@ -1,6 +1,5 @@
 import { GitlabOutlined, InfoCircleOutlined, KeyOutlined, WarningOutlined } from '@ant-design/icons';
 import { Alert, Card, Checkbox, Divider, Space, Typography } from 'antd';
-import React from 'react';
 
 const { Text, Title } = Typography;
 

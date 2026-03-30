@@ -1,6 +1,5 @@
 import { LoadingOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
 import { Modal, Space, Spin, Tag, Typography, theme } from 'antd';
-import React from 'react';
 
 const { Text } = Typography;
 const { useToken } = theme;

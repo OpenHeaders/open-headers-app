@@ -16,7 +16,6 @@
 
 import type { FormInstance } from 'antd';
 import { Card, Col, Form, InputNumber, Radio, Row, Select, Switch } from 'antd';
-import React from 'react';
 
 const { Option } = Select;
 

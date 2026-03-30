@@ -26,7 +26,6 @@ import type { FormInstance } from 'antd';
 import timeManager from '../../../services/TimeManager';
 import { createLogger } from '../../../utils/error-handling/logger';
 import { showMessage } from '../../../utils/ui/messageUtil';
-import { validateVariableExists } from './HttpValidation';
 
 const log = createLogger('HttpUtils');
 

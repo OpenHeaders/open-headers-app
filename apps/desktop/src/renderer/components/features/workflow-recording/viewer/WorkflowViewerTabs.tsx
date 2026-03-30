@@ -4,7 +4,6 @@
  */
 
 import { Tabs } from 'antd';
-import React from 'react';
 import type { Recording } from '../../../../../types/recording';
 import { RecordConsoleTab, RecordInfoTab, RecordNetworkTab, RecordStorageTab } from '../../../record';
 import WorkflowViewerControls from './WorkflowViewerControls';

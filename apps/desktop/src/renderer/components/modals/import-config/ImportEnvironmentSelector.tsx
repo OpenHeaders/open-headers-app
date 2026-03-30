@@ -1,5 +1,4 @@
 import { Checkbox, Space, Typography } from 'antd';
-import React from 'react';
 
 const { Text } = Typography;
 

@@ -15,7 +15,6 @@
 import { CopyOutlined } from '@ant-design/icons';
 import { Button, Modal, Space, Tag, Typography, theme } from 'antd';
 import type { MessageInstance } from 'antd/es/message/interface';
-import React from 'react';
 import { format24HTimeWithMs, formatRelativeTimeWithSmallMs } from '../../../utils';
 
 const { Text } = Typography;

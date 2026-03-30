@@ -1,5 +1,5 @@
 import path from 'path';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 /**
  * Tests for pure logic in GitSyncService.

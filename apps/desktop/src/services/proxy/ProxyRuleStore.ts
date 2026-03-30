@@ -1,7 +1,6 @@
 import electron from 'electron';
 import fs from 'fs';
 import path from 'path';
-import { errorMessage } from '../../types/common';
 import atomicWriter from '../../utils/atomicFileWriter';
 import mainLogger from '../../utils/mainLogger';
 

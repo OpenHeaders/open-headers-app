@@ -1,6 +1,6 @@
 import { CheckCircleOutlined, CloseOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { Button, Modal, Progress } from 'antd';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /**
  * Separate modal for showing Git connection test progress

@@ -9,7 +9,6 @@
  */
 
 import { Tag, Tooltip } from 'antd';
-import React from 'react';
 import type { StorageRecord } from '../../../../types/recording';
 
 interface StorageAttributesCellProps {

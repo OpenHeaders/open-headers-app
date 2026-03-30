@@ -12,7 +12,6 @@
 
 import { FileOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import { Segmented, Tooltip } from 'antd';
-import React from 'react';
 
 interface ViewModeToggleProps {
   viewMode: string;

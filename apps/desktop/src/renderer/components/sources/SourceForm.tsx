@@ -29,7 +29,7 @@
  */
 
 import { Button, Card, Col, Form, Input, Row, Select } from 'antd';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { SourceType } from '../../../types/source';
 import { useEnvironments, useTotpState } from '../../contexts';
 import { useFileSystem } from '../../hooks/useFileSystem';

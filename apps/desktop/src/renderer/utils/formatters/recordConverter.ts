@@ -2,7 +2,6 @@ import type {
   CookieAttributes,
   NavigationEntry,
   NetworkRecord,
-  NetworkTimingData,
   RawRecordingRecord,
   RecordingEvent,
   RecordingEventData,

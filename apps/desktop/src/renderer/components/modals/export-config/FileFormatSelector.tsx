@@ -1,6 +1,5 @@
 import { FileOutlined, FolderOutlined } from '@ant-design/icons';
 import { Card, Radio, Space, Typography } from 'antd';
-import React from 'react';
 
 const { Text, Title } = Typography;
 

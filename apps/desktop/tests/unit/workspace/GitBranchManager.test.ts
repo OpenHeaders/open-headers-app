@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GitExecutor } from '../../../src/services/workspace/git/core/GitExecutor';
 import { GitBranchManager } from '../../../src/services/workspace/git/repository/GitBranchManager';
 
