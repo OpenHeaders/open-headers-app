@@ -1,3 +1,4 @@
+import type { SavedDataMap, Source } from '@openheaders/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock header-manager before importing rule-engine
@@ -30,8 +31,6 @@ import {
   updateSavedDataHash,
 } from '@/background/modules/rule-engine';
 import { getCurrentSources } from '@/background/modules/sources-store';
-import type { SavedDataMap } from '@/types/header';
-import type { Source } from '@/types/websocket';
 
 const mockUpdateNetworkRules = updateNetworkRules as ReturnType<typeof vi.fn>;
 const mockGetCurrentSources = getCurrentSources as ReturnType<typeof vi.fn>;

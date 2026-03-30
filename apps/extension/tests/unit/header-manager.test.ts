@@ -1,6 +1,5 @@
+import type { SavedDataMap, Source } from '@openheaders/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { SavedDataMap } from '@/types/header';
-import type { Source } from '@/types/websocket';
 
 // ── Mocks ────────────────────────────────────────────────────────────
 

@@ -1,16 +1,10 @@
 /**
  * Header-related type definitions.
  *
- * Re-exports canonical types from @openheaders/core and adds
- * extension-specific types for declarativeNetRequest.
+ * Extension-specific types for declarativeNetRequest.
+ * Shared types (HeaderEntry, SavedDataMap, etc.) are imported
+ * directly from '@openheaders/core'.
  */
-
-// Re-export shared types
-export type {
-  HeaderEntry,
-  HeaderValueValidation,
-  SavedDataMap,
-} from '@openheaders/core/types';
 
 /** A fully resolved entry — safe to create a DNR rule */
 export interface ResolvedEntry {

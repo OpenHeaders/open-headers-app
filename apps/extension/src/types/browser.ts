@@ -86,10 +86,13 @@ export interface ActiveRule {
 
 /** Context object passed to handleGeneralMessage */
 export interface MessageHandlerContext {
-  getCurrentSources: () => import('./websocket').Source[];
+  getCurrentSources: () => import('@openheaders/core').Source[];
   isWebSocketConnected: () => boolean;
   sendViaWebSocket: (data: Record<string, unknown>) => boolean;
-  scheduleUpdate: (reason: string, options?: { immediate?: boolean; sources?: import('./websocket').Source[] }) => void;
+  scheduleUpdate: (
+    reason: string,
+    options?: { immediate?: boolean; sources?: import('@openheaders/core').Source[] },
+  ) => void;
   revalidateTrackedRequests: () => Promise<void>;
   updateBadgeCallback: () => void;
   lastSourcesHash: string;

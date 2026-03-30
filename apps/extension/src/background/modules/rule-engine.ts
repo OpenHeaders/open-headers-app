@@ -14,10 +14,9 @@
  * - Init (background startup)    → scheduleUpdate('init', { immediate: true })
  */
 
+import type { SavedDataMap, Source } from '@openheaders/core';
 import { logger } from '@utils/logger';
 import { updateNetworkRules } from '@/background/header-manager';
-import type { SavedDataMap } from '@/types/header';
-import type { Source } from '@/types/websocket';
 import { getCurrentSources } from './sources-store';
 import { generateSavedDataHash, generateSourcesHash } from './utils';
 

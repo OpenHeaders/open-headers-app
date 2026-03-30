@@ -2,13 +2,13 @@
  * WebSocket connection management
  */
 
+import type { HeaderRuleFromApp, RulesData, SavedDataMap, Source } from '@openheaders/core';
 import { WS_SERVER_URL as CORE_WS_SERVER_URL } from '@openheaders/core/protocol';
 import { isChrome, isEdge, isFirefox, isSafari, runtime, storage } from '@utils/browser-api.js';
 import { logger } from '@utils/logger';
 import { sendMessageWithCallback } from '@utils/messaging';
 import { getChunkedData, setChunkedData } from '@utils/storage-chunking.js';
-import type { SavedDataMap } from '@/types/header';
-import type { HeaderRuleFromApp, OnSourcesReceivedCallback, RulesData, Source } from '@/types/websocket';
+import type { OnSourcesReceivedCallback } from '@/types/websocket';
 import { scheduleUpdate } from './modules/rule-engine';
 import { getCurrentSources, setSourcesFromApp } from './modules/sources-store';
 import { generateSourcesHash } from './modules/utils';

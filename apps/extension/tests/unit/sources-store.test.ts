@@ -1,5 +1,5 @@
+import type { Source } from '@openheaders/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Source } from '@/types/websocket';
 
 // ── Mocks ────────────────────────────────────────────────────────────
 

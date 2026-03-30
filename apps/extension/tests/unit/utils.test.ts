@@ -1,9 +1,8 @@
+import type { SavedDataMap, Source } from '@openheaders/core';
 import { normalizeHeaderName } from '@utils/utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { formatUrlPattern } from '@/background/header-manager';
 import { debounce, generateSavedDataHash, generateSourcesHash } from '@/background/modules/utils';
-import type { SavedDataMap } from '@/types/header';
-import type { Source } from '@/types/websocket';
 
 // ---------------------------------------------------------------------------
 //  Factory functions
