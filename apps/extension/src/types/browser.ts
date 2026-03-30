@@ -2,6 +2,8 @@
  * Browser API helper types and extension message types
  */
 
+import type { Source } from '@openheaders/core';
+
 declare const browser: typeof chrome | undefined;
 
 /** The cross-browser API object (Firefox `browser` or Chrome `chrome`) */
@@ -86,12 +88,12 @@ export interface ActiveRule {
 
 /** Context object passed to handleGeneralMessage */
 export interface MessageHandlerContext {
-  getCurrentSources: () => import('@openheaders/core').Source[];
+  getCurrentSources: () => Source[];
   isWebSocketConnected: () => boolean;
   sendViaWebSocket: (data: Record<string, unknown>) => boolean;
   scheduleUpdate: (
     reason: string,
-    options?: { immediate?: boolean; sources?: import('@openheaders/core').Source[] },
+    options?: { immediate?: boolean; sources?: Source[] },
   ) => void;
   revalidateTrackedRequests: () => Promise<void>;
   updateBadgeCallback: () => void;
