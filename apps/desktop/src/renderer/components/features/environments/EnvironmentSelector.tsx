@@ -20,7 +20,6 @@ import EnvironmentShareModal from '@/renderer/components/modals/EnvironmentShare
 import type { EnvironmentVariable } from '@/types/environment';
 import { checkMissingVariables } from './EnvironmentUtils';
 
-const { Option } = Select;
 const { Text } = Typography;
 
 interface ThemeToken {
@@ -159,21 +158,25 @@ const EnvironmentSelector: React.FC<EnvironmentSelectorProps> = ({
         <Col flex="auto">
           <Space orientation="vertical" size={8} style={{ width: '100%' }}>
             <Text type="secondary">Active Environment</Text>
-            <Select value={activeEnvironment} onChange={handleEnvironmentSwitch} style={{ width: 200 }}>
-              {Object.keys(environments).map((env) => {
+            <Select
+              value={activeEnvironment}
+              onChange={handleEnvironmentSwitch}
+              style={{ width: 200 }}
+              options={Object.keys(environments).map((env) => {
                 const varCount = Object.keys(environments[env] || {}).length;
-                return (
-                  <Option key={env} value={env}>
+                return {
+                  value: env,
+                  label: (
                     <Space>
                       <span>{env}</span>
                       <Text type="secondary" style={{ fontSize: 12 }}>
                         ({varCount} {varCount === 1 ? 'var' : 'vars'})
                       </Text>
                     </Space>
-                  </Option>
-                );
+                  ),
+                };
               })}
-            </Select>
+            />
           </Space>
         </Col>
         <Col>

@@ -38,7 +38,6 @@ import type { WorkspaceFormValues } from '@/renderer/components/features/workspa
 import { useWorkspaces } from '@/renderer/hooks/workspace';
 import type { TeamWorkspaceInvite } from '@/types/workspace';
 
-const { Option } = Select;
 const { Text } = Typography;
 
 const generateUniqueWorkspaceName = (baseName: string, existingWorkspaces: Array<{ name: string }>) => {
@@ -707,13 +706,7 @@ const TeamWorkspaceAcceptInviteModal = ({
                           <Input.Password placeholder="ghp_xxxxxxxxxxxx or glpat-xxxxxxxxxxxx" size="small" />
                         </Form.Item>
                         <Form.Item name="tokenType" label="Token Type" initialValue="auto" style={{ marginBottom: 0 }}>
-                          <Select size="small">
-                            {TOKEN_TYPES.map((type) => (
-                              <Option key={type.value} value={type.value}>
-                                {type.label}
-                              </Option>
-                            ))}
-                          </Select>
+                          <Select size="small" options={TOKEN_TYPES} />
                         </Form.Item>
                       </div>
                     )}

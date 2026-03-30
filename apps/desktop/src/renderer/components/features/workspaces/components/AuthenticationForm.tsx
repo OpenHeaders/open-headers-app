@@ -6,7 +6,6 @@ import {
   TOKEN_TYPES,
 } from '@/renderer/components/features/workspaces/constants/WorkspaceConstants';
 
-const { Option } = Select;
 
 /**
  * Authentication form component for Git repository access
@@ -56,13 +55,7 @@ const AuthenticationForm = ({ authType, sshKeySource, onBrowseSSHKey }: Authenti
         initialValue="auto"
         style={{ marginBottom: 0 }}
       >
-        <Select>
-          {TOKEN_TYPES.map((type) => (
-            <Option key={type.value} value={type.value}>
-              {type.label}
-            </Option>
-          ))}
-        </Select>
+        <Select options={TOKEN_TYPES} />
       </Form.Item>
     </div>
   );

@@ -17,7 +17,6 @@
 import type { FormInstance } from 'antd';
 import { Card, Col, Form, Input, InputNumber, Radio, Row, Select, Space, Switch } from 'antd';
 
-const { Option } = Select;
 
 /**
  * Auto-Refresh card component for refresh configuration
@@ -83,14 +82,18 @@ const AutoRefreshCard = ({
           <Col span={24}>
             {refreshType === 'preset' || form.getFieldValue(['refreshOptions', 'type']) === 'preset' ? (
               <Form.Item name={['refreshOptions', 'interval']} initialValue={15} style={{ marginBottom: 0 }}>
-                <Select onChange={handlePresetIntervalChange} size="small">
-                  <Option value={1}>Every 1 minute</Option>
-                  <Option value={5}>Every 5 minutes</Option>
-                  <Option value={15}>Every 15 minutes</Option>
-                  <Option value={30}>Every 30 minutes</Option>
-                  <Option value={60}>Every hour</Option>
-                  <Option value={120}>Every 2 hours</Option>
-                </Select>
+                <Select
+                  onChange={handlePresetIntervalChange}
+                  size="small"
+                  options={[
+                    { value: 1, label: 'Every 1 minute' },
+                    { value: 5, label: 'Every 5 minutes' },
+                    { value: 15, label: 'Every 15 minutes' },
+                    { value: 30, label: 'Every 30 minutes' },
+                    { value: 60, label: 'Every hour' },
+                    { value: 120, label: 'Every 2 hours' },
+                  ]}
+                />
               </Form.Item>
             ) : (
               <Form.Item name={['refreshOptions', 'interval']} initialValue={15} style={{ marginBottom: 0 }}>

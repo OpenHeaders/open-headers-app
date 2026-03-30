@@ -16,7 +16,6 @@ import {
 } from 'antd';
 import type React from 'react';
 
-const { Option } = Select;
 const { Text } = Typography;
 
 // SameSite options
@@ -171,13 +170,8 @@ const CookieAttributes: React.FC<CookieAttributesProps> = ({
                   }}
                   style={{ width: '100%' }}
                   size="small"
-                >
-                  {SAMESITE_OPTIONS.map((option) => (
-                    <Option key={option.value} value={option.value}>
-                      {option.label}
-                    </Option>
-                  ))}
-                </Select>
+                  options={SAMESITE_OPTIONS}
+                />
               </Form.Item>
               <Text type="secondary" style={{ fontSize: 11, display: 'block' }}>
                 {SAMESITE_OPTIONS.find((opt) => opt.value === sameSite)?.description}
@@ -190,11 +184,17 @@ const CookieAttributes: React.FC<CookieAttributesProps> = ({
             {/* Right side - Expiration */}
             <div style={{ flex: 1 }}>
               <Form.Item label="Expiration" name="expirationMode" initialValue="session" style={{ marginBottom: 8 }}>
-                <Select value={expirationMode} onChange={setExpirationMode} style={{ width: '280px' }} size="small">
-                  <Option value="session">Session (no expiration)</Option>
-                  <Option value="maxAge">Max-Age (seconds)</Option>
-                  <Option value="expires">Expires (specific date)</Option>
-                </Select>
+                <Select
+                  value={expirationMode}
+                  onChange={setExpirationMode}
+                  style={{ width: '280px' }}
+                  size="small"
+                  options={[
+                    { value: 'session', label: 'Session (no expiration)' },
+                    { value: 'maxAge', label: 'Max-Age (seconds)' },
+                    { value: 'expires', label: 'Expires (specific date)' },
+                  ]}
+                />
               </Form.Item>
 
               {/* Expiration value input (shown conditionally) */}

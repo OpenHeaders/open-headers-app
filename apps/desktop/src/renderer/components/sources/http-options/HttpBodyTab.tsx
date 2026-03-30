@@ -16,7 +16,6 @@
 
 import { Col, Form, Input, Row, Select } from 'antd';
 
-const { Option } = Select;
 const { TextArea } = Input;
 
 /**
@@ -39,10 +38,14 @@ const HttpBodyTab = ({ contentType, handleContentTypeChange, validateVariableExi
     <Row gutter={16}>
       <Col span={6}>
         <Form.Item name={['requestOptions', 'contentType']} label="Content Type">
-          <Select onChange={handleContentTypeChange} size="small">
-            <Option value="application/json">JSON</Option>
-            <Option value="application/x-www-form-urlencoded">Form URL Encoded</Option>
-          </Select>
+          <Select
+            onChange={handleContentTypeChange}
+            size="small"
+            options={[
+              { value: 'application/json', label: 'JSON' },
+              { value: 'application/x-www-form-urlencoded', label: 'Form URL Encoded' },
+            ]}
+          />
         </Form.Item>
       </Col>
       <Col span={18}>

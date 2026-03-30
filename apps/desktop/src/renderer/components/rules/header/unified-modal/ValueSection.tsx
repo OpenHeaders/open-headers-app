@@ -1,4 +1,5 @@
 import { Alert, Form, Input, Select, Space, Typography, theme } from 'antd';
+import type { DefaultOptionType } from 'antd/es/select';
 import type React from 'react';
 import { useCallback, useMemo } from 'react';
 import { formatSourceDisplay, getSourceIcon } from '@/renderer/components/proxy';
@@ -8,7 +9,6 @@ import {
   validateEnvironmentVariables,
 } from '@/renderer/utils/validation/environment-variables';
 
-const { Option } = Select;
 const { Text } = Typography;
 
 interface EnvContext {
@@ -111,12 +111,16 @@ const ValueSection: React.FC<ValueSectionProps> = ({ mode, valueType, setValueTy
     <>
       <Space.Compact block style={{ marginBottom: 16 }}>
         <Form.Item name="valueType" initialValue="static" style={{ marginBottom: 0 }}>
-          <Select size="small" style={{ width: 120 }} value={valueType} onChange={setValueType}>
-            <Option value="static">Static</Option>
-            <Option value="dynamic" disabled={!sources || sources.length === 0}>
-              Dynamic {sources && sources.length === 0 && '(No sources)'}
-            </Option>
-          </Select>
+          <Select
+            size="small"
+            style={{ width: 120 }}
+            value={valueType}
+            onChange={setValueType}
+            options={[
+              { value: 'static', label: 'Static' },
+              { value: 'dynamic', label: `Dynamic${sources && sources.length === 0 ? ' (No sources)' : ''}`, disabled: !sources || sources.length === 0 },
+            ]}
+          />
         </Form.Item>
 
         {valueType === 'static' ? (
@@ -129,18 +133,20 @@ const ValueSection: React.FC<ValueSectionProps> = ({ mode, valueType, setValueTy
             style={{ flex: 1, marginBottom: 0 }}
             rules={[{ required: true, message: 'Please select a source' }]}
           >
-            <Select placeholder="Select a source" size="small" showSearch optionFilterProp="children">
-              {sources && sources.length > 0 ? (
-                sources.map((source) => (
-                  <Option key={source.sourceId} value={source.sourceId}>
-                    {getSourceIcon(source)}
-                    {formatSourceDisplay(source)}
-                  </Option>
-                ))
-              ) : (
-                <Option disabled>No sources available</Option>
-              )}
-            </Select>
+            <Select
+              placeholder="Select a source"
+              size="small"
+              showSearch
+              options={(() => {
+                const opts: DefaultOptionType[] = sources && sources.length > 0
+                  ? sources.map((source) => ({
+                      value: source.sourceId,
+                      label: <>{getSourceIcon(source)}{formatSourceDisplay(source)}</>,
+                    }))
+                  : [{ value: '', label: 'No sources available', disabled: true }];
+                return opts;
+              })()}
+            />
           </Form.Item>
         )}
       </Space.Compact>

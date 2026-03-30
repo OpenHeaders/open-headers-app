@@ -7,8 +7,9 @@ import DomainTags from '@/renderer/components/features/domain-tags';
 import type { HeaderRule } from '@/renderer/components/proxy/components/tables/ProxyRuleTableColumns';
 import { formatSourceDisplay, getSourceIcon } from '@/renderer/components/proxy/utils';
 
+import type { DefaultOptionType } from 'antd/es/select';
+
 const { Text } = Typography;
-const { Option } = Select;
 
 type SourceItem = Pick<Source, 'sourceId' | 'sourceType' | 'sourceTag' | 'sourcePath'>;
 
@@ -82,43 +83,44 @@ export const ExistingHeaderRuleSelector: React.FC<ExistingHeaderRuleSelectorProp
       placeholder="Select a header rule *"
       size="small"
       showSearch
-      optionFilterProp="children"
       styles={{ popup: { root: { maxWidth: 600 } } }}
       style={{ width: '100%' }}
       optionLabelProp="label"
-    >
-      {headerRules.length > 0 ? (
-        headerRules.map((rule) => {
-          const isDisabled = rule.isEnabled === false;
-          return (
-            <Option key={rule.id} value={rule.id} disabled={isDisabled} label={rule.headerName}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <Space>
-                  <Text strong={!isDisabled} type={isDisabled ? 'secondary' : undefined}>
-                    {rule.headerName}
-                  </Text>
-                  {rule.isDynamic && (
-                    <Tag color="blue" style={{ marginLeft: 8 }}>
-                      Dynamic
-                    </Tag>
-                  )}
-                  {isDisabled && <Tag color="default">Disabled</Tag>}
-                </Space>
-                <Text type="secondary" style={{ fontSize: 11, marginLeft: 2 }}>
-                  {rule.domains?.length
-                    ? rule.domains.length > 3
-                      ? `${rule.domains.slice(0, 3).join(', ')}... (+${rule.domains.length - 3} more)`
-                      : rule.domains.join(', ')
-                    : 'all domains'}
-                </Text>
-              </div>
-            </Option>
-          );
-        })
-      ) : (
-        <Option disabled>No header rules available</Option>
-      )}
-    </Select>
+      options={(() => {
+        const opts: DefaultOptionType[] = headerRules.length > 0
+          ? headerRules.map((rule) => {
+              const isDisabled = !rule.isEnabled;
+              return {
+                value: rule.id,
+                disabled: isDisabled,
+                label: (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <Space>
+                      <Text strong={!isDisabled} type={isDisabled ? 'secondary' : undefined}>
+                        {rule.headerName}
+                      </Text>
+                      {rule.isDynamic && (
+                        <Tag color="blue" style={{ marginLeft: 8 }}>
+                          Dynamic
+                        </Tag>
+                      )}
+                      {isDisabled && <Tag color="default">Disabled</Tag>}
+                    </Space>
+                    <Text type="secondary" style={{ fontSize: 11, marginLeft: 2 }}>
+                      {rule.domains?.length
+                        ? rule.domains.length > 3
+                          ? `${rule.domains.slice(0, 3).join(', ')}... (+${rule.domains.length - 3} more)`
+                          : rule.domains.join(', ')
+                        : 'all domains'}
+                    </Text>
+                  </div>
+                ),
+              };
+            })
+          : [{ value: '', label: 'No header rules available', disabled: true }];
+        return opts;
+      })()}
+    />
   </Form.Item>
 );
 
@@ -136,12 +138,16 @@ export const CustomHeaderConfig: React.FC<CustomHeaderConfigProps> = ({
       <Input placeholder="Header Name (e.g., Authorization) *" size="small" />
     </Form.Item>
     <Form.Item name="valueType" initialValue="static" style={{ marginBottom: 0 }}>
-      <Select size="small" style={{ width: 120 }} value={valueType} onChange={setValueType}>
-        <Option value="static">Static</Option>
-        <Option value="dynamic" disabled={!sources || sources.length === 0}>
-          Dynamic {sources && sources.length === 0 && '(No sources)'}
-        </Option>
-      </Select>
+      <Select
+        size="small"
+        style={{ width: 120 }}
+        value={valueType}
+        onChange={setValueType}
+        options={[
+          { value: 'static', label: 'Static' },
+          { value: 'dynamic', label: `Dynamic${sources && sources.length === 0 ? ' (No sources)' : ''}`, disabled: !sources || sources.length === 0 },
+        ]}
+      />
     </Form.Item>
   </Space.Compact>
 );
@@ -161,18 +167,20 @@ export const StaticValueInput: React.FC<StaticValueInputProps> = ({ validateHead
 export const DynamicValueConfig: React.FC<DynamicValueConfigProps> = ({ sources }) => (
   <>
     <Form.Item name="sourceId" rules={[{ required: true, message: 'Please select a source' }]}>
-      <Select placeholder="Select a source *" size="small" showSearch optionFilterProp="children">
-        {sources && sources.length > 0 ? (
-          sources.map((source) => (
-            <Option key={source.sourceId} value={source.sourceId}>
-              {getSourceIcon(source)}
-              {formatSourceDisplay(source)}
-            </Option>
-          ))
-        ) : (
-          <Option disabled>No sources available</Option>
-        )}
-      </Select>
+      <Select
+        placeholder="Select a source *"
+        size="small"
+        showSearch
+        options={(() => {
+          const opts: DefaultOptionType[] = sources && sources.length > 0
+            ? sources.map((source) => ({
+                value: source.sourceId,
+                label: <>{getSourceIcon(source)}{formatSourceDisplay(source)}</>,
+              }))
+            : [{ value: '', label: 'No sources available', disabled: true }];
+          return opts;
+        })()}
+      />
     </Form.Item>
 
     {/* Dynamic Value Format */}

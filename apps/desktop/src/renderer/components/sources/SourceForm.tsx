@@ -55,7 +55,6 @@ import {
 } from './source-form';
 
 const log = createLogger('SourceForm');
-const { Option } = Select;
 
 /**
  * SourceForm component for adding new sources with modular architecture
@@ -260,23 +259,30 @@ const SourceForm = ({ onAddSource }: SourceFormProps) => {
           <Row gutter={16}>
             <Col span={4}>
               <Form.Item label="Source Type" name="sourceType" rules={[{ required: true }]}>
-                <Select onChange={handleSourceTypeChange} size="small">
-                  <Option value="file">File</Option>
-                  <Option value="env">Environment Variable</Option>
-                  <Option value="http">HTTP Request</Option>
-                </Select>
+                <Select
+                  onChange={handleSourceTypeChange}
+                  size="small"
+                  options={[
+                    { value: 'file', label: 'File' },
+                    { value: 'env', label: 'Environment Variable' },
+                    { value: 'http', label: 'HTTP Request' },
+                  ]}
+                />
               </Form.Item>
             </Col>
             {sourceType === 'http' && (
               <Col span={3}>
                 <Form.Item label="Method" name="sourceMethod" rules={[{ required: true }]}>
-                  <Select size="small">
-                    <Option value="GET">GET</Option>
-                    <Option value="POST">POST</Option>
-                    <Option value="PUT">PUT</Option>
-                    <Option value="DELETE">DELETE</Option>
-                    <Option value="PATCH">PATCH</Option>
-                  </Select>
+                  <Select
+                    size="small"
+                    options={[
+                      { value: 'GET', label: 'GET' },
+                      { value: 'POST', label: 'POST' },
+                      { value: 'PUT', label: 'PUT' },
+                      { value: 'DELETE', label: 'DELETE' },
+                      { value: 'PATCH', label: 'PATCH' },
+                    ]}
+                  />
                 </Form.Item>
               </Col>
             )}

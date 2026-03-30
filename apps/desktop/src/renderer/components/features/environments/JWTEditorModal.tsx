@@ -762,48 +762,41 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({
                       onChange={handleAlgorithmChange}
                       style={{ width: '100%', marginTop: 8 }}
                       placeholder="Select signing algorithm"
-                    >
-                      <Select.OptGroup label="HMAC (Symmetric)">
-                        <Select.Option value="HS256">HS256 (HMAC with SHA-256)</Select.Option>
-                        <Select.Option value="HS384" disabled>
-                          HS384 (Coming Soon)
-                        </Select.Option>
-                        <Select.Option value="HS512" disabled>
-                          HS512 (Coming Soon)
-                        </Select.Option>
-                      </Select.OptGroup>
-                      <Select.OptGroup label="RSA (Asymmetric)">
-                        <Select.Option value="RS256">RS256 (RSA with SHA-256)</Select.Option>
-                        <Select.Option value="RS384" disabled>
-                          RS384 (Coming Soon)
-                        </Select.Option>
-                        <Select.Option value="RS512" disabled>
-                          RS512 (Coming Soon)
-                        </Select.Option>
-                      </Select.OptGroup>
-                      <Select.OptGroup label="ECDSA">
-                        <Select.Option value="ES256" disabled>
-                          ES256 (Coming Soon)
-                        </Select.Option>
-                        <Select.Option value="ES384" disabled>
-                          ES384 (Coming Soon)
-                        </Select.Option>
-                        <Select.Option value="ES512" disabled>
-                          ES512 (Coming Soon)
-                        </Select.Option>
-                      </Select.OptGroup>
-                      <Select.OptGroup label="RSA-PSS">
-                        <Select.Option value="PS256" disabled>
-                          PS256 (Coming Soon)
-                        </Select.Option>
-                        <Select.Option value="PS384" disabled>
-                          PS384 (Coming Soon)
-                        </Select.Option>
-                        <Select.Option value="PS512" disabled>
-                          PS512 (Coming Soon)
-                        </Select.Option>
-                      </Select.OptGroup>
-                    </Select>
+                      options={[
+                        {
+                          label: 'HMAC (Symmetric)',
+                          options: [
+                            { value: 'HS256', label: 'HS256 (HMAC with SHA-256)' },
+                            { value: 'HS384', label: 'HS384 (Coming Soon)', disabled: true },
+                            { value: 'HS512', label: 'HS512 (Coming Soon)', disabled: true },
+                          ],
+                        },
+                        {
+                          label: 'RSA (Asymmetric)',
+                          options: [
+                            { value: 'RS256', label: 'RS256 (RSA with SHA-256)' },
+                            { value: 'RS384', label: 'RS384 (Coming Soon)', disabled: true },
+                            { value: 'RS512', label: 'RS512 (Coming Soon)', disabled: true },
+                          ],
+                        },
+                        {
+                          label: 'ECDSA',
+                          options: [
+                            { value: 'ES256', label: 'ES256 (Coming Soon)', disabled: true },
+                            { value: 'ES384', label: 'ES384 (Coming Soon)', disabled: true },
+                            { value: 'ES512', label: 'ES512 (Coming Soon)', disabled: true },
+                          ],
+                        },
+                        {
+                          label: 'RSA-PSS',
+                          options: [
+                            { value: 'PS256', label: 'PS256 (Coming Soon)', disabled: true },
+                            { value: 'PS384', label: 'PS384 (Coming Soon)', disabled: true },
+                            { value: 'PS512', label: 'PS512 (Coming Soon)', disabled: true },
+                          ],
+                        },
+                      ]}
+                    />
 
                     {algorithm.startsWith('RS') ? (
                       <TextArea
