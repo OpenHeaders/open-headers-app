@@ -246,17 +246,24 @@ const Footer: React.FC = () => {
             </Space>
           </Tooltip>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {recordingHotkeyEnabled && recordingHotkey !== 'Not set' ? (
+            {recordingHotkey && recordingHotkey !== 'Not set' ? (
               <Space size={4}>
                 {recordingHotkey.split('+').map((key, index) => (
-                  <Tag key={index} style={{ margin: 0, fontSize: '11px' }}>
+                  <Tag
+                    key={index}
+                    style={{
+                      margin: 0,
+                      fontSize: '11px',
+                      opacity: recordingHotkeyEnabled ? 1 : 0.5,
+                    }}
+                  >
                     {key}
                   </Tag>
                 ))}
               </Space>
             ) : (
               <Text type="secondary" style={{ fontSize: '12px', fontStyle: 'italic' }}>
-                {!recordingHotkeyEnabled ? 'Disabled' : recordingHotkey}
+                Not set
               </Text>
             )}
             <Tooltip title={!isConnected ? 'App not connected' : 'Edit hotkey in settings'}>
