@@ -96,7 +96,7 @@ open-headers/
 │       ├── popup/                  React popup UI (800x600)
 │       ├── context/                HeaderContext, ThemeContext
 │       ├── assets/recording/       Recording system (state machine, content script, rrweb)
-│       ├── types/                  Extension-specific types (re-exports core + DNR types)
+│       ├── types/                  Extension-specific types (DNR rules, recording service)
 │       └── utils/                  Cross-browser API wrapper, storage chunking, messaging
 │
 ├── docs/                           Repo-wide documentation
@@ -255,10 +255,10 @@ import { SourceSchema } from '@openheaders/core/schemas';
 
 ### What lives in core
 
-- **Types** (`types/`): Plain TypeScript interfaces — Source, HeaderEntry, Rules, Recording, etc.
-- **Protocol** (`protocol/`): WS message types, constants (port 59210, protocol name, message types)
+- **Types** (`types/`): Domain interfaces (Source, HeaderEntry, Rules, Recording), common utilities (JsonValue, OperationResult, errorMessage, toError)
+- **Protocol** (`protocol/`): WS message types (AppNavigationIntent, WorkflowRecordingPayload, DisplayContext, RulesData), constants (port 59210, protocol name, message types)
 - **Utils** (`utils/`): Header validation/sanitization (RFC 7230), FNV-1a hashing for change detection
-- **Schemas** (`schemas/`): Valibot schemas for boundary validation (WS messages, file I/O)
+- **Schemas** (`schemas/`): Valibot schemas for boundary validation (SourceSchema, WorkflowRecordingPayloadSchema)
 
 ### What does NOT live in core
 
@@ -277,7 +277,7 @@ Anything that imports `chrome`, `electron`, `fs`, `ws`, or DOM APIs. UI componen
 
 ```bash
 pnpm turbo test                                       # All packages
-pnpm --filter @openheaders/desktop test               # Desktop only (7149 tests)
+pnpm --filter @openheaders/desktop test               # Desktop only (7153 tests)
 pnpm --filter @openheaders/extension test             # Extension only (765 tests)
 pnpm --filter @openheaders/desktop test:e2e           # Desktop e2e (requires build)
 pnpm --filter @openheaders/extension test:e2e         # Extension e2e (requires Chrome build)
