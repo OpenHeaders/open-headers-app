@@ -69,7 +69,8 @@ export function useEnvironmentOperations(): UseEnvironmentOperationsReturn {
       try {
         const sourceVars = environments[sourceEnv];
         if (!sourceVars) {
-          throw new Error(`Source environment '${sourceEnv}' does not exist`);
+          showMessage('error', `Source environment '${sourceEnv}' does not exist`);
+          return false;
         }
 
         await service.createEnvironment(newName);

@@ -105,8 +105,14 @@ export function useWorkspaces(): UseWorkspacesReturn {
     async (workspaceId: string, options: { silent?: boolean } = {}): Promise<boolean> => {
       try {
         const workspace = workspaces.find((w) => w.id === workspaceId);
-        if (!workspace) throw new Error('Workspace not found');
-        if (workspace.type !== 'git') throw new Error('Only git-based workspaces can be synced');
+        if (!workspace) {
+          showMessage('error', 'Workspace not found');
+          return false;
+        }
+        if (workspace.type !== 'git') {
+          showMessage('error', 'Only git-based workspaces can be synced');
+          return false;
+        }
 
         const result = await service.syncWorkspace(workspaceId);
 
@@ -129,7 +135,10 @@ export function useWorkspaces(): UseWorkspacesReturn {
     async (workspaceId: string, newName: string | null = null): Promise<Workspace | null> => {
       try {
         const workspace = workspaces.find((w) => w.id === workspaceId);
-        if (!workspace) throw new Error('Workspace not found');
+        if (!workspace) {
+          showMessage('error', 'Workspace not found');
+          return null;
+        }
 
         // Create a personal copy via main process
         const clonedWorkspace = {

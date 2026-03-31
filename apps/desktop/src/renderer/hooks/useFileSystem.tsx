@@ -83,8 +83,7 @@ export function useFileSystem(): UseFileSystemReturn {
    */
   const selectFile = useCallback(async (): Promise<string | null> => {
     try {
-      const filePath = await window.electronAPI.openFileDialog();
-      return filePath; // Will be null if user cancels
+      return await window.electronAPI.openFileDialog(); // Will be null if user cancels
     } catch (error: unknown) {
       throw new Error(`Error selecting file: ${error instanceof Error ? error.message : String(error)}`);
     }

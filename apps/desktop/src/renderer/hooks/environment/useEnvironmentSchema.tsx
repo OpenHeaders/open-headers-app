@@ -21,7 +21,7 @@ export function useEnvironmentSchema(): UseEnvironmentSchemaReturn {
 
   const findVariableUsage = useCallback((sources: Source[]): VariableUsage => {
     const usage: VariableUsage = {};
-    const variablePattern = /\{\{(\w+)\}\}/g;
+    const variablePattern = /{{(\w+)}}/g;
 
     sources.forEach((source: Source) => {
       if (source.sourceType === 'http') {

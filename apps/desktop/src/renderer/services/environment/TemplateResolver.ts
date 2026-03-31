@@ -10,7 +10,7 @@ class TemplateResolver {
 
   constructor() {
     // Match {{variable}} pattern
-    this.variablePattern = /\{\{(\w+)\}\}/g;
+    this.variablePattern = /{{(\w+)}}/g;
   }
 
   /**
@@ -21,7 +21,7 @@ class TemplateResolver {
     variables: Record<string, string>,
     options: { defaultValue?: string; throwOnMissing?: boolean; logMissing?: boolean } = {},
   ) {
-    if (!template || typeof template !== 'string') {
+    if (!template) {
       return template;
     }
 
@@ -58,7 +58,7 @@ class TemplateResolver {
    * Extract variable names from a template
    */
   extractVariables(template: string | null) {
-    if (!template || typeof template !== 'string') {
+    if (!template) {
       return [];
     }
 
@@ -80,7 +80,7 @@ class TemplateResolver {
    * Check if a string contains variables
    */
   hasVariables(template: string | null) {
-    if (!template || typeof template !== 'string') {
+    if (!template) {
       return false;
     }
 
@@ -106,7 +106,6 @@ class TemplateResolver {
     }
 
     const resolved: Record<string, string | unknown> = {};
-    const allMissingVars: string[] = [];
 
     Object.entries(obj).forEach(([key, value]) => {
       if (typeof value === 'string') {
@@ -115,9 +114,6 @@ class TemplateResolver {
           resolved[key] = result;
         } else {
           resolved[key] = result.resolved;
-        }
-        if (result !== null && typeof result !== 'string' && result.missingVars) {
-          allMissingVars.push(...result.missingVars);
         }
       } else if (typeof value === 'object') {
         resolved[key] = this.resolveObject(value, variables, options);

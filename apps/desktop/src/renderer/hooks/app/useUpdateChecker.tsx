@@ -6,7 +6,7 @@
 
 import { LoadingOutlined } from '@ant-design/icons';
 import { notification } from 'antd';
-import type React from 'react';
+import type { RefObject } from 'react';
 import { useRef } from 'react';
 
 export interface UpdateNotificationHandle {
@@ -14,7 +14,7 @@ export interface UpdateNotificationHandle {
 }
 
 interface UseUpdateCheckerReturn {
-  updateNotificationRef: React.MutableRefObject<UpdateNotificationHandle | null>;
+  updateNotificationRef: RefObject<UpdateNotificationHandle | null>;
   handleCheckForUpdates: () => void;
 }
 

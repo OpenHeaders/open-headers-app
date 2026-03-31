@@ -428,6 +428,14 @@ export const createEnvironmentChangeEffect =
     return () => clearTimeout(timer);
   };
 
+export interface ImperativeHandleMethods {
+  forceTotpState: (enabled: boolean, secret: string) => boolean;
+  getTotpState: () => TotpState;
+  forceHeadersState: (headers: Array<{ key?: string; value?: string }>) => boolean;
+  getHeadersState: () => Array<{ key: string; value: string }>;
+  validateFields: () => void;
+}
+
 /**
  * Creates imperative handle methods factory
  *
@@ -444,7 +452,7 @@ export const createImperativeHandleMethods = ({
   form,
   getTotpStateFromForm,
   isFormInitializedRef,
-}: ImperativeHandleParams) => ({
+}: ImperativeHandleParams): ImperativeHandleMethods => ({
   // Method to force TOTP state directly
   forceTotpState: (enabled: boolean, secret: string) => {
     // Update form values - form is the single source of truth

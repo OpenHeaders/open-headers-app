@@ -119,7 +119,7 @@ export const useRecordPlayer = (): UseRecordPlayerReturn => {
       }
     };
 
-    loadRrwebPlayer();
+    void loadRrwebPlayer();
 
     // Restore console methods on cleanup
     return () => {

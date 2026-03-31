@@ -18,9 +18,6 @@ import type { Source } from '@openheaders/core';
 import type React from 'react';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useSources } from '@/renderer/hooks/workspace';
-import { createLogger } from '@/renderer/utils/error-handling/logger';
-
-const _log = createLogger('RefreshManagerContext');
 
 interface RefreshStatus {
   isRefreshing: boolean;

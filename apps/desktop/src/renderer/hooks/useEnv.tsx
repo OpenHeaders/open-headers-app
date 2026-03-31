@@ -12,11 +12,11 @@ export function useEnv(): UseEnvReturn {
    * Get environment variable value
    */
   const getVariable = useCallback(async (name: string): Promise<string> => {
-    try {
-      if (!name) {
-        throw new Error('Environment variable name is required');
-      }
+    if (!name) {
+      throw new Error('Error getting environment variable: Environment variable name is required');
+    }
 
+    try {
       return await window.electronAPI.getEnvVariable(name);
     } catch (error: unknown) {
       throw new Error(`Error getting environment variable: ${error instanceof Error ? error.message : String(error)}`);

@@ -13,7 +13,7 @@
  */
 
 import type { Recording } from '@openheaders/core';
-import type React from 'react';
+import type { RefObject } from 'react';
 import type { InitialAction } from '@/renderer/components/modals/settings/SettingsModal';
 import { useAppInitialization } from './useAppInitialization';
 import { useFileWatcher } from './useFileWatcher';
@@ -37,7 +37,7 @@ interface UseAppEffectsDeps {
 }
 
 interface UseAppEffectsReturn {
-  updateNotificationRef: React.MutableRefObject<UpdateNotificationHandle | null>;
+  updateNotificationRef: RefObject<UpdateNotificationHandle | null>;
   handleCheckForUpdates: () => void;
   clearAllHighlights: () => void;
 }

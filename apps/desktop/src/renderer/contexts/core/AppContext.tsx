@@ -10,10 +10,7 @@ import { NavigationProvider } from './NavigationContext';
 export const AppContext = React.createContext(null);
 
 // Dummy hook for backward compatibility
-export const useApp = () => {
-  const context = React.useContext(AppContext);
-  return context;
-};
+export const useApp = () => React.useContext(AppContext);
 
 /**
  * Combined Settings and Theme Provider

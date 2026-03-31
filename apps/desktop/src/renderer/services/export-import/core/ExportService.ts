@@ -48,8 +48,8 @@ export class ExportService {
 
   /**
    * Executes the complete export process
-   * @param {Object} exportOptions - Export configuration options
-   * @returns {Promise<void>}
+   * @param exportOptions - Export configuration options
+   * @returns Promise that resolves when export completes
    */
   async execute(exportOptions: ExportOptions) {
     const startTime = Date.now();
@@ -86,8 +86,8 @@ export class ExportService {
 
   /**
    * Gathers export data from all selected data types
-   * @param {Object} exportOptions - Export configuration options
-   * @returns {Promise<Object>} - Collected export data
+   * @param exportOptions - Export configuration options
+   * @returns - Collected export data
    * @private
    */
   async _gatherExportData(exportOptions: ExportOptions): Promise<ExportData> {
@@ -138,9 +138,9 @@ export class ExportService {
 
   /**
    * Handles file export based on the selected format
-   * @param {Object} exportData - Data to export
-   * @param {Object} exportOptions - Export configuration options
-   * @returns {Promise<Array<string>>} - Array of written file paths
+   * @param exportData - Data to export
+   * @param exportOptions - Export configuration options
+   * @returns - Array of written file paths
    * @private
    */
   async _handleFileExport(exportData: ExportData, exportOptions: ExportOptions) {
@@ -155,8 +155,8 @@ export class ExportService {
 
   /**
    * Handles single file export
-   * @param {Object} exportData - Data to export
-   * @returns {Promise<Array<string>>} - Array with single file path
+   * @param exportData - Data to export
+   * @returns - Array with single file path
    * @private
    */
   async _handleSingleFileExport(exportData: ExportData) {
@@ -172,9 +172,9 @@ export class ExportService {
 
   /**
    * Handles separate files export
-   * @param {Object} exportData - Data to export
-   * @param {Object} exportOptions - Export configuration options
-   * @returns {Promise<Array<string>>} - Array of written file paths
+   * @param exportData - Data to export
+   * @param exportOptions - Export configuration options
+   * @returns - Array of written file paths
    * @private
    */
   async _handleSeparateFilesExport(exportData: ExportData, exportOptions: ExportOptions) {
@@ -210,7 +210,7 @@ export class ExportService {
 
   /**
    * Validates export options
-   * @param {Object} exportOptions - Export options to validate
+   * @param exportOptions - Export options to validate
    * @throws {Error} - If validation fails
    * @private
    */
@@ -226,7 +226,7 @@ export class ExportService {
     }
 
     // Check if at least one item is selected
-    const hasSelection = Object.values(selectedItems).some((selected) => selected === true);
+    const hasSelection = Object.values(selectedItems).some((selected) => selected);
     if (!hasSelection) {
       throw new Error('At least one data type must be selected for export');
     }
@@ -238,8 +238,8 @@ export class ExportService {
 
   /**
    * Validates collected export data
-   * @param {Object} exportData - Export data to validate
-   * @param {Object} exportOptions - Export options for context
+   * @param exportData - Export data to validate
+   * @param exportOptions - Export options for context
    * @throws {Error} - If validation fails
    * @private
    */
@@ -295,8 +295,8 @@ export class ExportService {
 
   /**
    * Counts the total number of items in export data
-   * @param {Object} exportData - Export data to count
-   * @returns {number} - Total item count
+   * @param exportData - Export data to count
+   * @returns - Total item count
    * @private
    */
   _countExportItems(exportData: ExportData) {
@@ -339,8 +339,8 @@ export class ExportService {
 
   /**
    * Calculates approximate size of export data
-   * @param {Object} exportData - Export data to measure
-   * @returns {string} - Human-readable size estimate
+   * @param exportData - Export data to measure
+   * @returns - Human-readable size estimate
    * @private
    */
   _calculateExportSize(exportData: ExportData) {
@@ -358,8 +358,8 @@ export class ExportService {
 
   /**
    * Sanitizes export options for logging (removes sensitive data)
-   * @param {Object} exportOptions - Export options to sanitize
-   * @returns {Object} - Sanitized options for logging
+   * @param exportOptions - Export options to sanitize
+   * @returns - Sanitized options for logging
    * @private
    */
   _sanitizeOptionsForLogging(exportOptions: ExportOptions) {
@@ -376,8 +376,8 @@ export class ExportService {
 
   /**
    * Gets export statistics for reporting
-   * @param {Object} exportData - Export data to analyze
-   * @returns {Object} - Comprehensive export statistics
+   * @param exportData - Export data to analyze
+   * @returns - Comprehensive export statistics
    */
   getExportStatistics(exportData: ExportData) {
     const stats = {

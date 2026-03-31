@@ -38,7 +38,7 @@ export function useAppInitialization({
     };
 
     // Initialize app version on startup
-    getAppVersion();
+    void getAppVersion();
 
     // Set up listener for opening record recordings from main process
     const unsubscribe = window.electronAPI.onOpenRecordRecording(async (data) => {
