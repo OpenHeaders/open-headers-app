@@ -684,7 +684,6 @@ class NetworkService extends EventEmitter {
     const ips: string[] = [];
 
     let foundAnswerSection = false;
-    let _skipNextAddress = true; // Skip first Address line (DNS server) on Windows
 
     for (const line of lines) {
       const trimmedLine = line.trim();
@@ -692,7 +691,6 @@ class NetworkService extends EventEmitter {
       // Detect answer section (works for both "Non-authoritative answer:" and "answer:")
       if (trimmedLine.toLowerCase().includes('answer')) {
         foundAnswerSection = true;
-        _skipNextAddress = false; // After answer section, Address lines are results
         continue;
       }
 

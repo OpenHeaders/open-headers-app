@@ -88,4 +88,3 @@ class ProxyRuleStore {
 }
 
 export { ProxyRuleStore };
-export default ProxyRuleStore;

@@ -189,188 +189,35 @@ class VideoConverter {
   }
 
   /**
-   * Optimize video for specific file size
-   */
-  async optimizeForSize(
-    inputPath: string,
-    outputPath: string,
-    targetSizeMB: number,
-    progressCallback?: (progress: ConversionProgress) => void,
-  ): Promise<ConversionResult> {
-    // First, get video duration
-    const duration = await this.getVideoDuration(inputPath);
-
-    // Calculate required bitrate (in bits)
-    const targetBitrate = calculateBitrate(targetSizeMB, duration);
-
-    log.info('Optimizing for size:', {
-      targetSizeMB,
-      duration,
-      targetBitrate: `${Math.round(targetBitrate / 1000)}k`,
-    });
-
-    const args = [
-      '-i',
-      inputPath,
-      '-c:v',
-      'libx264',
-      '-b:v',
-      String(targetBitrate),
-      '-maxrate',
-      String(Math.floor(targetBitrate * 1.1)),
-      '-bufsize',
-      String(targetBitrate * 2),
-      '-an',
-      '-movflags',
-      '+faststart',
-      '-pix_fmt',
-      'yuv420p',
-      '-profile:v',
-      'baseline',
-      '-preset',
-      'medium',
-      '-y',
-      outputPath,
-    ];
-
-    return this.runFFmpeg(args, progressCallback);
-  }
-
-  /**
-   * Get video duration
-   */
-  async getVideoDuration(videoPath: string): Promise<number> {
-    return new Promise((resolve, reject) => {
-      const ffmpeg = spawn(this.ffmpegPath, ['-i', videoPath]);
-      let stderr = '';
-
-      ffmpeg.stderr.on('data', (data: Buffer) => {
-        stderr += data.toString();
-      });
-
-      ffmpeg.on('close', () => {
-        const match = stderr.match(/Duration: (\d{2}):(\d{2}):(\d{2})/);
-        if (match) {
-          const duration = parseDuration(match[1], match[2], match[3]);
-          resolve(duration);
-        } else {
-          reject(new Error('Could not determine video duration'));
-        }
-      });
-
-      ffmpeg.on('error', (err: Error) => {
-        reject(err);
-      });
-    });
-  }
-
-  /**
-   * Run FFmpeg with arguments
-   */
-  async runFFmpeg(
-    args: string[],
-    progressCallback?: (progress: ConversionProgress) => void,
-  ): Promise<ConversionResult> {
-    return new Promise((resolve, reject) => {
-      const ffmpeg = spawn(this.ffmpegPath, args);
-
-      let stderr = '';
-      let duration = 0;
-
-      ffmpeg.stderr.on('data', (data: Buffer) => {
-        stderr += data.toString();
-
-        // Parse duration and progress
-        const durationMatch = data.toString().match(/Duration: (\d{2}):(\d{2}):(\d{2})/);
-        if (durationMatch && duration === 0) {
-          duration = parseDuration(durationMatch[1], durationMatch[2], durationMatch[3]);
-        }
-
-        const progressMatch = data.toString().match(/time=(\d{2}):(\d{2}):(\d{2})/);
-        if (progressMatch && duration > 0 && progressCallback) {
-          const currentTime = parseDuration(progressMatch[1], progressMatch[2], progressMatch[3]);
-          const percent = Math.round((currentTime / duration) * 100);
-          progressCallback({ percent, currentTime, duration });
-        }
-      });
-
-      ffmpeg.on('close', (code: number | null) => {
-        if (code === 0) {
-          resolve({ success: true });
-        } else {
-          reject(new Error(`FFmpeg exited with code ${code}: ${stderr}`));
-        }
-      });
-
-      ffmpeg.on('error', (err: Error) => {
-        reject(err);
-      });
-    });
-  }
-
-  /**
-   * Generate thumbnail from video
-   */
-  async generateThumbnail(videoPath: string, outputPath: string, timeSeconds: number = 2): Promise<string> {
-    const args = [
-      '-i',
-      videoPath,
-      '-ss',
-      timeSeconds.toString(), // Seek to time
-      '-vframes',
-      '1', // Extract one frame
-      '-vf',
-      'scale=320:-1', // Scale to 320px width, maintain aspect ratio
-      '-y',
-      outputPath,
-    ];
-
-    return new Promise((resolve, reject) => {
-      const ffmpeg = spawn(this.ffmpegPath, args);
-
-      ffmpeg.on('close', (code: number | null) => {
-        if (code === 0) {
-          resolve(outputPath);
-        } else {
-          reject(new Error(`Thumbnail generation failed with code ${code}`));
-        }
-      });
-
-      ffmpeg.on('error', (err: Error) => {
-        reject(err);
-      });
-    });
-  }
-
-  /**
    * Validate input file before processing
    */
   async validateInputFile(inputPath: string): Promise<void> {
-    // Check if file exists
+    let stats: fs.Stats;
     try {
-      const stats = await fsPromises.stat(inputPath);
-      log.info('Input file stats:', {
-        path: inputPath,
-        size: stats.size,
-        isFile: stats.isFile(),
-      });
-
-      if (!stats.isFile()) {
-        throw new Error('Input path is not a file');
-      }
-
-      if (stats.size === 0) {
-        throw new Error('Input file is empty (0 bytes)');
-      }
-
-      // Use ffprobe to validate the video format
-      await this.validateVideoFormat(inputPath);
+      stats = await fsPromises.stat(inputPath);
     } catch (error: unknown) {
       if (toErrno(error).code === 'ENOENT') {
         throw new Error(`Input file not found: ${inputPath}`);
       }
       throw error;
     }
+
+    log.info('Input file stats:', {
+      path: inputPath,
+      size: stats.size,
+      isFile: stats.isFile(),
+    });
+
+    if (!stats.isFile()) {
+      throw new Error('Input path is not a file');
+    }
+
+    if (stats.size === 0) {
+      throw new Error('Input file is empty (0 bytes)');
+    }
+
+    // Use ffprobe to validate the video format
+    await this.validateVideoFormat(inputPath);
   }
 
   /**
@@ -444,4 +291,3 @@ class VideoConverter {
 }
 
 export { calculateBitrate, parseDuration, VideoConverter };
-export default VideoConverter;

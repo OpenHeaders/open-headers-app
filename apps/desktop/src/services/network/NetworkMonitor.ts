@@ -241,7 +241,7 @@ class NetworkMonitor extends EventEmitter {
     // Regular connectivity checks
     const intervalId = setInterval(() => {
       if (!this.isDestroyed) {
-        this.performConnectivityCheck();
+        void this.performConnectivityCheck();
       }
     }, this.config.normalCheckInterval);
 
@@ -566,7 +566,9 @@ class NetworkMonitor extends EventEmitter {
     const endpoints: EndpointConfig[] = [
       { url: 'https://www.google.com/generate_204', timeout: 3000, weight: 1.0 },
       { url: 'https://connectivity-check.ubuntu.com', timeout: 3000, weight: 0.8 },
+      // noinspection HttpUrlsUsage — intentional HTTP for captive portal detection
       { url: 'http://captive.apple.com/hotspot-detect.html', timeout: 3000, weight: 0.8 },
+      // noinspection HttpUrlsUsage — intentional HTTP for connectivity check
       { url: 'http://www.msftconnecttest.com/connecttest.txt', timeout: 3000, weight: 0.8 },
       { url: 'https://1.1.1.1', timeout: 2000, weight: 0.6 },
       { url: 'https://8.8.8.8', timeout: 2000, weight: 0.6 },
@@ -705,7 +707,6 @@ class NetworkMonitor extends EventEmitter {
       this.stateLock = true;
 
       const wasOnline = this.state.isOnline;
-      const _previousState = JSON.parse(JSON.stringify(this.state));
 
       // Create new state object atomically
       const isOnline = results.basic.success || results.endpoints.success;
@@ -779,7 +780,7 @@ class NetworkMonitor extends EventEmitter {
       log.info('Performing comprehensive check after network change...');
 
       // Perform comprehensive check after network change
-      const _checkResult = await this.performComprehensiveCheck();
+      await this.performComprehensiveCheck();
 
       if (this.isDestroyed) return;
 
@@ -833,7 +834,7 @@ class NetworkMonitor extends EventEmitter {
       });
 
       // Trigger network re-evaluation
-      this.performComprehensiveCheck();
+      void this.performComprehensiveCheck();
     }
   }
 
@@ -935,4 +936,3 @@ class NetworkMonitor extends EventEmitter {
 }
 
 export { NetworkMonitor };
-export default NetworkMonitor;

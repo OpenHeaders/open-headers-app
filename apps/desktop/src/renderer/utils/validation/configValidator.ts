@@ -75,99 +75,94 @@ async function analyzeConfigFile(
   isEnvFile = false,
   isSeparateMode = false,
 ): Promise<ConfigAnalysisResult | EnvAnalysisResult> {
+  let data: ConfigData;
   try {
-    const data = JSON.parse(content) as ConfigData;
+    data = JSON.parse(content) as ConfigData;
+  } catch {
+    throw new Error('Invalid file format. Please select a valid Open Headers configuration file.');
+  }
 
-    if (isEnvFile) {
-      // Environment file should only contain environment data
-      const hasOtherData = data.rules || data.sources || data.proxyRules;
-      if (hasOtherData) {
-        throw new Error(
-          'This appears to be a main configuration file with sources/rules/proxy rules. Please use the main configuration file upload area for this file.',
-        );
-      }
-
-      return {
-        valid: true,
-        hasEnvironmentSchema: !!data.environmentSchema,
-        hasEnvironments: !!data.environments,
-        environmentCount: data.environments
-          ? Object.keys(data.environments).length
-          : data.environmentSchema?.environments
-            ? Object.keys(data.environmentSchema.environments).length
-            : 0,
-        variableCount: data.environmentSchema
-          ? Object.keys(data.environmentSchema.variableDefinitions || {}).length
-          : 0,
-        rawData: data,
-      };
-    }
-
-    // For main config file in separate mode, check if it's environment-only
-    const hasOnlyEnvData =
-      !data.sources && !data.rules && !data.proxyRules && (data.environmentSchema || data.environments);
-
-    // In separate files mode, reject environment-only files for main config area
-    if (isSeparateMode && hasOnlyEnvData) {
+  if (isEnvFile) {
+    // Environment file should only contain environment data
+    const hasOtherData = data.rules || data.sources || data.proxyRules;
+    if (hasOtherData) {
       throw new Error(
-        'This appears to be an environment-only file. Please use the environment file upload area for environment files.',
+        'This appears to be a main configuration file with sources/rules/proxy rules. Please use the main configuration file upload area for this file.',
       );
     }
 
-    const info: ConfigAnalysisResult = {
-      valid: true as const,
-      version: data.version || 'Unknown',
-      hasRules: !!data.rules,
-      hasSources: !!data.sources,
-      hasProxyRules: !!data.proxyRules,
+    return {
+      valid: true,
       hasEnvironmentSchema: !!data.environmentSchema,
       hasEnvironments: !!data.environments,
-      hasWorkspace: !!data.workspace,
-
-      // Counts
-      ruleCount: 0,
-      sourceCount: data.sources ? data.sources.length : 0,
-      proxyRuleCount: data.proxyRules ? data.proxyRules.length : 0,
       environmentCount: data.environments
         ? Object.keys(data.environments).length
         : data.environmentSchema?.environments
           ? Object.keys(data.environmentSchema.environments).length
           : 0,
-      variableCount: data.environmentSchema ? Object.keys(data.environmentSchema.variableDefinitions || {}).length : 0,
-
-      // Rule breakdown
-      ruleBreakdown: {},
-
-      // Workspace info if present
-      workspaceInfo: data.workspace || null,
-
-      // Store raw data for further validation
+      variableCount: data.environmentSchema
+        ? Object.keys(data.environmentSchema.variableDefinitions || {}).length
+        : 0,
       rawData: data,
     };
+  }
 
-    // Count rules by type
-    if (data.rules) {
-      for (const [ruleType, rules] of Object.entries(data.rules)) {
-        if (Array.isArray(rules)) {
-          info.ruleBreakdown[ruleType] = rules.length;
-          info.ruleCount += rules.length;
-        }
+  // For main config file in separate mode, check if it's environment-only
+  const hasOnlyEnvData =
+    !data.sources && !data.rules && !data.proxyRules && (data.environmentSchema || data.environments);
+
+  // In separate files mode, reject environment-only files for main config area
+  if (isSeparateMode && hasOnlyEnvData) {
+    throw new Error(
+      'This appears to be an environment-only file. Please use the environment file upload area for environment files.',
+    );
+  }
+
+  const info: ConfigAnalysisResult = {
+    valid: true as const,
+    version: data.version || 'Unknown',
+    hasRules: !!data.rules,
+    hasSources: !!data.sources,
+    hasProxyRules: !!data.proxyRules,
+    hasEnvironmentSchema: !!data.environmentSchema,
+    hasEnvironments: !!data.environments,
+    hasWorkspace: !!data.workspace,
+
+    // Counts
+    ruleCount: 0,
+    sourceCount: data.sources ? data.sources.length : 0,
+    proxyRuleCount: data.proxyRules ? data.proxyRules.length : 0,
+    environmentCount: data.environments
+      ? Object.keys(data.environments).length
+      : data.environmentSchema?.environments
+        ? Object.keys(data.environmentSchema.environments).length
+        : 0,
+    variableCount: data.environmentSchema ? Object.keys(data.environmentSchema.variableDefinitions || {}).length : 0,
+
+    // Rule breakdown
+    ruleBreakdown: {},
+
+    // Workspace info if present
+    workspaceInfo: data.workspace || null,
+
+    // Store raw data for further validation
+    rawData: data,
+  };
+
+  // Count rules by type
+  if (data.rules) {
+    for (const [ruleType, rules] of Object.entries(data.rules)) {
+      if (Array.isArray(rules)) {
+        info.ruleBreakdown[ruleType] = rules.length;
+        info.ruleCount += rules.length;
       }
     }
-
-    // Additional validation for structure
-    validateConfigStructure(data);
-
-    return info;
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      (error.message.includes('Environment file') || error.message.includes('environment-only'))
-    ) {
-      throw error;
-    }
-    throw new Error('Invalid file format. Please select a valid Open Headers configuration file.');
   }
+
+  // Additional validation for structure
+  validateConfigStructure(data);
+
+  return info;
 }
 
 /**
@@ -230,14 +225,14 @@ function validateConfigStructure(data: ConfigData) {
         if (!rule.domains || !Array.isArray(rule.domains) || rule.domains.length === 0) {
           throw new Error(`Invalid proxy rule at index ${index}: static rule must have at least one domain`);
         }
-        if (!rule.headerName || typeof rule.headerName !== 'string') {
+        if (!rule.headerName) {
           throw new Error(`Invalid proxy rule at index ${index}: static rule must have a valid header name`);
         }
       }
 
       // Validate dynamic rules
       if (isDynamicRule) {
-        if (!rule.headerRuleId || typeof rule.headerRuleId !== 'string') {
+        if (!rule.headerRuleId) {
           throw new Error(`Invalid proxy rule at index ${index}: dynamic rule must have a valid header rule ID`);
         }
       }
@@ -289,9 +284,9 @@ function validateConfigStructure(data: ConfigData) {
 /**
  * Validate configuration for Git workspace
  * This includes both file validation and Git-specific checks
- * @param {string} content - Configuration file content
- * @param {string} filePath - Expected file path in repository
- * @returns {Object} Validation result
+ * @param content - Configuration file content
+ * @param _filePath - Expected file path in repository
+ * @returns Validation result
  */
 async function validateGitWorkspaceConfig(content: string, _filePath: string) {
   try {
@@ -341,9 +336,9 @@ async function validateGitWorkspaceConfig(content: string, _filePath: string) {
 
 /**
  * Read and validate multi-file configuration format
- * @param {Function} readFile - Function to read file content (async)
- * @param {string} basePath - Base path for config files
- * @returns {Object} Combined configuration object
+ * @param readFile - Function to read file content (async)
+ * @param basePath - Base path for config files
+ * @returns Combined configuration object
  */
 async function readAndValidateMultiFileConfig(
   readFile: (path: string, options?: { list: boolean }) => Promise<string[] & string>,
@@ -399,7 +394,12 @@ async function readAndValidateMultiFileConfig(
 
     // Validate we found at least something
     if (!validationResults.mainFile && !validationResults.envFile) {
-      throw new Error('No valid configuration files found in the expected format');
+      return {
+        success: false,
+        error: 'No valid configuration files found in the expected format',
+        config: null,
+        validationResults,
+      };
     }
 
     return {

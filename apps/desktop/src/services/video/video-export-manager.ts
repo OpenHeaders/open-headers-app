@@ -79,17 +79,16 @@ class VideoExportManager {
         // Ensure FFmpeg is available before converting
         const ffmpegStatus = await this.ffmpegManager.checkFFmpeg();
         if (!ffmpegStatus.available) {
-          throw new Error('FFmpeg not available');
+          return { success: false, error: 'FFmpeg not available' };
         }
 
         const ffmpegPath = this.ffmpegManager.getFFmpegPath();
         log.info('Using FFmpeg for conversion:', ffmpegPath);
 
         const converter = new VideoConverter(ffmpegPath!);
-        const result = await converter.convertToMP4(inputPath, outputPath, (progress) => {
+        return await converter.convertToMP4(inputPath, outputPath, (progress) => {
           sender.send('video-conversion-progress', progress);
         });
-        return result;
       } catch (error: unknown) {
         log.error('Video conversion failed:', error);
         return { success: false, error: errorMessage(error) };
@@ -269,7 +268,7 @@ class VideoExportManager {
     // Load progress HTML
     const progressHtml = `
             <!DOCTYPE html>
-            <html>
+            <html lang="en">
             <head>
                 <style>
                     body {
@@ -300,7 +299,7 @@ class VideoExportManager {
                     .progress-fill {
                         height: 100%;
                         background: #4CAF50;
-                        width: 0%;
+                        width: 0;
                         transition: width 0.3s ease;
                     }
                     .status {
@@ -370,7 +369,7 @@ class VideoExportManager {
 
       progressWindow.close();
 
-      dialog.showMessageBox({
+      await dialog.showMessageBox({
         type: 'info',
         title: 'FFmpeg Installed',
         message: 'FFmpeg has been installed successfully.',
@@ -414,7 +413,7 @@ class VideoExportManager {
     // Load conversion progress HTML
     const progressHtml = `
             <!DOCTYPE html>
-            <html>
+            <html lang="en">
             <head>
                 <style>
                     body {
@@ -445,7 +444,7 @@ class VideoExportManager {
                     .progress-fill {
                         height: 100%;
                         background: #2196F3;
-                        width: 0%;
+                        width: 0;
                         transition: width 0.3s ease;
                     }
                     .status {
@@ -515,4 +514,3 @@ class VideoExportManager {
 const videoExportManager = new VideoExportManager();
 
 export { VideoExportManager, videoExportManager };
-export default videoExportManager;

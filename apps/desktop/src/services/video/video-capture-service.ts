@@ -520,14 +520,6 @@ class VideoCaptureService {
     return Array.from(this.activeRecordings.values());
   }
 
-  /**
-   * Clean up any orphaned recordings on startup
-   */
-  async cleanupOrphanedRecordings(): Promise<void> {
-    // This would check for incomplete recordings and clean them up
-    // Implementation depends on specific requirements
-    log.info('Cleanup orphaned recordings - not implemented yet');
-  }
 }
 
 export { VideoCaptureService };

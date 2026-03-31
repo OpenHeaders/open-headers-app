@@ -26,7 +26,7 @@ export const AppStates = {
 
 export type AppState = (typeof AppStates)[keyof typeof AppStates];
 
-export const StateTransitions: Record<string, Record<string, string>> = {
+export const StateTransitions: Record<AppState, Record<string, AppState>> = {
   [AppStates.INITIALIZING]: {
     LOAD_SETTINGS: AppStates.LOADING_SETTINGS,
     ERROR: AppStates.ERROR,
@@ -94,8 +94,8 @@ interface AppContext {
 
 class AppStateMachineImpl extends EventEmitter {
   private log = createLogger('AppStateMachine');
-  currentState: string = AppStates.INITIALIZING;
-  previousState: string | null = null;
+  currentState: AppState = AppStates.INITIALIZING;
+  previousState: AppState | null = null;
   private stateHistory: StateHistoryEntry[] = [
     {
       state: AppStates.INITIALIZING,
@@ -119,7 +119,7 @@ class AppStateMachineImpl extends EventEmitter {
   };
   private currentTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  getState(): string {
+  getState(): AppState {
     return this.currentState;
   }
   getHistory(): StateHistoryEntry[] {

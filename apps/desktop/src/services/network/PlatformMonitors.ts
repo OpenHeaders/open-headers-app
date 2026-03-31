@@ -232,13 +232,13 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
         }
       } catch (_e) {
         // scutil might not be available or might fail
-        this.checkVPNInterfaces();
+        void this.checkVPNInterfaces();
       }
     };
 
     // Delay initial check to allow NetworkMonitor to establish baseline
     setTimeout(() => {
-      checkVPN();
+      void checkVPN();
     }, 500);
 
     // Regular checks - reduced frequency to prevent excessive process spawning
@@ -315,7 +315,7 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
     };
 
     // Initial check
-    checkWiFi();
+    void checkWiFi();
 
     // Regular checks
     const interval = setInterval(checkWiFi, 3000);
@@ -418,99 +418,9 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
     };
 
     // Check every 10 seconds instead of using persistent process
-    checkAdapters();
+    void checkAdapters();
     const interval = setInterval(checkAdapters, 10000);
     this.intervals.push(interval);
-  }
-
-  watchNetworkAdaptersLegacy(): void {
-    // DEPRECATED: This method used an infinite loop PowerShell script
-    // that caused process accumulation. Kept for reference only.
-    const monitorScript = `
-            $ErrorActionPreference = 'SilentlyContinue'
-            while ($true) {
-                try {
-                    $adapters = Get-NetAdapter -ErrorAction SilentlyContinue | Select-Object Name, Status, InterfaceDescription
-                    if ($adapters) {
-                        $adapters | ConvertTo-Json -Compress
-                    }
-                    Start-Sleep -Seconds 2
-                } catch {
-                    Start-Sleep -Seconds 5
-                }
-            }
-        `;
-
-    const startMonitor = (): void => {
-      try {
-        const monitor = spawn('powershell', ['-NoProfile', '-NonInteractive', '-Command', monitorScript]);
-        let lastState: string | null = null;
-        let restartTimer: ReturnType<typeof setTimeout> | null = null;
-
-        monitor.stdout.on('data', (data: Buffer) => {
-          const output = data.toString().trim();
-          if (output && (output.startsWith('[') || output.startsWith('{'))) {
-            try {
-              const adapters = JSON.parse(output);
-              const currentState = JSON.stringify(adapters);
-
-              if (lastState && lastState !== currentState) {
-                this.log.info('Network adapter change detected');
-                this.emit('network-change', {
-                  type: 'adapter-change',
-                  adapters,
-                });
-              }
-
-              lastState = currentState;
-            } catch (e: unknown) {
-              this.log.debug('JSON parsing error in adapter monitor:', errorMessage(e));
-            }
-          }
-        });
-
-        monitor.on('error', (err: Error) => {
-          this.log.error('Adapter monitor error:', err.message);
-          // Restart monitor after 10 seconds
-          if (!restartTimer) {
-            restartTimer = setTimeout(() => {
-              this.log.info('Restarting adapter monitor...');
-              startMonitor();
-            }, 10000);
-          }
-        });
-
-        monitor.on('exit', (code: number | null) => {
-          this.log.warn(`Adapter monitor exited with code ${code}`);
-          // Remove from processes array
-          const index = this.processes.indexOf(monitor);
-          if (index > -1) {
-            this.processes.splice(index, 1);
-          }
-        });
-
-        this.processes.push(monitor);
-      } catch (e: unknown) {
-        this.log.error('Failed to start adapter monitor:', errorMessage(e));
-        // Fall back to periodic polling if PowerShell spawn fails
-        this.fallbackAdapterMonitoring();
-      }
-    };
-
-    startMonitor();
-  }
-
-  fallbackAdapterMonitoring(): void {
-    this.log.info('Using fallback adapter monitoring');
-    // Implement simple periodic check as fallback
-    const checkAdapters = setInterval(() => {
-      // This will be picked up by the base network monitor's interface checking
-      this.emit('network-change', {
-        type: 'fallback-check',
-      });
-    }, 30000); // Check every 30 seconds
-
-    this.intervals.push(checkAdapters);
   }
 
   watchVPNState(): void {
@@ -695,43 +605,11 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
     };
 
     // Initial check
-    checkWiFi();
+    void checkWiFi();
 
     // Regular checks
     const interval = setInterval(checkWiFi, 3000);
     this.intervals.push(interval);
-  }
-
-  monitorNetworkEvents(): void {
-    // Monitor Windows network events using WMI
-    const eventScript = `
-            Register-WmiEvent -Query "SELECT * FROM __InstanceModificationEvent WITHIN 2 WHERE TargetInstance ISA 'Win32_NetworkAdapter'" |
-            ForEach-Object {
-                Write-Host "NETWORK_CHANGE"
-            }
-        `;
-
-    try {
-      const monitor = spawn('powershell', ['-Command', eventScript]);
-
-      monitor.stdout.on('data', (data: Buffer) => {
-        const output = data.toString().trim();
-        if (output.includes('NETWORK_CHANGE')) {
-          this.log.info('WMI network event detected');
-          this.emit('network-change', {
-            type: 'wmi-event',
-          });
-        }
-      });
-
-      monitor.on('error', (err: Error) => {
-        this.log.error('WMI monitor error:', err.message);
-      });
-
-      this.processes.push(monitor);
-    } catch (e: unknown) {
-      this.log.error('Failed to start WMI monitor:', errorMessage(e));
-    }
   }
 }
 
@@ -905,7 +783,7 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
     };
 
     // Initial check
-    checkVPN();
+    void checkVPN();
 
     // Regular checks
     const interval = setInterval(checkVPN, 2000);
@@ -966,7 +844,7 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
     };
 
     // Initial check
-    checkWiFi();
+    void checkWiFi();
 
     // Regular checks
     const interval = setInterval(checkWiFi, 3000);

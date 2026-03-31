@@ -87,34 +87,34 @@ describe('analyzeConfigFile (main config)', () => {
     const config = {
       sources: [{ sourceId: 's1', sourceType: 'invalid', sourcePath: '/api' }],
     };
-    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('Invalid file format');
+    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('Invalid source type at index 0');
   });
 
   it('throws for source missing required fields', async () => {
     const config = {
       sources: [{ sourceId: 's1' }],
     };
-    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('Invalid file format');
+    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('Invalid source at index 0: missing required fields');
   });
 
   it('throws for rules that is not an object', async () => {
     const config = { rules: 'invalid' };
-    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('Invalid file format');
+    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('rules must be an object');
   });
 
   it('throws for rules with non-array rule type', async () => {
     const config = { rules: { header: 'not-an-array' } };
-    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('Invalid file format');
+    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('rules.header must be an array');
   });
 
   it('throws for proxyRules that is not an array', async () => {
     const config = { proxyRules: 'invalid' };
-    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('Invalid file format');
+    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('proxyRules must be an array');
   });
 
   it('throws for sources that is not an array', async () => {
     const config = { sources: 'invalid' };
-    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('Invalid file format');
+    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('sources must be an array');
   });
 });
 
@@ -140,7 +140,7 @@ describe('analyzeConfigFile (env file)', () => {
       rules: { header: [] },
       environmentSchema: {},
     };
-    await expect(analyzeConfigFile(JSON.stringify(config), true)).rejects.toThrow('Invalid file format');
+    await expect(analyzeConfigFile(JSON.stringify(config), true)).rejects.toThrow('main configuration file');
   });
 
   it('rejects env file that contains sources', async () => {
@@ -148,7 +148,7 @@ describe('analyzeConfigFile (env file)', () => {
       sources: [],
       environmentSchema: {},
     };
-    await expect(analyzeConfigFile(JSON.stringify(config), true)).rejects.toThrow('Invalid file format');
+    await expect(analyzeConfigFile(JSON.stringify(config), true)).rejects.toThrow('main configuration file');
   });
 });
 
@@ -209,7 +209,7 @@ describe('validateConfigStructure (via analyzeConfigFile)', () => {
       workspace: { type: 'git', name: 'test' },
       sources: [{ sourceId: 's1', sourceType: 'http', sourcePath: '/api' }],
     };
-    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('Invalid file format');
+    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('gitUrl is required');
   });
 
   it('validates git workspace requires name', async () => {
@@ -217,31 +217,31 @@ describe('validateConfigStructure (via analyzeConfigFile)', () => {
       workspace: { type: 'git', gitUrl: 'https://example.com' },
       sources: [{ sourceId: 's1', sourceType: 'http', sourcePath: '/api' }],
     };
-    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('Invalid file format');
+    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('name is required');
   });
 
   it('validates environments must be object', async () => {
     const config = { environments: 'invalid' };
-    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('Invalid file format');
+    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('environments must be an object');
   });
 
   it('validates environmentSchema must be object', async () => {
     const config = { environmentSchema: 'invalid' };
-    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('Invalid file format');
+    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('environmentSchema must be an object');
   });
 
   it('validates dynamic proxy rule requires headerRuleId', async () => {
     const config = {
       proxyRules: [{ isDynamic: true }],
     };
-    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('Invalid file format');
+    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('dynamic rule must have a valid header rule ID');
   });
 
   it('validates static proxy rule requires headerName', async () => {
     const config = {
       proxyRules: [{ isDynamic: false, domains: ['example.com'] }],
     };
-    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('Invalid file format');
+    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('static rule must have a valid header name');
   });
 });
 

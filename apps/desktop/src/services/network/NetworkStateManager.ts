@@ -142,8 +142,10 @@ class NetworkStateManager extends EventEmitter {
 
         // Verify version hasn't changed during update
         if (this.stateVersion !== expectedVersion + 1) {
-          log.error('Concurrent state modification detected!');
-          throw new Error('State version mismatch');
+          log.error('Concurrent state modification detected! Reverting to previous state');
+          this.state = previousState;
+          this.stateVersion = expectedVersion;
+          return;
         }
 
         // Emit event with change details
@@ -231,4 +233,3 @@ class NetworkStateManager extends EventEmitter {
 const networkStateManager = new NetworkStateManager();
 
 export { NetworkStateManager, networkStateManager };
-export default networkStateManager;

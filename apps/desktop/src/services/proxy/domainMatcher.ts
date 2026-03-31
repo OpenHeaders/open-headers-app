@@ -1,5 +1,3 @@
-import url from 'node:url';
-
 /**
  * Matches a URL against domain patterns.
  *
@@ -18,9 +16,15 @@ class DomainMatcher {
   static matches(targetUrl: string | null | undefined, domainPattern: string | null | undefined): boolean {
     if (!targetUrl || !domainPattern) return false;
 
-    const parsedUrl = url.parse(targetUrl);
-    const hostname = parsedUrl.hostname || '';
-    const port = parsedUrl.port || '';
+    let hostname: string;
+    let port: string;
+    try {
+      const parsed = new URL(targetUrl);
+      hostname = parsed.hostname;
+      port = parsed.port;
+    } catch {
+      return false;
+    }
 
     // Handle full URL patterns like *://example.com/*
     if (domainPattern.includes('://')) {

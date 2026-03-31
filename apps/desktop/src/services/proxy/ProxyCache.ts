@@ -257,4 +257,3 @@ class ProxyCache {
 }
 
 export { ProxyCache };
-export default ProxyCache;

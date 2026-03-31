@@ -147,10 +147,6 @@ describe('PlatformMonitors', () => {
       expect(monitor).toBeInstanceOf(BasePlatformMonitor);
     });
 
-    it('has fallbackAdapterMonitoring method', () => {
-      const monitor = new WindowsNetworkMonitor();
-      expect(typeof monitor.fallbackAdapterMonitoring).toBe('function');
-    });
   });
 
   describe('LinuxNetworkMonitor', () => {

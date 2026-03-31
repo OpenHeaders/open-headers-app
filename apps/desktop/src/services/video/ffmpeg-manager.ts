@@ -136,22 +136,23 @@ class FFmpegManager {
     this.isDownloading = true;
     this.downloadCallbacks = [];
 
+    // Determine the correct file based on platform and architecture
+    const platform = process.platform;
+    const arch = process.arch;
+    let filename: string;
+
+    if (platform === 'darwin') {
+      filename = arch === 'arm64' ? 'ffmpeg-macos-arm64.zip' : 'ffmpeg-macos-x64.zip';
+    } else if (platform === 'win32') {
+      filename = 'ffmpeg-windows-x64.zip';
+    } else if (platform === 'linux') {
+      filename = arch === 'arm64' ? 'ffmpeg-linux-arm64.tar.gz' : 'ffmpeg-linux-x64.tar.gz';
+    } else {
+      this.isDownloading = false;
+      throw new Error(`Unsupported platform: ${platform}`);
+    }
+
     try {
-      // Determine the correct file based on platform and architecture
-      const platform = process.platform;
-      const arch = process.arch;
-      let filename: string;
-
-      if (platform === 'darwin') {
-        filename = arch === 'arm64' ? 'ffmpeg-macos-arm64.zip' : 'ffmpeg-macos-x64.zip';
-      } else if (platform === 'win32') {
-        filename = 'ffmpeg-windows-x64.zip';
-      } else if (platform === 'linux') {
-        filename = arch === 'arm64' ? 'ffmpeg-linux-arm64.tar.gz' : 'ffmpeg-linux-x64.tar.gz';
-      } else {
-        throw new Error(`Unsupported platform: ${platform}`);
-      }
-
       const url = `https://github.com/OpenHeaders/open-headers-app/releases/download/v2.12.0/${filename}`;
       log.info('Downloading FFmpeg from:', url);
 
@@ -477,4 +478,3 @@ class FFmpegManager {
 }
 
 export { FFmpegManager };
-export default FFmpegManager;

@@ -8,20 +8,20 @@ import { errorMessage } from '@openheaders/core';
 
 /**
  * Decodes a JWT token without verification
- * @param {string} token - JWT token string
- * @returns {Object} Decoded token with header and payload
+ * @param token - JWT token string
+ * @returns Decoded token with header and payload
  */
 export function decodeJWT(token: string) {
+  if (!token) {
+    throw new Error('Failed to decode JWT: Invalid token');
+  }
+
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    throw new Error('Failed to decode JWT: Invalid JWT format');
+  }
+
   try {
-    if (!token || typeof token !== 'string') {
-      throw new Error('Invalid token');
-    }
-
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      throw new Error('Invalid JWT format');
-    }
-
     // Decode header and payload
     const header = JSON.parse(atob(parts[0].replace(/-/g, '+').replace(/_/g, '/')));
     const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
@@ -38,10 +38,10 @@ export function decodeJWT(token: string) {
 
 /**
  * Encodes a JWT token from header and payload
- * @param {Object} header - JWT header object
- * @param {Object} payload - JWT payload object
- * @param {string} signature - Original signature (we can't re-sign without secret)
- * @returns {string} Encoded JWT token
+ * @param header - JWT header object
+ * @param payload - JWT payload object
+ * @param signature - Original signature (we can't re-sign without secret)
+ * @returns Encoded JWT token
  */
 export function encodeJWT(header: JsonObject, payload: JsonObject, signature = '') {
   try {
@@ -59,13 +59,17 @@ export function encodeJWT(header: JsonObject, payload: JsonObject, signature = '
 
 /**
  * Signs a JWT token with a secret key
- * @param {Object} header - JWT header object
- * @param {Object} payload - JWT payload object
- * @param {string} secret - Secret key for signing (or private key for RSA)
- * @param {string} algorithm - Algorithm to use (default: HS256)
- * @returns {Promise<string>} Signed JWT token
+ * @param header - JWT header object
+ * @param payload - JWT payload object
+ * @param secret - Secret key for signing (or private key for RSA)
+ * @param algorithm - Algorithm to use (default: HS256)
+ * @returns Signed JWT token
  */
 export async function signJWT(header: JsonObject, payload: JsonObject, secret: string, algorithm = 'HS256') {
+  if (algorithm !== 'HS256' && algorithm !== 'RS256') {
+    throw new Error(`Failed to sign JWT: Algorithm ${algorithm} not supported. Only HS256 and RS256 are currently supported.`);
+  }
+
   try {
     // Ensure algorithm in header matches
     const finalHeader = { ...header, alg: algorithm, typ: 'JWT' };
@@ -78,7 +82,7 @@ export async function signJWT(header: JsonObject, payload: JsonObject, secret: s
     const dataToSign = `${encodedHeader}.${encodedPayload}`;
 
     // Create signature based on algorithm
-    let signature = '';
+    let signature: string;
     const encoder = new TextEncoder();
 
     if (algorithm === 'HS256') {
@@ -98,7 +102,7 @@ export async function signJWT(header: JsonObject, payload: JsonObject, secret: s
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
         .replace(/=/g, '');
-    } else if (algorithm === 'RS256') {
+    } else {
       // RSA signing with SHA-256
       // Parse the PEM private key
       const pemContents = secret
@@ -133,8 +137,6 @@ export async function signJWT(header: JsonObject, payload: JsonObject, secret: s
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
         .replace(/=/g, '');
-    } else {
-      throw new Error(`Algorithm ${algorithm} not supported. Only HS256 and RS256 are currently supported.`);
     }
 
     return `${dataToSign}.${signature}`;
@@ -145,10 +147,12 @@ export async function signJWT(header: JsonObject, payload: JsonObject, secret: s
 
 /**
  * Checks if a string is a valid JWT token
- * @param {string} value - String to check
- * @returns {boolean} True if valid JWT format
+ * @param value - String to check
+ * @returns True if valid JWT format
  */
 export function isJWT(value: string) {
+  // Runtime guard: callers may pass non-string values via untyped boundaries
+  // noinspection SuspiciousTypeOfGuard
   if (!value || typeof value !== 'string') {
     return false;
   }
@@ -162,7 +166,8 @@ export function isJWT(value: string) {
   // Try to decode header and payload
   try {
     const header = JSON.parse(atob(parts[0].replace(/-/g, '+').replace(/_/g, '/')));
-    const _payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    // Validate payload is parseable
+    JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
 
     // Check if header has typical JWT fields
     return header && typeof header === 'object' && (header.alg || header.typ === 'JWT');
@@ -173,8 +178,8 @@ export function isJWT(value: string) {
 
 /**
  * Formats JSON for display
- * @param {Object} obj - Object to format
- * @returns {string} Formatted JSON string
+ * @param obj - Object to format
+ * @returns Formatted JSON string
  */
 export function formatJSON(obj: JsonObject) {
   return JSON.stringify(obj, null, 2);
@@ -182,8 +187,8 @@ export function formatJSON(obj: JsonObject) {
 
 /**
  * Validates JWT structure after editing
- * @param {string} jsonString - JSON string to validate
- * @returns {Object} Parsed JSON or throws error
+ * @param jsonString - JSON string to validate
+ * @returns Parsed JSON or throws error
  */
 export function validateJSON(jsonString: string) {
   try {
@@ -195,8 +200,8 @@ export function validateJSON(jsonString: string) {
 
 /**
  * Gets JWT expiration status
- * @param {Object} payload - JWT payload
- * @returns {Object} Expiration info
+ * @param payload - JWT payload
+ * @returns Expiration info
  */
 export function getJWTExpiration(payload: JsonObject) {
   if (!payload?.exp) {

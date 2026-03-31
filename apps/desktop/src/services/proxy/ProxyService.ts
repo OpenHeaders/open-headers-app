@@ -4,14 +4,12 @@ import http from 'node:http';
 import https from 'node:https';
 import type net from 'node:net';
 import tls from 'node:tls';
-import url from 'node:url';
 import type { HeaderRule, Source } from '@openheaders/core';
 import { errorMessage } from '@openheaders/core';
 import mainLogger from '@/utils/mainLogger';
 import { DomainMatcher } from './domainMatcher';
 import { ProxyCache } from './ProxyCache';
-import type { ProxyRule } from './ProxyRuleStore';
-import { ProxyRuleStore } from './ProxyRuleStore';
+import { type ProxyRule, ProxyRuleStore } from './ProxyRuleStore';
 
 const { createLogger } = mainLogger;
 
@@ -253,7 +251,7 @@ class ProxyService extends EventEmitter {
 
   doProxy(req: http.IncomingMessage, res: http.ServerResponse, targetUrl: string): void {
     const requestId = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-    const parsedUrl = url.parse(targetUrl);
+    const parsedUrl = new URL(targetUrl);
     const rules = this.getApplicableRules(targetUrl);
 
     const proxyHeaders: Record<string, string | string[] | undefined> = { ...req.headers };
@@ -286,7 +284,7 @@ class ProxyService extends EventEmitter {
       {
         hostname: parsedUrl.hostname,
         port: parsedUrl.port,
-        path: parsedUrl.path,
+        path: parsedUrl.pathname + parsedUrl.search,
         method: req.method,
         headers: proxyHeaders,
         agent: parsedUrl.protocol === 'https:' ? this.httpsAgent || undefined : undefined,
@@ -351,8 +349,8 @@ class ProxyService extends EventEmitter {
           }
         });
 
-        const redirectUrl = url.resolve(targetUrl, locationUrl);
-        const parsedRedirectUrl = url.parse(redirectUrl);
+        const redirectUrl = new URL(locationUrl, targetUrl).href;
+        const parsedRedirectUrl = new URL(redirectUrl);
         proxyHeaders.host = parsedRedirectUrl.host || undefined;
 
         const redirectProtocol = parsedRedirectUrl.protocol === 'https:' ? https : http;
@@ -361,7 +359,7 @@ class ProxyService extends EventEmitter {
           {
             hostname: parsedRedirectUrl.hostname,
             port: parsedRedirectUrl.port,
-            path: parsedRedirectUrl.path,
+            path: parsedRedirectUrl.pathname + parsedRedirectUrl.search,
             method: 'GET',
             headers: proxyHeaders,
             agent: parsedRedirectUrl.protocol === 'https:' ? this.httpsAgent || undefined : undefined,
@@ -573,7 +571,7 @@ class ProxyService extends EventEmitter {
       return sourceValue || value || '';
     }
 
-    if (!value || typeof value !== 'string') return value || '';
+    if (!value) return value || '';
 
     const sourceMatch = value.match(/^__source_(\d+)$/);
     if (sourceMatch) {
@@ -586,6 +584,7 @@ class ProxyService extends EventEmitter {
   }
 
   resolveEnvironmentVariables(template: string): string {
+    // noinspection SuspiciousTypeOfGuard
     if (!template || typeof template !== 'string') return template;
 
     return template.replace(/\{\{([^}]+)}}/g, (match: string, varName: string) => {
