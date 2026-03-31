@@ -95,8 +95,7 @@ const ImportFileSelector: React.FC<ImportFileSelectorProps> = ({
                   title={`Selected: ${fileData.file.name}`}
                   type="success"
                   showIcon
-                  closable
-                  onClose={onFileRemove}
+                  closable={{ onClose: onFileRemove }}
                   style={{ marginTop: 16 }}
                 />
               )}
@@ -157,8 +156,7 @@ const ImportFileSelector: React.FC<ImportFileSelectorProps> = ({
                     title={`Selected: ${fileData.file.name}`}
                     type="success"
                     showIcon
-                    closable
-                    onClose={onFileRemove}
+                    closable={{ onClose: onFileRemove }}
                     style={{ marginTop: 8 }}
                   />
                 )}
@@ -197,8 +195,7 @@ const ImportFileSelector: React.FC<ImportFileSelectorProps> = ({
                     title="Environment file loaded"
                     type="success"
                     showIcon
-                    closable
-                    onClose={onEnvFileRemove}
+                    closable={{ onClose: onEnvFileRemove }}
                     style={{ marginTop: 8 }}
                   />
                 )}

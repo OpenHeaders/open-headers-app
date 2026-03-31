@@ -71,7 +71,7 @@ const EnvironmentShareModal = ({ visible, environmentName, environmentData, onCl
   // Generate invite links when modal opens
   React.useEffect(() => {
     if (visible && environmentName && environmentData) {
-      generateEnvironmentLink(false);
+      void generateEnvironmentLink(false);
     }
   }, [visible, environmentName, environmentData, generateEnvironmentLink]);
 
@@ -91,7 +91,7 @@ const EnvironmentShareModal = ({ visible, environmentName, environmentData, onCl
 
   const handleCopyLink = () => {
     copyToClipboard(appLink);
-    message.success('Link copied to clipboard');
+    void message.success('Link copied to clipboard');
   };
 
   if (!environmentName || !environmentData) return null;

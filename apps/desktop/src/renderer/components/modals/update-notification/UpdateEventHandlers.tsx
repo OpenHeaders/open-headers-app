@@ -1,3 +1,4 @@
+import type { RefObject } from 'react';
 import timeManager from '@/renderer/services/TimeManager';
 
 /**
@@ -23,6 +24,15 @@ import timeManager from '@/renderer/services/TimeManager';
  *  params.MIN_CHECK_DISPLAY_TIME - Minimum notification display time
  *  Event handlers and cleanup function
  */
+export interface UpdateStateSetters {
+  setManualCheckInProgress: (v: boolean) => void;
+  setUpdateInfo: (info: unknown) => void;
+  setIsDownloading: (v: boolean) => void;
+  setDownloadProgress: (v: number) => void;
+  setUpdateDownloaded: (v: boolean) => void;
+  setIsInstalling: (v: boolean) => void;
+}
+
 interface UpdateEventHandlersParams {
   notificationManager: {
     clearNotification: (key: string) => void;
@@ -36,20 +46,13 @@ interface UpdateEventHandlersParams {
     NOTIFICATION_KEYS: Record<string, string>;
   };
   state: { isDownloading: boolean; manualCheckInProgress: boolean; updateDownloaded: boolean };
-  setState: {
-    setManualCheckInProgress: (v: boolean) => void;
-    setUpdateInfo: (info: unknown) => void;
-    setIsDownloading: (v: boolean) => void;
-    setDownloadProgress: (v: number) => void;
-    setUpdateDownloaded: (v: boolean) => void;
-    setIsInstalling: (v: boolean) => void;
-  };
+  setState: UpdateStateSetters;
   refs: {
-    checkingNotificationRef: React.MutableRefObject<boolean>;
-    inSilentCheckModeRef: React.MutableRefObject<boolean>;
-    pendingNotificationRef: React.MutableRefObject<boolean>;
-    checkStartTimeRef: React.MutableRefObject<number>;
-    handlingAlreadyDownloadedRef: React.MutableRefObject<boolean>;
+    checkingNotificationRef: RefObject<boolean>;
+    inSilentCheckModeRef: RefObject<boolean>;
+    pendingNotificationRef: RefObject<boolean>;
+    checkStartTimeRef: RefObject<number>;
+    handlingAlreadyDownloadedRef: RefObject<boolean>;
   };
   debugLog: (message: string) => void;
   MIN_CHECK_DISPLAY_TIME: number;
@@ -323,7 +326,7 @@ export const createUpdateEventHandlers = ({
     const unsubscribeProgress = window.electronAPI.onUpdateProgress((data) => handleUpdateProgress(data));
     const unsubscribeDownloaded = window.electronAPI.onUpdateDownloaded((data) => handleUpdateDownloaded(data));
     const unsubscribeError = window.electronAPI.onUpdateError((data) =>
-      handleUpdateError(typeof data === 'string' ? data : String(data?.message ?? '')),
+      handleUpdateError(data?.message ?? ''),
     );
     const unsubscribeNotAvailable = window.electronAPI.onUpdateNotAvailable(handleUpdateNotAvailable);
 

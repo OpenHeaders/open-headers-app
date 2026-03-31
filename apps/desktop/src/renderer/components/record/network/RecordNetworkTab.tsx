@@ -91,14 +91,8 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
     if (!isBodyFilterActive) return data;
 
     return data.filter((req: NetworkRecord) => {
-      const hasRequestBody =
-        req.requestBody &&
-        (typeof req.requestBody === 'string' ? req.requestBody.trim() !== '' : Object.keys(req.requestBody).length > 0);
-      const hasResponseBody =
-        req.responseBody &&
-        (typeof req.responseBody === 'string'
-          ? req.responseBody.trim() !== ''
-          : Object.keys(req.responseBody).length > 0);
+      const hasRequestBody = req.requestBody && req.requestBody.trim() !== '';
+      const hasResponseBody = req.responseBody && req.responseBody.trim() !== '';
 
       if (bodyFilters.hasRequestBody && bodyFilters.hasResponseBody) {
         return hasRequestBody && hasResponseBody;
@@ -135,20 +129,12 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
 
     // Add request body
     if (networkRecord.requestBody) {
-      const bodyStr =
-        typeof networkRecord.requestBody === 'string'
-          ? networkRecord.requestBody
-          : JSON.stringify(networkRecord.requestBody);
-      searchableFields.push(bodyStr.toLowerCase());
+      searchableFields.push(networkRecord.requestBody.toLowerCase());
     }
 
     // Add response body
     if (networkRecord.responseBody) {
-      const bodyStr =
-        typeof networkRecord.responseBody === 'string'
-          ? networkRecord.responseBody
-          : JSON.stringify(networkRecord.responseBody);
-      searchableFields.push(bodyStr.toLowerCase());
+      searchableFields.push(networkRecord.responseBody.toLowerCase());
     }
 
     return searchableFields;

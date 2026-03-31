@@ -11,10 +11,9 @@
  */
 
 import { FilterOutlined } from '@ant-design/icons';
-import type { MenuProps } from 'antd';
-import { Button, Checkbox, Dropdown, Tooltip } from 'antd';
+import { type MenuProps, Button, Checkbox, Dropdown, Tooltip } from 'antd';
 import { useMemo } from 'react';
-import type { GlobalToken } from './types';
+import type { GlobalToken } from 'antd';
 
 interface BodyFilters {
   hasRequestBody: boolean;

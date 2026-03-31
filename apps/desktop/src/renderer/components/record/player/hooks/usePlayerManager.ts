@@ -333,15 +333,13 @@ export const usePlayerManager = (
                   if (event.type === 3 && event.data?.source === 0) {
                     // DOM mutation
                     if (event.data.adds) {
-                      event.data.adds = event.data.adds.filter((add) => {
-                        if (
-                          add.node?.tagName === 'script' &&
-                          add.node?.textContent?.includes('Blocked script execution')
-                        ) {
-                          return false;
-                        }
-                        return true;
-                      });
+                      event.data.adds = event.data.adds.filter(
+                        (add) =>
+                          !(
+                            add.node?.tagName === 'script' &&
+                            add.node?.textContent?.includes('Blocked script execution')
+                          ),
+                      );
                     }
                   }
 

@@ -1,6 +1,6 @@
 import { App } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
-import { useSettings, useSources, useWorkspaces } from '@/renderer/contexts';
+import { useSettings, useSources } from '@/renderer/contexts';
 import { useHeaderRules } from '@/renderer/hooks/useCentralizedWorkspace';
 import type { CacheEntry, CacheStats, ProxyRule } from '@/types/proxy';
 
@@ -17,14 +17,13 @@ import type { CacheEntry, CacheStats, ProxyRule } from '@/types/proxy';
  * - Event-driven updates and synchronization
  * - Integration with workspace and settings contexts
  *
- * @returns {Object} Proxy server state and management functions
+ * @returns Proxy server state and management functions
  */
 export const useProxyServer = () => {
   const { message } = App.useApp();
 
   // Context dependencies
   const { sources } = useSources();
-  const { activeWorkspaceId: _activeWorkspaceId } = useWorkspaces();
   const { settings, saveSettings } = useSettings();
 
   // Header rules from WorkspaceStateService (via IPC state patches)

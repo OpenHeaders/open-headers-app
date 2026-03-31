@@ -181,11 +181,9 @@ const TeamWorkspaceAcceptInviteModal = ({
     if (!window.electronAPI?.workspaceState) return;
 
     // Close modal when workspace switch starts (via IPC from main process)
-    const cleanup = window.electronAPI.workspaceState.onSwitchProgress(() => {
+    return window.electronAPI.workspaceState.onSwitchProgress(() => {
       onCancel();
     });
-
-    return cleanup;
   }, [onCancel]);
 
   const checkGitStatus = useCallback(async () => {

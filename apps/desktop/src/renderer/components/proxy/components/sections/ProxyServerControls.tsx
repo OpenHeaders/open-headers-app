@@ -94,7 +94,7 @@ const ProxyServerControls = ({
           </Space>
         </div>
 
-        {tutorialMode !== false && (
+        {tutorialMode && (
           <Alert
             style={{ marginTop: '16px' }}
             title="About Proxy Server"

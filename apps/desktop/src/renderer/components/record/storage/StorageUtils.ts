@@ -7,11 +7,11 @@
 
 /**
  * Get color for storage action type
- * @param {string} action - Storage action ('set', 'remove', 'clear')
- * @returns {string} Ant Design color name
+ * @param action - Storage action ('set', 'remove', 'clear')
+ * @returns Ant Design color name
  */
 export const getActionColor = (action: string) => {
-  if (!action || typeof action !== 'string') {
+  if (!action) {
     return 'default';
   }
 
@@ -29,11 +29,11 @@ export const getActionColor = (action: string) => {
 
 /**
  * Get color for storage type
- * @param {string} type - Storage type ('localStorage', 'sessionStorage', 'cookie')
- * @returns {string} Ant Design color name
+ * @param type - Storage type ('localStorage', 'sessionStorage', 'cookie')
+ * @returns Ant Design color name
  */
 export const getTypeColor = (type: string) => {
-  if (!type || typeof type !== 'string') {
+  if (!type) {
     return 'default';
   }
 
@@ -51,8 +51,8 @@ export const getTypeColor = (type: string) => {
 
 /**
  * Format storage value for display
- * @param {any} value - Storage value to format
- * @returns {string} Formatted value string
+ * @param value - Storage value to format
+ * @returns Formatted value string
  */
 export const formatValue = (value: unknown) => {
   if (value === null || value === undefined) return '';
@@ -74,8 +74,8 @@ export const formatValue = (value: unknown) => {
 
 /**
  * Get tooltip text for storage action
- * @param {string} action - Storage action
- * @returns {string} Tooltip description
+ * @param action - Storage action
+ * @returns Tooltip description
  */
 export const getActionTooltip = (action: string) => {
   const tooltips = {
@@ -88,8 +88,8 @@ export const getActionTooltip = (action: string) => {
 
 /**
  * Get tooltip text for storage type
- * @param {string} type - Storage type
- * @returns {string} Tooltip description
+ * @param type - Storage type
+ * @returns Tooltip description
  */
 export const getTypeTooltip = (type: string) => {
   const tooltips = {

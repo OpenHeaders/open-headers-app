@@ -133,7 +133,7 @@ const SearchOverlay = ({
    * Handle keyboard events in the search input
    *  e - The keyboard event
    */
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       onClose();
     }
@@ -154,7 +154,7 @@ const SearchOverlay = ({
           placeholder={placeholder}
           value={localSearchValue}
           onChange={handleInputChange}
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyDown}
           autoFocus
           aria-label={`Search input: ${placeholder}`}
           role="searchbox"

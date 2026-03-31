@@ -11,8 +11,8 @@
  * Converts byte values to human-readable format with appropriate units.
  * Used for displaying cache sizes and memory usage.
  *
- * @param {number} bytes - Number of bytes to format
- * @returns {string} Formatted string with units (B, KB, MB, GB)
+ * @param bytes - Number of bytes to format
+ * @returns Formatted string with units (B, KB, MB, GB)
  */
 export const formatBytes = (bytes: number) => {
   if (bytes === 0) return '0 B';
@@ -28,8 +28,8 @@ export const formatBytes = (bytes: number) => {
  * Shows first 10 and last 10 characters for values longer than 23 chars.
  * Used in table displays to prevent layout issues with long values.
  *
- * @param {string} value - Header value to truncate
- * @returns {string} Truncated value with ellipsis
+ * @param value - Header value to truncate
+ * @returns Truncated value with ellipsis
  */
 export const truncateValue = (value: string) => {
   if (!value) return '';
@@ -43,9 +43,9 @@ export const truncateValue = (value: string) => {
  * Truncates domain names that are too long for table display.
  * Maintains readability while preventing layout overflow.
  *
- * @param {string} domain - Domain name to truncate
- * @param {number} maxLength - Maximum length before truncation (default: 18)
- * @returns {string} Truncated domain with ellipsis if needed
+ * @param domain - Domain name to truncate
+ * @param maxLength - Maximum length before truncation (default: 18)
+ * @returns Truncated domain with ellipsis if needed
  */
 export const truncateDomain = (domain: string, maxLength = 18) => {
   if (!domain) return '';

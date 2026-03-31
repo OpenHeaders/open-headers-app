@@ -48,7 +48,7 @@ const NetworkTimingTab = ({ request, record, token }: NetworkTimingTabProps) => 
       <div style={{ display: 'flex', marginBottom: '4px' }}>
         <Text style={{ width: '140px', fontSize: '12px', color: token.colorTextTertiary }}>{label}:</Text>
         <Text style={{ fontSize: '12px' }}>
-          {typeof value === 'number' ? value.toFixed(2) : value} {unit}
+          {value.toFixed(2)} {unit}
         </Text>
       </div>
     );

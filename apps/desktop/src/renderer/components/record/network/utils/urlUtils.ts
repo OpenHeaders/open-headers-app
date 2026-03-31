@@ -8,9 +8,9 @@
  * Extract display name from URL for better readability
  * Handles numeric paths and provides fallbacks for better UX
  *
- * @param {string} url - The full URL
- * @param {string} fallback - Fallback text when URL parsing fails
- * @returns {string} Shortened display name
+ * @param url - The full URL
+ * @param fallback - Fallback text when URL parsing fails
+ * @returns Shortened display name
  */
 export const getDisplayName = (url: string, fallback = 'Request Details') => {
   if (!url) return fallback;

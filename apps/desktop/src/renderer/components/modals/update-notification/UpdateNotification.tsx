@@ -1,11 +1,8 @@
 import { App, theme } from 'antd';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import timeManager from '@/renderer/services/TimeManager';
-import { createLogger } from '@/renderer/utils/error-handling/logger';
-import { createUpdateEventHandlers } from './UpdateEventHandlers';
+import { createUpdateEventHandlers, type UpdateStateSetters } from './UpdateEventHandlers';
 import { UpdateNotificationManager } from './UpdateNotificationManager';
-
-const _log = createLogger('UpdateNotification');
 
 /**
  * UpdateNotification component for handling application updates
@@ -89,14 +86,13 @@ const UpdateNotification = forwardRef((_props, ref) => {
     lastCheckTime,
   };
 
-  const setState = {
-    setUpdateDownloaded: (v: boolean) => setUpdateDownloaded(v),
-    setDownloadProgress: (v: number) => setDownloadProgress(v),
-    setIsDownloading: (v: boolean) => setIsDownloading(v),
-    setUpdateInfo: (info: unknown) => setUpdateInfo(info),
-    setManualCheckInProgress: (v: boolean) => setManualCheckInProgress(v),
-    setIsInstalling: (v: boolean) => setIsInstalling(v),
-    setLastCheckTime: (v: number) => setLastCheckTime(v),
+  const setState: UpdateStateSetters = {
+    setUpdateDownloaded,
+    setDownloadProgress,
+    setIsDownloading,
+    setUpdateInfo,
+    setManualCheckInProgress,
+    setIsInstalling,
   };
 
   const refs = {

@@ -5,10 +5,9 @@
  * used across different record tab components
  */
 
-import { CopyOutlined, EyeOutlined, SearchOutlined } from '@ant-design/icons';
+import { CopyOutlined, EyeOutlined } from '@ant-design/icons';
 import { Button, Tooltip } from 'antd';
 import type { ColumnType, TableProps } from 'antd/es/table';
-import type { GlobalToken } from 'antd/es/theme/interface';
 import type React from 'react';
 
 interface MessageApi {
@@ -35,46 +34,6 @@ export const createTimestampColumn = (timestampRenderer: (value: number) => Reac
   defaultSortOrder: 'ascend' as const,
   render: timestampRenderer,
 });
-
-/**
- * Create a search-enabled column header with search button
- *  title - Column title
- *  isSearchActive - Whether search is currently active
- *  onSearchToggle - Handler for search toggle
- *  searchTooltip - Tooltip text for search button
- *  token - Ant Design theme token
- *  Column header with search button
- */
-export const createSearchableColumnHeader = (
-  title: string,
-  isSearchActive: boolean,
-  onSearchToggle: () => void,
-  searchTooltip = 'Search',
-  token: GlobalToken,
-) => {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-      <span>{title}</span>
-      <Tooltip title={searchTooltip}>
-        <Button
-          type="text"
-          size="small"
-          icon={<SearchOutlined />}
-          onClick={(e) => {
-            e.stopPropagation();
-            onSearchToggle();
-          }}
-          style={{
-            minWidth: 'auto',
-            padding: '0 4px',
-            height: '20px',
-            color: isSearchActive ? token.colorPrimary : token.colorTextSecondary,
-          }}
-        />
-      </Tooltip>
-    </div>
-  );
-};
 
 /**
  * Create standard table props with common configurations
@@ -153,19 +112,4 @@ export const createViewButton = (onClick: () => void, tooltip = 'View details') 
   );
 };
 
-/**
- * Format data for table by adding keys and sorting
- *  data - Raw data array
- *  sortField - Field to sort by (default: 'timestamp')
- *  keyField - Field to use as React key (default: index)
- *  Formatted data with keys
- */
-export const formatTableData = (data: TableRecord[]) => {
-  return data
-    .slice()
-    .sort((a, b) => a.timestamp - b.timestamp)
-    .map((item, index) => ({
-      ...item,
-      key: index,
-    }));
-};
+

@@ -36,7 +36,7 @@ const DeveloperSettings = ({ formValues, screenRecordingPermission, onChange }: 
   );
 
   const handleOpenPath = (pathKey: string) => {
-    window.electronAPI.openAppPath(pathKey);
+    void window.electronAPI.openAppPath(pathKey);
   };
 
   return (

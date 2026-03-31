@@ -103,7 +103,7 @@ const DomainsColumnContent = ({ record, headerRules }: { record: ProxyRule; head
   const envContext = useEnvironments();
 
   let domains: string[] | undefined;
-  let hasEnvVars = false;
+  let hasEnvVars: boolean;
 
   if (record.headerRuleId) {
     // For header rule references, show the domains from the referenced rule
@@ -246,8 +246,8 @@ const HeaderColumnContent = ({
 
   // Resolve header value
   let displayValue: string | undefined = headerInfo.value;
-  let resolvedFullValue = '';
-  let sourceValue = '';
+  let resolvedFullValue: string;
+  let sourceValue: string;
 
   if (headerInfo.isDynamic && headerInfo.sourceId) {
     // For dynamic values, get the source content
@@ -318,7 +318,7 @@ export const createHeaderColumn = (sources: ProxySource[], headerRules: HeaderRu
 const TypeColumnContent = ({ record, headerRules }: { record: ProxyRule; headerRules: HeaderRule[] }) => {
   const { isWaiting, missingVars } = useProxyRuleActivation(record, headerRules);
 
-  let hasEnvVars = false;
+  let hasEnvVars: boolean;
   if (record.headerRuleId) {
     const headerRule = getHeaderRuleInfo(record.headerRuleId, headerRules);
     hasEnvVars = headerRule?.hasEnvVars ?? false;

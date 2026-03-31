@@ -5,10 +5,10 @@
 /**
  * Calculates viewport scale for player container
  *
- * @param {Object} viewport - Viewport dimensions {width, height}
- * @param {number} containerWidth - Container width
- * @param {number} containerHeight - Container height
- * @returns {number} Scale factor
+ * @param viewport - Viewport dimensions {width, height}
+ * @param containerWidth - Container width
+ * @param containerHeight - Container height
+ * @returns Scale factor
  */
 export const calculateViewportScale = (
   viewport: { width: number; height: number },

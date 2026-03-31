@@ -2,8 +2,8 @@
  * Custom hook for managing search and filter functionality in record tables
  * Provides consistent search/filter behavior across different record tabs
  *
- * @param {string} defaultSearchValue - Initial search value
- * @returns {Object} Search and filter state and handlers
+ * @param defaultSearchValue - Initial search value
+ * @returns Search and filter state and handlers
  */
 
 import type React from 'react';
@@ -38,7 +38,7 @@ export const useSearchFilter = (defaultSearchValue = '') => {
 
   /**
    * Update search value
-   * @param {string} value - New search value
+   * @param value - New search value
    */
   const updateSearchValue = (value: string) => {
     setSearchValue(value);
@@ -53,8 +53,8 @@ export const useSearchFilter = (defaultSearchValue = '') => {
 
   /**
    * Create filter function for table columns
-   * @param {Function} searchableFieldsExtractor - Function to extract searchable fields from record
-   * @returns {Function} Filter function for table
+   * @param searchableFieldsExtractor - Function to extract searchable fields from record
+   * @returns Filter function for table
    */
   const createFilterFunction = <T>(searchableFieldsExtractor: (record: T) => string[]) => {
     return (value: boolean | React.Key, record: T) => {

@@ -87,10 +87,10 @@ const formatHotkeyForDisplay = (hotkey: string | undefined): string[] => {
   if (!hotkey) return [];
 
   // Detect platform
-  const isMac = navigator?.platform?.toLowerCase().includes('mac') || window?.electronAPI?.platform === 'darwin';
+  const isMac = navigator?.userAgent?.includes('Mac') || window?.electronAPI?.platform === 'darwin';
 
   // Split the hotkey and replace CommandOrControl
-  const parts = hotkey.split('+').map((part: string) => {
+  return hotkey.split('+').map((part: string) => {
     const trimmed = part.trim();
     if (trimmed === 'CommandOrControl') {
       return isMac ? 'Cmd' : 'Ctrl';
@@ -99,8 +99,6 @@ const formatHotkeyForDisplay = (hotkey: string | undefined): string[] => {
     if (trimmed === 'Control') return 'Ctrl';
     return trimmed;
   });
-
-  return parts;
 };
 
 /**
@@ -152,7 +150,7 @@ const HotkeyInput = forwardRef(({ value, onChange, disabled }: HotkeyInputProps,
   const [capturedHotkey, setCapturedHotkey] = useState('');
   const [error, setError] = useState('');
   const inputRef = useRef<HTMLDivElement | null>(null);
-  const isMac = navigator?.platform?.toLowerCase().includes('mac') || window?.electronAPI?.platform === 'darwin';
+  const isMac = navigator?.userAgent?.includes('Mac') || window?.electronAPI?.platform === 'darwin';
 
   const handleEdit = useCallback(async () => {
     // Temporarily disable the global hotkey while editing
@@ -171,7 +169,7 @@ const HotkeyInput = forwardRef(({ value, onChange, disabled }: HotkeyInputProps,
     () => ({
       triggerEdit: () => {
         if (!disabled && !isEditing) {
-          handleEdit();
+          void handleEdit();
         }
       },
     }),
@@ -264,13 +262,13 @@ const HotkeyInput = forwardRef(({ value, onChange, disabled }: HotkeyInputProps,
 
     // Handle Escape to cancel (but don't prevent default for Escape)
     if (key === 'Escape') {
-      handleCancel();
+      void handleCancel();
       return;
     }
 
     // Handle Enter to save (if valid)
     if (key === 'Enter' && capturedHotkey && !error) {
-      handleSave();
+      void handleSave();
     }
   };
 

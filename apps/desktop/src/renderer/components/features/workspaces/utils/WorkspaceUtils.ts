@@ -31,8 +31,8 @@ export interface WorkspaceFormValues {
 
 /**
  * Gets relative time string from a date
- * @param {Date} date - The date to calculate relative time from
- * @returns {string} Human-readable relative time string
+ * @param date - The date to calculate relative time from
+ * @returns Human-readable relative time string
  */
 export const getTimeAgo = (date: Date) => {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -48,8 +48,8 @@ export const getTimeAgo = (date: Date) => {
 
 /**
  * Extracts repository name from a Git URL
- * @param {string} url - The Git repository URL
- * @returns {string} Repository name
+ * @param url - The Git repository URL
+ * @returns Repository name
  */
 export const extractRepoName = (url: string) => {
   if (!url) return '';
@@ -58,8 +58,8 @@ export const extractRepoName = (url: string) => {
 
 /**
  * Determines the appropriate icon for a Git provider based on URL
- * @param {string} url - The Git repository URL
- * @returns {string} Icon component name
+ * @param url - The Git repository URL
+ * @returns Icon component name
  */
 export const getProviderIcon = (url: string) => {
   if (!url) return PROVIDER_ICONS.generic;
@@ -79,17 +79,17 @@ export const getProviderIcon = (url: string) => {
 
 /**
  * Prepares authentication data based on form values and auth type
- * @param {Object} values - Form values containing authentication fields
- * @param {string} values.gitToken - Git personal access token (for TOKEN auth)
- * @param {string} values.gitUsername - Git username (for BASIC auth)
- * @param {string} values.gitPassword - Git password (for BASIC auth)
- * @param {string} values.tokenType - Token type for TOKEN auth
- * @param {string} values.sshKeySource - SSH key source ('file' or 'text')
- * @param {string} values.sshKeyPath - Path to SSH key file
- * @param {string} values.sshKey - SSH key content
- * @param {string} values.sshPassphrase - SSH key passphrase
- * @param {string} authType - Selected authentication type
- * @returns {Object} Prepared authentication data
+ * @param values - Form values containing authentication fields
+ * @param values.gitToken - Git personal access token (for TOKEN auth)
+ * @param values.gitUsername - Git username (for BASIC auth)
+ * @param values.gitPassword - Git password (for BASIC auth)
+ * @param values.tokenType - Token type for TOKEN auth
+ * @param values.sshKeySource - SSH key source ('file' or 'text')
+ * @param values.sshKeyPath - Path to SSH key file
+ * @param values.sshKey - SSH key content
+ * @param values.sshPassphrase - SSH key passphrase
+ * @param authType - Selected authentication type
+ * @returns Prepared authentication data
  */
 export const prepareAuthData = async (values: WorkspaceFormValues, authType: string): Promise<WorkspaceAuthData> => {
   switch (authType) {
@@ -130,15 +130,15 @@ export const prepareAuthData = async (values: WorkspaceFormValues, authType: str
 
 /**
  * Prepares workspace object for saving, removing sensitive form fields
- * @param {Object} values - Form values containing workspace configuration
- * @param {string} values.name - Workspace name
- * @param {string} values.gitUrl - Git repository URL
- * @param {string} values.gitBranch - Git branch
- * @param {string} values.gitPath - Path to config file in repository
- * @param {string} values.authType - Authentication type
- * @param {Object} editingWorkspace - Existing workspace being edited (if any)
- * @param {Object} authData - Prepared authentication data
- * @returns {Object} Prepared workspace object with sensitive fields removed
+ * @param values - Form values containing workspace configuration
+ * @param values.name - Workspace name
+ * @param values.gitUrl - Git repository URL
+ * @param values.gitBranch - Git branch
+ * @param values.gitPath - Path to config file in repository
+ * @param values.authType - Authentication type
+ * @param editingWorkspace - Existing workspace being edited (if any)
+ * @param authData - Prepared authentication data
+ * @returns Prepared workspace object with sensitive fields removed
  */
 export const prepareWorkspaceData = (
   values: WorkspaceFormValues,
@@ -168,8 +168,8 @@ export const prepareWorkspaceData = (
 
 /**
  * Formats validation details for display
- * @param {Object} validationDetails - Validation details from API
- * @returns {string[]} Array of formatted validation items
+ * @param validationDetails - Validation details from API
+ * @returns Array of formatted validation items
  */
 export const formatValidationDetails = (validationDetails: {
   sourceCount: number;

@@ -33,13 +33,11 @@ const NetworkResponseTab = ({ request, token }: NetworkResponseTabProps) => {
   const contentType = request.responseHeaders?.['content-type'] || '';
 
   try {
-    if (contentType.includes('json') || typeof request.responseBody === 'object') {
-      const jsonData =
-        typeof request.responseBody === 'string' ? JSON.parse(request.responseBody) : request.responseBody;
+    if (contentType.includes('json')) {
+      const jsonData = JSON.parse(request.responseBody);
       formattedResponse = JSON.stringify(jsonData, null, 2);
     } else {
-      formattedResponse =
-        typeof request.responseBody === 'string' ? request.responseBody : JSON.stringify(request.responseBody, null, 2);
+      formattedResponse = request.responseBody;
     }
   } catch (_e) {
     formattedResponse = String(request.responseBody);

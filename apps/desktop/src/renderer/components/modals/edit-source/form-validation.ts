@@ -24,7 +24,7 @@ interface FormInstance {
  * Validates environment variables in a value string
  */
 const validateEnvironmentVariables = (value: string, envContext: FormEnvContext): Promise<void> => {
-  if (!value || typeof value !== 'string') return Promise.resolve();
+  if (!value) return Promise.resolve();
 
   // Skip validation if environments aren't ready yet
   if (!envContext.environmentsReady) {
@@ -63,12 +63,12 @@ const validateEnvironmentVariables = (value: string, envContext: FormEnvContext)
 
 /**
  * Validates TOTP code placeholders in a value string
- * @param {string} value - The value to validate
- * @param {Object} form - Ant Design form instance
- * @returns {Promise<void>} - Resolves if valid, rejects with error message if invalid
+ * @param value - The value to validate
+ * @param form - Ant Design form instance
+ * @returns - Resolves if valid, rejects with error message if invalid
  */
 const validateTotpCodePlaceholder = (value: string, form: FormInstance): Promise<void> => {
-  if (!value || typeof value !== 'string') return Promise.resolve();
+  if (!value) return Promise.resolve();
 
   // Check for TOTP code pattern [[TOTP_CODE]]
   if (value.includes('[[TOTP_CODE]]')) {
@@ -90,10 +90,10 @@ const validateTotpCodePlaceholder = (value: string, form: FormInstance): Promise
 
 /**
  * Validates headers for environment variables and TOTP codes
- * @param {Array} headers - Array of header objects
- * @param {Object} envContext - Environment context for variable validation
- * @param {string} fieldName - Name of the field being validated (for error messages)
- * @returns {Promise<void>} - Resolves if valid, rejects with error message if invalid
+ * @param headers - Array of header objects
+ * @param envContext - Environment context for variable validation
+ * @param fieldName - Name of the field being validated (for error messages)
+ * @returns - Resolves if valid, rejects with error message if invalid
  */
 const validateHeadersForVariables = (
   headers: Partial<SourceHeader>[] | null | undefined,
@@ -138,9 +138,9 @@ const validateHeadersForVariables = (
 
 /**
  * Validates query parameters for environment variables
- * @param {Array} queryParams - Array of query parameter objects
- * @param {Object} envContext - Environment context for variable validation
- * @returns {Promise<void>} - Resolves if valid, rejects with error message if invalid
+ * @param queryParams - Array of query parameter objects
+ * @param envContext - Environment context for variable validation
+ * @returns - Resolves if valid, rejects with error message if invalid
  */
 const validateQueryParamsForVariables = (
   queryParams: Partial<SourceQueryParam>[] | null | undefined,
@@ -175,9 +175,9 @@ const validateQueryParamsForVariables = (
 
 /**
  * Validates request body for environment variables
- * @param {string} body - Request body content
- * @param {Object} envContext - Environment context for variable validation
- * @returns {Promise<void>} - Resolves if valid, rejects with error message if invalid
+ * @param body - Request body content
+ * @param envContext - Environment context for variable validation
+ * @returns - Resolves if valid, rejects with error message if invalid
  */
 const validateBodyForVariables = (body: string | null | undefined, envContext: FormEnvContext): Promise<void> => {
   if (!body) return Promise.resolve();
@@ -204,9 +204,9 @@ const validateBodyForVariables = (body: string | null | undefined, envContext: F
 
 /**
  * Validates JSON filter path for environment variables
- * @param {Object} jsonFilter - JSON filter object with enabled and path properties
- * @param {Object} envContext - Environment context for variable validation
- * @returns {Promise<void>} - Resolves if valid, rejects with error message if invalid
+ * @param jsonFilter - JSON filter object with enabled and path properties
+ * @param envContext - Environment context for variable validation
+ * @returns - Resolves if valid, rejects with error message if invalid
  */
 const validateJsonFilterForVariables = (
   jsonFilter: JsonFilter | null | undefined,
@@ -236,9 +236,9 @@ const validateJsonFilterForVariables = (
 
 /**
  * Validates TOTP secret for environment variables
- * @param {string} totpSecret - TOTP secret value
- * @param {Object} envContext - Environment context for variable validation
- * @returns {Promise<void>} - Resolves if valid, rejects with error message if invalid
+ * @param totpSecret - TOTP secret value
+ * @param envContext - Environment context for variable validation
+ * @returns - Resolves if valid, rejects with error message if invalid
  */
 const validateTotpSecretForVariables = (
   totpSecret: string | null | undefined,
@@ -268,9 +268,9 @@ const validateTotpSecretForVariables = (
 
 /**
  * Comprehensive validation of all form fields for environment variables and TOTP codes
- * @param {Object} form - Ant Design form instance
- * @param {Object} envContext - Environment context for variable validation
- * @returns {Promise<void>} - Resolves if all validations pass, rejects with first error encountered
+ * @param form - Ant Design form instance
+ * @param envContext - Environment context for variable validation
+ * @returns - Resolves if all validations pass, rejects with first error encountered
  */
 const validateAllFormFields = async (form: FormInstance, envContext: FormEnvContext): Promise<void> => {
   // Validate headers

@@ -24,6 +24,6 @@ export * from './components';
 export * from './hooks';
 // Main component (primary export)
 // Default export for convenience
-export { default as ProxyServer, default } from './ProxyServer';
+export { default } from './ProxyServer';
 // Utilities
 export * from './utils';

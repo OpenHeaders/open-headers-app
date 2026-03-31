@@ -53,7 +53,7 @@ const TeamWorkspaceShareInviteModal = ({ visible, workspace, onClose }: TeamWork
   // Generate invite links when modal opens
   React.useEffect(() => {
     if (visible && workspace) {
-      generateInviteLinks();
+      void generateInviteLinks();
     }
   }, [visible, workspace, generateInviteLinks]);
 
@@ -105,7 +105,7 @@ const TeamWorkspaceShareInviteModal = ({ visible, workspace, onClose }: TeamWork
 
   const handleCopyLink = () => {
     copyToClipboard(getLinkValue());
-    message.success('Link copied to clipboard');
+    void message.success('Link copied to clipboard');
   };
 
   if (!workspace) return null;

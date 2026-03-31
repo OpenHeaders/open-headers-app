@@ -33,12 +33,11 @@ const NetworkPayloadTab = ({ request, token }: NetworkPayloadTabProps) => {
   const contentType = request.requestHeaders?.['content-type'] || request.requestHeaders?.['Content-Type'] || '';
 
   try {
-    if (contentType.includes('json') || typeof request.requestBody === 'object') {
-      const jsonData = typeof request.requestBody === 'string' ? JSON.parse(request.requestBody) : request.requestBody;
+    if (contentType.includes('json')) {
+      const jsonData = JSON.parse(request.requestBody);
       formattedPayload = JSON.stringify(jsonData, null, 2);
     } else {
-      formattedPayload =
-        typeof request.requestBody === 'string' ? request.requestBody : JSON.stringify(request.requestBody, null, 2);
+      formattedPayload = request.requestBody;
     }
   } catch (_e) {
     formattedPayload = String(request.requestBody);

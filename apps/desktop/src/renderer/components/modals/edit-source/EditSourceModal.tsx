@@ -4,13 +4,10 @@ import { Form, Modal } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import { useEnvironments, useTotpState } from '@/renderer/contexts';
 import { showMessage } from '@/renderer/utils';
-import { createLogger } from '@/renderer/utils/error-handling/logger';
 import EditSourceForm from './EditSourceForm';
 import EditSourceModalFooter from './EditSourceModalFooter';
 import type { EditSourceFormValues } from './form-submission-handler';
 import FormSubmissionHandler from './form-submission-handler';
-
-const _log = createLogger('EditSourceModal');
 
 interface HttpOptionsRef {
   validateFields?: () => void;

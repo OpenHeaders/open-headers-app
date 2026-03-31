@@ -236,7 +236,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
         setStep(2);
       } catch (error) {
         console.error('Error processing preloaded environment data:', error);
-        message.error('Failed to process environment configuration');
+        void message.error('Failed to process environment configuration');
       }
     }
   }, [visible, preloadedEnvData, analyzeConfigData]);
@@ -403,14 +403,10 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
         return;
       }
 
-      if (!files.single && !files.sources) {
-        throw new Error('No files selected for import');
-      }
-
-      // Get the main file data
       const mainFile = files.single || files.sources;
       if (!mainFile) {
-        throw new Error('No files selected for import');
+        message.error('No files selected for import');
+        return;
       }
       const mainData = mainFile.analysis.rawData;
       const envData = files.environments?.analysis?.rawData;

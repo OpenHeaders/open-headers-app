@@ -19,7 +19,6 @@ import { InfoCircleOutlined, TableOutlined } from '@ant-design/icons';
 import { Button, Space, Spin, Tooltip, Typography, theme } from 'antd';
 import { useState } from 'react';
 import { format24HTimeWithMs, formatDuration } from '@/renderer/utils';
-import { createLogger } from '@/renderer/utils/error-handling/logger';
 import DOMPlayerContainer from './components/DOMPlayerContainer';
 import VideoPlayerContainer from './components/VideoPlayerContainer';
 import ViewModeToggle from './components/ViewModeToggle';
@@ -32,7 +31,6 @@ import {
 import { useVideoLoader } from './hooks/useVideoLoader';
 
 const { Text } = Typography;
-const _log = createLogger('RecordPlayer');
 
 interface RecordPlayerProps {
   record: RecordData | null;

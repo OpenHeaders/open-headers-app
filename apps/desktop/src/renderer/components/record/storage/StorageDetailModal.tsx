@@ -32,7 +32,7 @@ const StorageDetailModal = ({ visible, selectedEntry, onClose, messageApi }: Sto
   if (!selectedEntry) return null;
 
   const handleCopyKey = () => {
-    navigator.clipboard.writeText(selectedEntry.name);
+    void navigator.clipboard.writeText(selectedEntry.name);
     messageApi.success('Key copied to clipboard');
   };
 
@@ -49,14 +49,14 @@ const StorageDetailModal = ({ visible, selectedEntry, onClose, messageApi }: Sto
     } else {
       textToCopy = formatValue(selectedEntry.oldValue);
     }
-    navigator.clipboard.writeText(textToCopy);
+    void navigator.clipboard.writeText(textToCopy);
     messageApi.success(
       selectedEntry.action === 'clear' ? 'Cleared entries copied to clipboard' : 'Old value copied to clipboard',
     );
   };
 
   const handleCopyNewValue = () => {
-    navigator.clipboard.writeText(formatValue(selectedEntry.value));
+    void navigator.clipboard.writeText(formatValue(selectedEntry.value));
     messageApi.success('New value copied to clipboard');
   };
 

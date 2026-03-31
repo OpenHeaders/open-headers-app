@@ -13,6 +13,7 @@ import {
 import type { MenuProps } from 'antd';
 import { Button, Dropdown, Layout, Space, Typography } from 'antd';
 import type { GlobalToken } from 'antd/es/theme/interface';
+import appIcon from '@/renderer/images/icon128.png';
 
 const { Header } = Layout;
 const { Title } = Typography;
@@ -73,7 +74,7 @@ export function AppHeader({
   return (
     <Header className="app-header">
       <div className={`logo-title ${window.electronAPI?.platform ? `platform-${window.electronAPI.platform}` : ''}`}>
-        <img src="./images/icon128.png" alt="Open Headers Logo" className="app-logo" />
+        <img src={appIcon} alt="Open Headers Logo" className="app-logo" />
         <div className="title-version">
           <Title level={3}>Open Headers</Title>
         </div>

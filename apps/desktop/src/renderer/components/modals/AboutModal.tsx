@@ -1,6 +1,7 @@
 import { CompassOutlined, GlobalOutlined } from '@ant-design/icons';
 import { Button, Divider, Modal, Space, Typography, theme } from 'antd';
 import { useState } from 'react';
+import appIcon from '@/renderer/images/icon128.png';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -40,7 +41,7 @@ const AboutModal = ({ open, onClose, appVersion }: AboutModalProps) => {
    */
   const openExternal = (url: string) => {
     if (window.electronAPI?.openExternal) {
-      window.electronAPI.openExternal(url);
+      void window.electronAPI.openExternal(url);
     } else {
       window.open(url, '_blank');
     }
@@ -68,7 +69,7 @@ const AboutModal = ({ open, onClose, appVersion }: AboutModalProps) => {
         {/* Application Icon with rounded corners and shadow */}
         <div className="app-icon-container">
           <img
-            src="./images/icon128.png"
+            src={appIcon}
             alt="Open Headers Logo"
             className="app-icon"
             style={{

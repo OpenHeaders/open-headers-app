@@ -57,8 +57,7 @@ const PermissionAlert = ({ permissionAlert, onClose }: PermissionAlertProps) => 
       }
       type={permissionAlert.type}
       showIcon
-      closable
-      onClose={onClose}
+      closable={{ onClose }}
       style={{ marginBottom: 16 }}
     />
   );

@@ -7,7 +7,7 @@ import type {
   SourceType,
 } from '@openheaders/core';
 import type { FormInstance } from 'antd';
-import type React from 'react';
+import type { RefObject } from 'react';
 import { showMessage } from '@/renderer/utils';
 import { createLogger } from '@/renderer/utils/error-handling/logger';
 import { validateAllFormFields } from './form-validation';
@@ -49,7 +49,7 @@ class FormSubmissionHandler {
   form: FormInstance;
   source: Source;
   envContext: FormEnvContext;
-  httpOptionsRef: React.MutableRefObject<HttpOptionsHandle | null>;
+  httpOptionsRef: RefObject<HttpOptionsHandle | null>;
   totpEnabled: boolean;
   totpSecret: string;
 
@@ -57,7 +57,7 @@ class FormSubmissionHandler {
     form: FormInstance,
     source: Source,
     envContext: FormEnvContext,
-    httpOptionsRef: React.MutableRefObject<HttpOptionsHandle | null>,
+    httpOptionsRef: RefObject<HttpOptionsHandle | null>,
   ) {
     this.form = form;
     this.source = source;
@@ -187,13 +187,13 @@ class FormSubmissionHandler {
     if (this.httpOptionsRef.current.getJsonFilterState) {
       const jsonFilterState = this.httpOptionsRef.current.getJsonFilterState();
 
-      if (jsonFilterState.enabled === true && !jsonFilterState.path) {
+      if (jsonFilterState.enabled && !jsonFilterState.path) {
         throw new Error('JSON filter is enabled but no path is specified. Please enter a JSON path.');
       }
 
       sourceData.jsonFilter = {
         enabled: Boolean(jsonFilterState.enabled),
-        path: jsonFilterState.enabled === true ? jsonFilterState.path || '' : '',
+        path: jsonFilterState.enabled ? jsonFilterState.path || '' : '',
       };
 
       sourceData.isFiltered = jsonFilterState.enabled;
