@@ -162,29 +162,6 @@ class TimeManager {
   }
 
   /**
-   * Pause monitoring (for system sleep)
-   * Unlike stopMonitoring, this is meant to be temporary
-   */
-  pauseMonitoring() {
-    log.info('Pausing time monitoring for system sleep');
-    this.stopMonitoring();
-  }
-
-  /**
-   * Resume monitoring (after system wake)
-   */
-  resumeMonitoring() {
-    log.info('Resuming time monitoring after system wake');
-    if (!this.checkInterval && !this.isDestroyed) {
-      // Update our time tracking to current values to avoid false drift detection
-      this.lastWallTime = this.now();
-      this.lastMonotonicTime = this.getMonotonicTime();
-      // Resume monitoring
-      this.startMonitoring();
-    }
-  }
-
-  /**
    * Main time check routine
    */
   async checkTime() {
@@ -334,14 +311,6 @@ class TimeManager {
   }
 
   /**
-   * Register a time event listener
-   */
-  addListener(callback: (...args: unknown[]) => void) {
-    this.listeners.add(callback);
-    return () => this.listeners.delete(callback);
-  }
-
-  /**
    * Notify all listeners of time events
    */
   notifyListeners(events: RendererTimeEvent[]) {
@@ -356,101 +325,6 @@ class TimeManager {
         log.error('Error in time event listener:', error);
       }
     }
-  }
-
-  /**
-   * Get current time info
-   */
-  async getCurrentTimeInfo() {
-    const now = this.now();
-    let timezone: string, offset: number;
-
-    // Try to get system timezone first
-    if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.getSystemTimezone) {
-      try {
-        const systemTz = await window.electronAPI.getSystemTimezone();
-        timezone = systemTz.timezone;
-        offset = systemTz.offset;
-      } catch (_error) {
-        // Fallback to cached values
-        timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        offset = this.getDate().getTimezoneOffset();
-      }
-    } else {
-      timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      offset = this.getDate().getTimezoneOffset();
-    }
-
-    return {
-      timestamp: now,
-      timezone,
-      timezoneOffset: offset,
-      isDST: this.isDST(now),
-      wallClock: this.getDate(now).toISOString(),
-      localTime: this.getDate(now).toLocaleString(),
-    };
-  }
-
-  /**
-   * Check if date is in DST (approximation)
-   */
-  isDST(timestamp: number | null = null) {
-    const ts = timestamp || this.now();
-    const date = this.getDate(ts);
-    const jan = this.getDate(date.getTime());
-    jan.setMonth(0, 1);
-    const jul = this.getDate(date.getTime());
-    jul.setMonth(6, 1);
-    const janOffset = jan.getTimezoneOffset();
-    const julOffset = jul.getTimezoneOffset();
-    const currentOffset = date.getTimezoneOffset();
-
-    // If current offset matches the smaller offset, we're in DST
-    return currentOffset === Math.min(janOffset, julOffset);
-  }
-
-  /**
-   * Calculate next wall-clock aligned time
-   * @param {number} intervalMs - Interval in milliseconds
-   * @param {number} lastRun - Last run timestamp
-   * @param {Object} options - Alignment options
-   */
-  getNextAlignedTime(
-    intervalMs: number,
-    lastRun: number | null = null,
-    options: { alignToMinute?: boolean; alignToHour?: boolean; alignToDay?: boolean } = {},
-  ) {
-    const { alignToMinute = false, alignToHour = false, alignToDay = false } = options;
-
-    const now = this.now();
-    const date = this.getDate(now);
-
-    // If no alignment requested, use simple interval
-    if (!alignToMinute && !alignToHour && !alignToDay) {
-      return lastRun ? lastRun + intervalMs : now + intervalMs;
-    }
-
-    // Calculate aligned time
-    if (alignToDay) {
-      // Align to start of day
-      date.setHours(0, 0, 0, 0);
-      date.setTime(date.getTime() + intervalMs);
-    } else if (alignToHour) {
-      // Align to start of hour
-      date.setMinutes(0, 0, 0);
-      date.setTime(date.getTime() + intervalMs);
-    } else if (alignToMinute) {
-      // Align to start of minute
-      date.setSeconds(0, 0);
-      date.setTime(date.getTime() + intervalMs);
-    }
-
-    // Ensure time is in future
-    while (date.getTime() <= now) {
-      date.setTime(date.getTime() + intervalMs);
-    }
-
-    return date.getTime();
   }
 
   /**
@@ -474,26 +348,6 @@ class TimeManager {
    */
   getMonotonicTime() {
     return performance.now();
-  }
-
-  /**
-   * Measure elapsed time since a start point (using monotonic time)
-   * This is immune to system clock changes
-   */
-  getElapsedTime(startTime: number) {
-    return performance.now() - startTime;
-  }
-
-  /**
-   * Get statistics
-   */
-  getStatistics() {
-    return {
-      ...this.stats,
-      uptime: this.now() - this.stats.startTime,
-      currentTimezone: this.lastTimezone,
-      currentOffset: this.lastTimezoneOffset,
-    };
   }
 
   /**

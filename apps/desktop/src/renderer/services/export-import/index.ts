@@ -38,8 +38,8 @@ export { ExportService, ImportService };
 
 /**
  * Creates both export and import services with shared dependencies
- * @param {Object} dependencies - Application dependencies
- * @returns {Object} - Object containing both services
+ * @param dependencies - Application dependencies
+ * @returns - Object containing both services
  */
 import type { ExportImportDependencies } from './core/types';
 
@@ -52,8 +52,8 @@ export function createExportImportServices(dependencies: ExportImportDependencie
 
 /**
  * Validates application dependencies for export/import operations
- * @param {Object} dependencies - Dependencies to validate
- * @returns {Object} - Validation result
+ * @param dependencies - Dependencies to validate
+ * @returns - Validation result
  */
 export function validateDependencies(dependencies: ExportImportDependencies) {
   const required: (keyof ExportImportDependencies)[] = [

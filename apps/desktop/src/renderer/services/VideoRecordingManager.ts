@@ -80,8 +80,8 @@ class VideoRecordingManager {
 
   /**
    * Start recording a window/screen
-   * @param {Object} options Recording options
-   * @returns {Object} Result object
+   * @param options Recording options
+   * @returns Result object
    */
   async startRecording(options: {
     sourceId?: string;
@@ -185,7 +185,6 @@ class VideoRecordingManager {
 
       // Use the highest quality codec available with quality hints
       let mimeType = 'video/webm;codecs=vp8'; // fallback
-      const _mimeOptions = [];
 
       // Try VP9 with high quality profile first (best quality)
       if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
@@ -262,8 +261,8 @@ class VideoRecordingManager {
 
   /**
    * Stop recording
-   * @param {string} recordingId Recording ID
-   * @returns {Object} Result object
+   * @param recordingId Recording ID
+   * @returns Result object
    */
   async stopRecording(recordingId: string) {
     try {
@@ -338,22 +337,6 @@ class VideoRecordingManager {
     }
   }
 
-  /**
-   * Get all active recordings
-   * @returns {Array} Active recording IDs
-   */
-  getActiveRecordings() {
-    return Array.from(this.activeRecordings.keys());
-  }
-
-  /**
-   * Stop all active recordings
-   * @returns {Promise<Array>} Results of stopping all recordings
-   */
-  async stopAllRecordings() {
-    const recordingIds = this.getActiveRecordings();
-    return await Promise.all(recordingIds.map((id) => this.stopRecording(id)));
-  }
 }
 
 // Create singleton instance

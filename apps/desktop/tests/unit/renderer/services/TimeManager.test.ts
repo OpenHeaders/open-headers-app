@@ -90,88 +90,6 @@ describe('Renderer TimeManager', () => {
   });
 
   // ------------------------------------------------------------------
-  // getElapsedTime()
-  // ------------------------------------------------------------------
-  describe('getElapsedTime()', () => {
-    it('returns elapsed time since start', () => {
-      const start = performance.now();
-      const elapsed = timeManager.getElapsedTime(start);
-      expect(elapsed).toBeGreaterThanOrEqual(0);
-      expect(elapsed).toBeLessThan(100);
-    });
-
-    it('returns positive value for past start time', () => {
-      const start = performance.now() - 1000;
-      const elapsed = timeManager.getElapsedTime(start);
-      expect(elapsed).toBeGreaterThanOrEqual(1000);
-    });
-  });
-
-  // ------------------------------------------------------------------
-  // isDST()
-  // ------------------------------------------------------------------
-  describe('isDST()', () => {
-    it('returns a boolean for current time', () => {
-      expect(typeof timeManager.isDST()).toBe('boolean');
-    });
-
-    it('accepts a timestamp argument', () => {
-      const result = timeManager.isDST(1700000000000);
-      expect(typeof result).toBe('boolean');
-    });
-
-    it('returns a boolean for null argument', () => {
-      expect(typeof timeManager.isDST(null)).toBe('boolean');
-    });
-  });
-
-  // ------------------------------------------------------------------
-  // addListener / notifyListeners
-  // ------------------------------------------------------------------
-  describe('listeners', () => {
-    it('addListener registers callback and returns unsubscribe function', () => {
-      const cb = vi.fn();
-      const unsub = timeManager.addListener(cb);
-      expect(timeManager.listeners.size).toBeGreaterThanOrEqual(1);
-      expect(timeManager.listeners.has(cb)).toBe(true);
-      unsub();
-      expect(timeManager.listeners.has(cb)).toBe(false);
-    });
-
-    it('notifyListeners calls all registered listeners with events', () => {
-      const cb1 = vi.fn();
-      const cb2 = vi.fn();
-      timeManager.addListener(cb1);
-      timeManager.addListener(cb2);
-
-      const events = [{ type: 'time_jump_forward', delta: 60000 }];
-      timeManager.notifyListeners(events);
-
-      expect(cb1).toHaveBeenCalledWith(events);
-      expect(cb2).toHaveBeenCalledWith(events);
-    });
-
-    it('notifyListeners handles listener errors gracefully without stopping others', () => {
-      const badCb = vi.fn().mockImplementation(() => {
-        throw new Error('listener error in timezone change handler');
-      });
-      const goodCb = vi.fn();
-      timeManager.addListener(badCb);
-      timeManager.addListener(goodCb);
-
-      expect(() => timeManager.notifyListeners([{ type: 'timezone_change' }])).not.toThrow();
-      expect(goodCb).toHaveBeenCalled();
-    });
-
-    it('supports multiple unsubscribe calls without error', () => {
-      const cb = vi.fn();
-      const unsub = timeManager.addListener(cb);
-      unsub();
-      unsub();
-      expect(timeManager.listeners.has(cb)).toBe(false);
-    });
-  });
-
   // ------------------------------------------------------------------
   // handleSystemWake
   // ------------------------------------------------------------------
@@ -189,7 +107,7 @@ describe('Renderer TimeManager', () => {
 
     it('notifies listeners with SYSTEM_WAKE event and os_event source', () => {
       const cb = vi.fn();
-      timeManager.addListener(cb);
+      timeManager.listeners.add(cb);
       timeManager.handleSystemWake();
 
       expect(cb).toHaveBeenCalledWith(
@@ -222,92 +140,7 @@ describe('Renderer TimeManager', () => {
   });
 
   // ------------------------------------------------------------------
-  // getNextAlignedTime
-  // ------------------------------------------------------------------
-  describe('getNextAlignedTime()', () => {
-    it('returns simple interval when no alignment', () => {
-      const now = timeManager.now();
-      const result = timeManager.getNextAlignedTime(300000);
-      expect(result).toBeGreaterThanOrEqual(now + 300000 - 10);
-    });
-
-    it('uses lastRun when provided and no alignment', () => {
-      const lastRun = Date.now() - 60000;
-      const result = timeManager.getNextAlignedTime(300000, lastRun);
-      expect(result).toBe(lastRun + 300000);
-    });
-
-    it('aligns to minute boundary with seconds and ms zeroed', () => {
-      const result = timeManager.getNextAlignedTime(60000, null, {
-        alignToMinute: true,
-      });
-      const date = new Date(result);
-      expect(date.getSeconds()).toBe(0);
-      expect(date.getMilliseconds()).toBe(0);
-    });
-
-    it('aligns to hour boundary with minutes, seconds, ms zeroed', () => {
-      const result = timeManager.getNextAlignedTime(3600000, null, {
-        alignToHour: true,
-      });
-      const date = new Date(result);
-      expect(date.getMinutes()).toBe(0);
-      expect(date.getSeconds()).toBe(0);
-    });
-
-    it('aligns to day boundary with minutes and seconds zeroed', () => {
-      const result = timeManager.getNextAlignedTime(86400000, null, {
-        alignToDay: true,
-      });
-      const date = new Date(result);
-      // Hours may be 0 or 1 depending on DST transitions (spring-forward
-      // shifts local-midnight + 24h to 1am). Minutes and seconds are
-      // always zeroed because the base is set via setHours(0,0,0,0).
-      expect(date.getHours()).toBeLessThanOrEqual(1);
-      expect(date.getMinutes()).toBe(0);
-      expect(date.getSeconds()).toBe(0);
-    });
-
-    it('ensures result is always in the future', () => {
-      const now = timeManager.now();
-      const result = timeManager.getNextAlignedTime(1000, null, {
-        alignToMinute: true,
-      });
-      expect(result).toBeGreaterThan(now);
-    });
-
-    it('handles very short interval with alignment', () => {
-      const now = timeManager.now();
-      const result = timeManager.getNextAlignedTime(100, null, { alignToMinute: true });
-      expect(result).toBeGreaterThan(now);
-    });
-  });
-
-  // ------------------------------------------------------------------
-  // getStatistics
-  // ------------------------------------------------------------------
-  describe('getStatistics()', () => {
-    it('returns full stats object shape', () => {
-      const stats = timeManager.getStatistics();
-      expect(stats).toEqual(
-        expect.objectContaining({
-          timeJumps: expect.any(Number),
-          timezoneChanges: expect.any(Number),
-          dstChanges: expect.any(Number),
-          systemWakes: expect.any(Number),
-          startTime: expect.any(Number),
-          uptime: expect.any(Number),
-          currentTimezone: expect.any(String),
-          currentOffset: expect.any(Number),
-        }),
-      );
-      expect(stats.uptime).toBeGreaterThanOrEqual(0);
-      expect(stats.currentTimezone.length).toBeGreaterThan(0);
-    });
-  });
-
-  // ------------------------------------------------------------------
-  // startMonitoring / stopMonitoring / pause / resume
+  // startMonitoring / stopMonitoring
   // ------------------------------------------------------------------
   describe('monitoring', () => {
     it('stopMonitoring clears interval', () => {
@@ -317,28 +150,9 @@ describe('Renderer TimeManager', () => {
       expect(timeManager.checkInterval).toBeNull();
     });
 
-    it('pauseMonitoring stops monitoring', () => {
+    it('startMonitoring restarts after stop', () => {
       timeManager.startMonitoring();
-      timeManager.pauseMonitoring();
-      expect(timeManager.checkInterval).toBeNull();
-    });
-
-    it('resumeMonitoring restarts monitoring', () => {
-      timeManager.resumeMonitoring();
       expect(timeManager.checkInterval).not.toBeNull();
-      timeManager.stopMonitoring();
-    });
-
-    it('resumeMonitoring does not start if destroyed', () => {
-      timeManager.isDestroyed = true;
-      timeManager.resumeMonitoring();
-      expect(timeManager.checkInterval).toBeNull();
-    });
-
-    it('resumeMonitoring updates time tracking values', () => {
-      const beforeWall = timeManager.lastWallTime;
-      timeManager.resumeMonitoring();
-      expect(timeManager.lastWallTime).toBeGreaterThanOrEqual(beforeWall);
       timeManager.stopMonitoring();
     });
 
@@ -359,8 +173,7 @@ describe('Renderer TimeManager', () => {
   // ------------------------------------------------------------------
   describe('destroy()', () => {
     it('sets isDestroyed flag, stops monitoring, clears listeners', () => {
-      const cb = vi.fn();
-      timeManager.addListener(cb);
+      timeManager.listeners.add(vi.fn());
       timeManager.startMonitoring();
 
       timeManager.destroy();

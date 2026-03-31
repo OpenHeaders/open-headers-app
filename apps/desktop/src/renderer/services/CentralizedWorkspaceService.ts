@@ -93,16 +93,6 @@ class CentralizedWorkspaceService {
     return { ...this.state };
   }
 
-  /**
-   * setState is kept for backward compat with hooks that set state directly
-   * (e.g. useSources.importSources, useWorkspaces.syncWorkspace status updates).
-   * These callers will be migrated to IPC calls — for now, apply locally + notify.
-   */
-  setState(updates: Partial<WorkspaceServiceState>, changedKeys: string[] = []): void {
-    this.state = { ...this.state, ...updates };
-    this.notifyListeners(changedKeys);
-  }
-
   // ── Initialization (hydrate from main) ──────────────────────
 
   async initialize(): Promise<boolean> {
@@ -114,7 +104,12 @@ class CentralizedWorkspaceService {
   private async _doInitialize(): Promise<boolean> {
     try {
       if (!window.electronAPI?.workspaceState) {
-        throw new Error('workspaceState API not available');
+        const msg = 'workspaceState API not available';
+        log.error(msg);
+        this.state.error = msg;
+        this.state.loading = false;
+        this.notifyListeners(['error', 'loading']);
+        return false;
       }
 
       const result = await window.electronAPI.workspaceState.initialize();
@@ -142,16 +137,6 @@ class CentralizedWorkspaceService {
 
   isReady(): boolean {
     return this.state.initialized && !this.state.loading;
-  }
-
-  async waitForReady(timeout = 10000): Promise<boolean> {
-    const start = Date.now();
-    while (!this.isReady()) {
-      if (Date.now() - start > timeout) throw new Error('Timeout waiting for workspace service');
-      if (!this.state.loading && !this.initPromise) await this.initialize();
-      await new Promise((r) => setTimeout(r, 100));
-    }
-    return true;
   }
 
   // ── Source CRUD (IPC forwards) ──────────────────────────────
@@ -249,29 +234,6 @@ class CentralizedWorkspaceService {
     return result.success;
   }
 
-  // ── Workspace data operations (IPC forwards) ───────────────
-
-  async loadWorkspaceData(_workspaceId: string): Promise<void> {
-    // Main process handles this — just re-hydrate state
-    const state = await window.electronAPI.workspaceState.getState();
-    const changedKeys: string[] = [];
-    for (const [key, value] of Object.entries(state)) {
-      if (key in this.state) {
-        Object.assign(this.state, { [key]: value });
-        changedKeys.push(key);
-      }
-    }
-    this.notifyListeners(changedKeys);
-  }
-
-  async initializeWorkspaceData(_workspaceId: string): Promise<void> {
-    // Main process handles workspace data initialization during createWorkspace
-  }
-
-  async saveWorkspaces(): Promise<void> {
-    // Main process handles persistence — no-op in renderer
-  }
-
   async copyWorkspaceData(sourceWorkspaceId: string, targetWorkspaceId: string): Promise<void> {
     const result = await window.electronAPI.workspaceState.copyWorkspaceData(sourceWorkspaceId, targetWorkspaceId);
     if (!result.success) throw new Error(result.error ?? 'Failed to copy workspace data');
@@ -299,4 +261,3 @@ export function getCentralizedWorkspaceService(): CentralizedWorkspaceService {
 }
 
 export { CentralizedWorkspaceService };
-export default CentralizedWorkspaceService;

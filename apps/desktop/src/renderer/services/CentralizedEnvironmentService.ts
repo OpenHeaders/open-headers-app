@@ -132,7 +132,12 @@ class CentralizedEnvironmentService {
       this.state.error = null;
 
       if (!window.electronAPI?.workspaceState) {
-        throw new Error('workspaceState API not available');
+        log.error('workspaceState API not available');
+        this.state.error = 'workspaceState API not available';
+        this.state.isLoading = false;
+        this.state.isReady = true;
+        this.notifyListeners(['error', 'isLoading', 'isReady']);
+        return false;
       }
 
       const envState = await window.electronAPI.workspaceState.getEnvironmentState();
@@ -230,25 +235,6 @@ class CentralizedEnvironmentService {
       defaultValue: '',
     });
     return typeof result === 'string' ? result : (result?.resolved ?? '');
-  }
-
-  // ── Workspace change handling ────────────────────────────────
-
-  async handleWorkspaceChange(_workspaceId: string): Promise<void> {
-    // No-op: main process handles environment loading during workspace switch.
-    // Renderer receives updated environments via workspace:state-patch.
-  }
-
-  // ── Backward compat stubs ────────────────────────────────────
-
-  async loadWorkspaceEnvironments(_workspaceId: string | null): Promise<boolean> {
-    // No-op — main process loads environments
-    return true;
-  }
-
-  async saveEnvironments(): Promise<boolean> {
-    // No-op — main process handles persistence
-    return true;
   }
 
   // ── Cleanup ──────────────────────────────────────────────────
