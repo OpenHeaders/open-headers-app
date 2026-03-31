@@ -287,4 +287,3 @@ async function detectAndValidateConfig(repoDir: string, searchPatterns: SearchPa
 }
 
 export { type DetectionResult, detectAndValidateConfig, type SearchPatterns };
-export default { detectAndValidateConfig };

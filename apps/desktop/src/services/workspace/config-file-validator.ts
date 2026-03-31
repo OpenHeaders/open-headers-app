@@ -436,4 +436,3 @@ class ConfigFileValidator {
 }
 
 export { type ConfigContent, ConfigFileValidator, type ConfigPaths, SCHEMAS, type ValidationResult };
-export default ConfigFileValidator;

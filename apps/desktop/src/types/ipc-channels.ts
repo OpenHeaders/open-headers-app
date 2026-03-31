@@ -245,7 +245,3 @@ export const IPC_PUSH = {
 
 // ── Type helpers ────────────────────────────────────────────────────
 
-export type InvokeChannel = (typeof IPC_INVOKE)[keyof typeof IPC_INVOKE];
-export type SendChannel = (typeof IPC_SEND)[keyof typeof IPC_SEND];
-export type PushChannel = (typeof IPC_PUSH)[keyof typeof IPC_PUSH];
-export type AnyChannel = InvokeChannel | SendChannel | PushChannel;

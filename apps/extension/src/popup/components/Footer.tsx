@@ -45,7 +45,6 @@ const Footer: React.FC = () => {
 
   const { headerEntries, isConnected } = useHeader();
   const totalRules = Object.keys(headerEntries).length;
-  const _enabledRules = Object.values(headerEntries).filter((rule) => rule.isEnabled !== false).length;
 
   const checkVideoRecordingState = useCallback(async () => {
     try {
@@ -85,8 +84,8 @@ const Footer: React.FC = () => {
       if (result.isRulesExecutionPaused !== undefined)
         setIsRulesExecutionPaused(result.isRulesExecutionPaused as boolean);
     });
-    checkVideoRecordingState();
-    checkRecordingHotkey();
+    void checkVideoRecordingState();
+    void checkRecordingHotkey();
 
     const handleVideoRecordingStateChange = (msg: { type?: string; enabled?: boolean; hotkey?: string }) => {
       if (msg.type === 'videoRecordingStateChanged' && msg.enabled !== undefined) setEnableVideoRecording(msg.enabled);

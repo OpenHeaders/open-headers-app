@@ -19,6 +19,7 @@ const log = createLogger('WorkspaceSettingsService');
 
 import { DATA_FORMAT_VERSION } from '@/config/version';
 import type { Workspace, WorkspaceSyncStatus } from '@/types/workspace';
+import type { SyncStatusOwnerLike, WorkspaceSettingsServiceLike } from './sync/types';
 
 interface WorkspaceSettings {
   version: string;
@@ -33,7 +34,7 @@ interface WorkspacesData {
   syncStatus: Record<string, WorkspaceSyncStatus>;
 }
 
-class WorkspaceSettingsService {
+class WorkspaceSettingsService implements WorkspaceSettingsServiceLike, SyncStatusOwnerLike {
   settingsPath: string;
   workspacesDir: string;
   defaultSettings: WorkspaceSettings;
@@ -63,67 +64,7 @@ class WorkspaceSettingsService {
     };
   }
 
-  /**
-   * Initialize the workspace settings
-   */
-  async initialize(): Promise<void> {
-    try {
-      // Ensure workspaces directory exists
-      await fs.promises.mkdir(this.workspacesDir, { recursive: true });
 
-      // Check if settings file exists
-      const exists = await this.checkSettingsExist();
-      if (!exists) {
-        // Settings file doesn't exist, create default
-        await this.createDefaultSettings();
-      }
-
-      log.info('WorkspaceSettingsService initialized');
-    } catch (error) {
-      log.error('Failed to initialize WorkspaceSettingsService:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Create default settings file
-   */
-  async createDefaultSettings(): Promise<void> {
-    try {
-      await atomicWriter.writeJson(this.settingsPath, this.defaultSettings, { pretty: true });
-
-      // Create default workspace directory
-      const defaultWorkspaceDir = path.join(this.workspacesDir, 'default-personal');
-      await fs.promises.mkdir(defaultWorkspaceDir, { recursive: true });
-
-      // Create default environment file
-      const defaultEnvPath = path.join(defaultWorkspaceDir, 'environments.json');
-      const defaultEnv = {
-        environments: {
-          Default: {},
-        },
-        activeEnvironment: 'Default',
-      };
-      await atomicWriter.writeJson(defaultEnvPath, defaultEnv, { pretty: true });
-
-      log.info('Created default workspace settings');
-    } catch (error) {
-      log.error('Failed to create default settings:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Check if settings file exists
-   */
-  async checkSettingsExist(): Promise<boolean> {
-    try {
-      await fs.promises.access(this.settingsPath);
-      return true;
-    } catch {
-      return false;
-    }
-  }
 
   /**
    * Get all workspace settings

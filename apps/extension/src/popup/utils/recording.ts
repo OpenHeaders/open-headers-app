@@ -56,7 +56,7 @@ export async function startRecording(useWidget = false): Promise<StartRecordingR
   const isRestrictedPage = !tab.url || tab.url === '' || restrictedUrls.some((prefix) => tab!.url!.startsWith(prefix));
 
   if (isRestrictedPage) {
-    const recordId = `record-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const recordId = `record-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
     await browserAPI.runtime.sendMessage({
       action: 'START_PRE_NAV_RECORDING',
@@ -69,7 +69,7 @@ export async function startRecording(useWidget = false): Promise<StartRecordingR
     return { success: true, recordId, preNavigation: true };
   }
 
-  const recordId = `record-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const recordId = `record-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
   // Single authority: background owns all start transitions.
   // It will inject the content script and notify it as part of its start flow.

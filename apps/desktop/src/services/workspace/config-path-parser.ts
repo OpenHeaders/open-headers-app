@@ -48,7 +48,7 @@ interface SearchPatterns {
  * 4. Base path for multi-file: "config/open-headers"
  */
 function parseConfigPath(userInput: string | null | undefined): ParsedPath {
-  if (!userInput || typeof userInput !== 'string') {
+  if (!userInput) {
     return {
       type: 'single',
       primaryPath: 'config/open-headers.json',
@@ -244,4 +244,3 @@ export {
   parseConfigPath,
   type SearchPatterns,
 };
-export default { parseConfigPath, getSearchPatterns, getPathErrorMessage };

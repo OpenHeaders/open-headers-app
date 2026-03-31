@@ -229,7 +229,7 @@ const TagManager: React.FC = () => {
         <Text type="secondary" style={{ fontSize: '12px' }}>
           Toggle entire groups of rules by tags
         </Text>
-        <Divider type="vertical" style={{ margin: '0 4px', height: '14px' }} />
+        <Divider orientation="vertical" style={{ margin: '0 4px', height: '14px' }} />
         <Space size={8}>
           <Tag color="blue">{totalStats.tagGroups} tag groups</Tag>
           <Tag color="green">Total {totalStats.totalRules} rules</Tag>

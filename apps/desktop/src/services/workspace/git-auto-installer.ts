@@ -393,4 +393,3 @@ class GitAutoInstaller {
 }
 
 export { type DistroInfo, GitAutoInstaller, type GitCheckResult, type InstallResult };
-export default GitAutoInstaller;

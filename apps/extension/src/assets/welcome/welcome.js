@@ -22,7 +22,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const connectionStatusText = document.getElementById('connection-status-text');
 
     // State variables
-    let connectionCheckInterval = null;
     let connectionCheckCount = 0;
     const MAX_CONNECTION_CHECKS = 10;
 
@@ -195,123 +194,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
-    }
-
-    /**
-     * Start checking connection
-     */
-    function startConnectionCheck() {
-        // If already confirmed successful, don't start checking again
-        if (connectionSuccessful) {
-            return;
-        }
-
-        // Update UI
-        if (stepConnection) stepConnection.classList.add('active');
-        if (connectionStatus) connectionStatus.className = 'connection-status status-connecting';
-        if (connectionStatusText) connectionStatusText.textContent = 'Checking connection...';
-
-        // Reset counter
-        connectionCheckCount = 0;
-
-        // Clear existing interval
-        if (connectionCheckInterval) {
-            clearInterval(connectionCheckInterval);
-        }
-
-        // Set up new interval
-        connectionCheckInterval = setInterval(checkConnection, 2000);
-
-        // Do immediate check
-        setTimeout(checkConnection, 100);
-    }
-
-    /**
-     * Check connection using the background script
-     */
-    function checkConnection() {
-        // Skip if already successful or beyond max attempts
-        if (connectionSuccessful || connectionCheckCount >= MAX_CONNECTION_CHECKS) {
-            return;
-        }
-
-        // Update counter
-        connectionCheckCount++;
-        if (connectionStatusText) {
-            connectionStatusText.textContent = `Checking connection (${connectionCheckCount}/${MAX_CONNECTION_CHECKS})...`;
-        }
-
-        // Use browser messaging to check connection status
-        const messageAPI = typeof browser !== 'undefined' ? browser : chrome;
-
-        messageAPI.runtime.sendMessage({ type: 'checkConnection' }, (response) => {
-            if (connectionSuccessful) {
-                return; // Already successful, ignore
-            }
-
-            if (response && response.connected) {
-                // Connection successful - set flag first to prevent races
-                connectionSuccessful = true;
-
-                // Clean up interval
-                if (connectionCheckInterval) {
-                    clearInterval(connectionCheckInterval);
-                    connectionCheckInterval = null;
-                }
-
-                // Update UI
-                if (connectionStatus) connectionStatus.className = 'connection-status status-connected';
-                if (connectionStatusText) connectionStatusText.textContent = '✓ Connection successful!';
-
-                // Update navigation buttons
-                updateNavigationButtons();
-
-                // Mark the connection step as completed
-                if (stepConnection) {
-                    const marker = stepConnection.querySelector('.step-marker');
-                    if (marker) marker.classList.add('completed');
-                }
-
-                // Store connection verification
-                if (typeof browser !== 'undefined' && browser.storage && browser.storage.local) {
-                    browser.storage.local.set({
-                        connectionVerified: true,
-                        connectionVerifiedTime: Date.now()
-                    });
-                } else if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-                    chrome.storage.local.set({
-                        connectionVerified: true,
-                        connectionVerifiedTime: Date.now()
-                    });
-                }
-            } else {
-                handleConnectionProgress();
-            }
-        });
-    }
-
-    /**
-     * Handle connection progress/failure
-     */
-    function handleConnectionProgress() {
-        if (connectionSuccessful) return;
-
-        if (connectionCheckCount >= MAX_CONNECTION_CHECKS) {
-            // Max attempts reached
-            if (connectionCheckInterval) {
-                clearInterval(connectionCheckInterval);
-                connectionCheckInterval = null;
-            }
-
-            // Update UI
-            if (connectionStatus) connectionStatus.className = 'connection-status status-error';
-            if (connectionStatusText) {
-                connectionStatusText.textContent = 'Connection failed. Please make sure the app is running.';
-            }
-
-            // Update navigation buttons
-            updateNavigationButtons();
-        }
     }
 
     // Initialize the page

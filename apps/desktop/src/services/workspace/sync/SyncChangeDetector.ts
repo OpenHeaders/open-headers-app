@@ -61,9 +61,7 @@ export async function checkForDataChanges(workspaceId: string, newData: SyncData
     if (await hasSourceChanges(workspacePath, newData)) return true;
     if (await hasRuleChanges(workspacePath, newData)) return true;
     if (await hasProxyRuleChanges(workspacePath, newData)) return true;
-    if (await hasEnvironmentChanges(workspacePath, newData)) return true;
-
-    return false;
+    return await hasEnvironmentChanges(workspacePath, newData);
   } catch (error) {
     log.error('Error checking for data changes:', error);
     return true; // Assume changes on error to be safe

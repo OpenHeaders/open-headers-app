@@ -67,16 +67,16 @@ const ActiveRules: React.FC = () => {
       }
     };
 
-    fetchActiveRules();
+    void fetchActiveRules();
 
     const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
     const handleTabUpdate = (_tabId: number, changeInfo: chrome.tabs.OnUpdatedInfo, tab: chrome.tabs.Tab) => {
-      if (changeInfo.status === 'complete' && tab.active) fetchActiveRules();
+      if (changeInfo.status === 'complete' && tab.active) void fetchActiveRules();
     };
     browserAPI.tabs.onUpdated.addListener(handleTabUpdate);
     browserAPI.tabs.onActivated.addListener(fetchActiveRules);
     const handleStorageChange = () => {
-      fetchActiveRules();
+      void fetchActiveRules();
     };
     browserAPI.storage.onChanged.addListener(handleStorageChange);
 
@@ -234,7 +234,7 @@ const ActiveRules: React.FC = () => {
               : currentTab.domain}
           </Text>
         </Tooltip>
-        <Divider type="vertical" style={{ margin: '0 4px', height: '14px' }} />
+        <Divider orientation="vertical" style={{ margin: '0 4px', height: '14px' }} />
         <Text type="secondary" style={{ fontSize: '12px' }}>
           {activeRules.length} rule{activeRules.length !== 1 ? 's' : ''} active
           {indirectMatches > 0 && ` (${directMatches} direct, ${indirectMatches} via resources)`}

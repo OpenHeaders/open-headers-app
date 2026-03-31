@@ -36,7 +36,7 @@ export function evaluateSourceDependencies(
  */
 export function extractVariablesFromSource(source: Source): string[] {
   const variables = new Set<string>();
-  const pattern = /\{\{(\w+)\}\}/g;
+  const pattern = /\{\{(\w+)}}/g;
 
   const extract = (str: string | undefined) => {
     if (!str) return;

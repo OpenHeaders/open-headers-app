@@ -73,8 +73,7 @@ const ConnectionInfo: React.FC = () => {
         }
         type="info"
         showIcon
-        closable
-        onClose={handleDismiss}
+        closable={{ onClose: handleDismiss }}
         style={{ boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)', borderRadius: 8 }}
       />
     </div>

@@ -34,17 +34,6 @@ declare global {
     };
   }
 
-  /** Source activation event detail */
-  interface SourceActivatedDetail {
-    sourceId: string;
-    source: Source;
-  }
-
-  /** Custom DOM events used in the renderer */
-  interface WindowEventMap {
-    'source-activated': CustomEvent<SourceActivatedDetail>;
-  }
-
   // --- Event data types for IPC callbacks ---
 
   /** Navigation data sent to renderer */
@@ -164,13 +153,6 @@ declare global {
     percent: number;
     total: number;
     transferred: number;
-  }
-
-  /** Protocol/invite processing event data */
-  interface ProtocolProcessingEvent {
-    url?: string;
-    data?: string;
-    type?: string;
   }
 
   /** File dialog options (subset of Electron's OpenDialogOptions/SaveDialogOptions) */
@@ -541,6 +523,7 @@ declare global {
     isPackaged: boolean;
   }
 
+  // noinspection JSUnusedGlobalSymbols — augments the global Window with electronAPI
   interface Window {
     electronAPI: ElectronAPI;
     startupData: StartupData;

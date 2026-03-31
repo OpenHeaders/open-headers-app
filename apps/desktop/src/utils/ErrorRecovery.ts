@@ -58,7 +58,6 @@ class ErrorRecovery {
    * Classify error type based on error object
    */
   classifyError(error: Error & { code?: string }): ErrorType {
-    const _errorString = error.toString().toLowerCase();
     const message = error.message?.toLowerCase() || '';
     const code = error.code?.toLowerCase() || '';
 
@@ -119,25 +118,6 @@ class ErrorRecovery {
     }
 
     return ErrorTypes.UNKNOWN;
-  }
-
-  /**
-   * Handle error with automatic recovery
-   */
-  async handle(error: Error, context: RecoveryContext = {}, retryFn: RetryFn = null): Promise<unknown> {
-    const errorType = this.classifyError(error);
-    const strategy = this.getStrategy(errorType);
-
-    this.log.info(`Handling ${errorType} error:`, error.message);
-
-    try {
-      const result = await strategy.call(this, error, context, retryFn);
-      this.resetRetryCount(context.operationId);
-      return result;
-    } catch (recoveryError: unknown) {
-      this.log.error(`Recovery failed for ${errorType} error:`, recoveryError);
-      throw recoveryError;
-    }
   }
 
   /**
@@ -424,18 +404,4 @@ class ErrorRecovery {
   }
 }
 
-// Export singleton instance and types
-const errorRecovery = new ErrorRecovery();
-
 export { ErrorRecovery as ErrorRecoveryClass, ErrorTypes };
-export const withRetry = errorRecovery.withRetry.bind(errorRecovery);
-export const handle = errorRecovery.handle.bind(errorRecovery);
-
-// Default export and CJS-compatible named export
-export { errorRecovery as ErrorRecovery };
-export default {
-  ErrorRecovery: errorRecovery,
-  ErrorTypes,
-  withRetry: errorRecovery.withRetry.bind(errorRecovery),
-  handle: errorRecovery.handle.bind(errorRecovery),
-};

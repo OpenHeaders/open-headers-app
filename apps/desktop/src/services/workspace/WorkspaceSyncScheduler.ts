@@ -30,12 +30,13 @@ import type {
   SyncStatusOwnerLike,
   WorkspaceSettingsServiceLike,
 } from './sync/types';
+import type { WorkspaceSyncSchedulerLike } from './state/types';
 import { SYNC_CONSTANTS, SYNC_SKIP_MESSAGES } from './sync/types';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WorkspaceSyncScheduler');
 
-class WorkspaceSyncScheduler {
+class WorkspaceSyncScheduler implements WorkspaceSyncSchedulerLike {
   private readonly gitSyncService: GitSyncServiceLike;
   private readonly workspaceSettingsService: WorkspaceSettingsServiceLike;
   private readonly networkService: NetworkServiceLike;

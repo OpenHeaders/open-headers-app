@@ -26,7 +26,7 @@ class WorkflowRecorder {
     this.recorderStarted = false;
 
     this.setupExtensionMessageListener();
-    this.notifyBackgroundReady();
+    void this.notifyBackgroundReady();
   }
 
   /**
@@ -42,7 +42,7 @@ class WorkflowRecorder {
       switch (messageType) {
         case 'startRecording':
         case MESSAGE_TYPES.START_RECORDING:
-          this.handleStartRecording(message.data || message);
+          void this.handleStartRecording(message.data || message);
           sendResponse({ success: true });
           break;
 
@@ -83,7 +83,7 @@ class WorkflowRecorder {
       });
 
       if (response?.shouldStartRecording) {
-        this.handleStartRecording({
+        await this.handleStartRecording({
           recordId: response.state?.metadata?.recordingId,
           useWidget: true,
           isPreNav: response.state?.metadata?.isPreNavigation,

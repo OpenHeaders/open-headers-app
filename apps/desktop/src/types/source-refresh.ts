@@ -33,17 +33,6 @@ export interface RefreshStatusInfo {
   circuitBreaker: CircuitBreakerInfo;
 }
 
-/** IPC payload: content updated */
-export interface ContentUpdatedPayload {
-  sourceId: string;
-  content: string;
-  originalResponse: string;
-  headers: Record<string, string>;
-  isFiltered: boolean;
-  filteredWith?: string;
-  lastRefresh: number;
-}
-
 /** IPC payload: status changed */
 export interface StatusChangedPayload {
   sourceId: string;

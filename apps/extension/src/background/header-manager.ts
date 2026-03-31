@@ -18,9 +18,6 @@ import { normalizeHeaderName } from '@utils/utils.js';
 import type { EntryResult, HeaderDnrRule, PlaceholderInfo, ResolvedEntry } from '@/types/header';
 import { isValidHeaderValue, sanitizeHeaderValue } from './rule-validator';
 
-// Track the highest rule ID from the last update for efficient removal
-let _lastMaxRuleId = 0;
-
 // Cached pause state — updated by setRulesPaused() from storage.onChanged listener
 let isPaused = false;
 
@@ -57,7 +54,6 @@ export function updateNetworkRules(dynamicSources: Source[]): void {
         });
       })
       .then(() => {
-        _lastMaxRuleId = 0;
         logger.debug('HeaderManager', 'All rules cleared while paused');
       });
     return;
@@ -124,7 +120,6 @@ export function updateNetworkRules(dynamicSources: Source[]): void {
         });
       })
       .then(() => {
-        _lastMaxRuleId = ruleId - 1;
         logger.info('HeaderManager', `Successfully updated ${rules.length} network rules`);
       })
       .catch((e: Error) => {

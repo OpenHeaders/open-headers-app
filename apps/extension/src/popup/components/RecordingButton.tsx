@@ -23,10 +23,10 @@ const RecordingButton: React.FC<RecordingButtonProps> = ({ useWidget = false }) 
   }, []);
 
   useEffect(() => {
-    checkRecordingState();
+    void checkRecordingState();
 
     const handleFocus = (): void => {
-      checkRecordingState();
+      void checkRecordingState();
     };
 
     window.addEventListener('focus', handleFocus);
