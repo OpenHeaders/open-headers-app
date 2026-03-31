@@ -53,9 +53,9 @@ interface WorkspaceName {
  * Sources are considered duplicates if they have the same type, name, and
  * type-specific identifying property (filePath for files, varName for env vars, url for http).
  *
- * @param {Object} source - Source to check for duplicates
- * @param {Array} currentSources - Array of existing sources
- * @returns {boolean} - True if source is a duplicate
+ * @param source - Source to check for duplicates
+ * @param currentSources - Array of existing sources
+ * @returns - True if source is a duplicate
  */
 export function isSourceDuplicate(source: ImportSource | null, currentSources: ImportSource[]) {
   if (!source || !Array.isArray(currentSources)) {
@@ -89,9 +89,9 @@ export function isSourceDuplicate(source: ImportSource | null, currentSources: I
  * Proxy rules are considered duplicates if they have the same URL pattern
  * and identical header configurations (including dynamic headers).
  *
- * @param {Object} rule - Proxy rule to check
- * @param {Array} existingRules - Array of existing proxy rules
- * @returns {boolean} - True if rule is a duplicate
+ * @param rule - Proxy rule to check
+ * @param existingRules - Array of existing proxy rules
+ * @returns - True if rule is a duplicate
  */
 export function isProxyRuleDuplicate(rule: ProxyRule | null, existingRules: ProxyRule[]) {
   if (!rule || !Array.isArray(existingRules)) {
@@ -115,9 +115,9 @@ export function isProxyRuleDuplicate(rule: ProxyRule | null, existingRules: Prox
 
 /**
  * Compares two header objects for equality
- * @param {Object} header1 - First header to compare
- * @param {Object} header2 - Second header to compare
- * @returns {boolean} - True if headers are equal
+ * @param header1 - First header to compare
+ * @param header2 - Second header to compare
+ * @returns - True if headers are equal
  */
 export function areHeadersEqual(header1: ImportHeader, header2: ImportHeader) {
   // Check header name
@@ -149,9 +149,9 @@ export function areHeadersEqual(header1: ImportHeader, header2: ImportHeader) {
  * Rules are first checked by ID for exact matches, then by content comparison
  * for rules without IDs. Content comparison varies by rule action type.
  *
- * @param {Object} rule - Rule to check
- * @param {Array} existingRules - Array of existing rules of the same type
- * @returns {boolean} - True if rule is a duplicate
+ * @param rule - Rule to check
+ * @param existingRules - Array of existing rules of the same type
+ * @returns - True if rule is a duplicate
  */
 export function isRuleDuplicate(rule: ImportRule | null, existingRules: ImportRule[]) {
   if (!rule || !Array.isArray(existingRules)) {
@@ -171,9 +171,9 @@ export function isRuleDuplicate(rule: ImportRule | null, existingRules: ImportRu
 
 /**
  * Compares two rules for content equality
- * @param {Object} rule1 - First rule to compare
- * @param {Object} rule2 - Second rule to compare
- * @returns {boolean} - True if rules have same content
+ * @param rule1 - First rule to compare
+ * @param rule2 - Second rule to compare
+ * @returns - True if rules have same content
  */
 export function areRulesContentEqual(rule1: ImportRule, rule2: ImportRule) {
   // Compare basic properties
@@ -205,9 +205,9 @@ export function areRulesContentEqual(rule1: ImportRule, rule2: ImportRule) {
 
 /**
  * Compares header modification arrays for equality
- * @param {Array} headers1 - First header array
- * @param {Array} headers2 - Second header array
- * @returns {boolean} - True if header modifications are equal
+ * @param headers1 - First header array
+ * @param headers2 - Second header array
+ * @returns - True if header modifications are equal
  */
 export function areHeaderModificationsEqual(
   headers1: ImportHeader[] | undefined,
@@ -235,10 +235,10 @@ export function areHeaderModificationsEqual(
  * Checks if an environment variable already exists with a non-empty value.
  * Variables that exist but have empty values (e.g. from schema imports) are
  * NOT considered duplicates — they are placeholders waiting to be filled.
- * @param {string} varName - Variable name
- * @param {string} envName - Environment name
- * @param {Object} environments - Current environments object
- * @returns {boolean} - True if variable already exists with a non-empty value
+ * @param varName - Variable name
+ * @param envName - Environment name
+ * @param environments - Current environments object
+ * @returns - True if variable already exists with a non-empty value
  */
 export function isEnvironmentVariableDuplicate(
   varName: string,
@@ -261,9 +261,9 @@ export function isEnvironmentVariableDuplicate(
 
 /**
  * Checks if a workspace name already exists
- * @param {string} workspaceName - Workspace name to check
- * @param {Array} existingWorkspaces - Array of existing workspaces
- * @returns {boolean} - True if workspace name is a duplicate
+ * @param workspaceName - Workspace name to check
+ * @param existingWorkspaces - Array of existing workspaces
+ * @returns - True if workspace name is a duplicate
  */
 export function isWorkspaceNameDuplicate(workspaceName: string, existingWorkspaces: WorkspaceName[]) {
   if (!workspaceName || !Array.isArray(existingWorkspaces)) {
@@ -275,10 +275,10 @@ export function isWorkspaceNameDuplicate(workspaceName: string, existingWorkspac
 
 /**
  * Generates a unique name by appending a suffix
- * @param {string} baseName - Original name
- * @param {Array} existingNames - Array of existing names to avoid
- * @param {string} suffix - Suffix to append (default: 'Copy')
- * @returns {string} - Unique name
+ * @param baseName - Original name
+ * @param existingNames - Array of existing names to avoid
+ * @param suffix - Suffix to append (default: 'Copy')
+ * @returns - Unique name
  */
 export function generateUniqueName(baseName: string, existingNames: string[], suffix: string = 'Copy') {
   if (!existingNames.includes(baseName)) {
@@ -298,8 +298,8 @@ export function generateUniqueName(baseName: string, existingNames: string[], su
 
 /**
  * Creates a duplicate detection strategy for different data types
- * @param {string} dataType - Type of data ('sources', 'rules', 'proxyRules', etc.)
- * @returns {Function} - Duplicate detection function for the specified type
+ * @param dataType - Type of data ('sources', 'rules', 'proxyRules', etc.)
+ * @returns - Duplicate detection function for the specified type
  */
 export function createDuplicateDetector(dataType: string) {
   switch (dataType) {
@@ -320,11 +320,11 @@ export function createDuplicateDetector(dataType: string) {
  * Processes items in batches to prevent UI blocking during large import operations.
  * Uses setTimeout(0) to yield control between batches.
  *
- * @param {Array} itemsToImport - Items to check for duplicates
- * @param {Array} existingItems - Existing items to compare against
- * @param {Function} duplicateDetector - Duplicate detection function
- * @param {number} batchSize - Size of batches to process (default: 50)
- * @returns {Promise<Array>} - Array of duplicate detection results
+ * @param itemsToImport - Items to check for duplicates
+ * @param existingItems - Existing items to compare against
+ * @param duplicateDetector - Duplicate detection function
+ * @param batchSize - Size of batches to process (default: 50)
+ * @returns - Array of duplicate detection results
  */
 export async function batchDuplicateDetection<T>(
   itemsToImport: T[],

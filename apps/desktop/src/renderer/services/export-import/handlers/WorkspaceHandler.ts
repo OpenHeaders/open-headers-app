@@ -42,8 +42,8 @@ export class WorkspaceHandler {
 
   /**
    * Exports workspace data for inclusion in export file
-   * @param {Object} options - Export options
-   * @returns {Promise<Object|null>} - Workspace data or null if not selected
+   * @param options - Export options
+   * @returns - Workspace data or null if not selected
    */
   async exportWorkspace(options: ExportOptions) {
     const { includeWorkspace, includeCredentials, currentWorkspace } = options;
@@ -80,9 +80,9 @@ export class WorkspaceHandler {
 
   /**
    * Imports workspace data and creates a new workspace
-   * @param {Object} workspaceInfo - Workspace information to import
-   * @param {Object} options - Import options
-   * @returns {Promise<Object>} - Import statistics with created workspace info
+   * @param workspaceInfo - Workspace information to import
+   * @param options - Import options
+   * @returns - Import statistics with created workspace info
    */
   async importWorkspace(workspaceInfo: WorkspaceData | null, options: WorkspaceImportOptions) {
     const stats: { createdWorkspace: WorkspaceData | null; errors: Array<{ workspace: string; error: string }> } = {
@@ -131,9 +131,9 @@ export class WorkspaceHandler {
 
   /**
    * Creates a new workspace from import data
-   * @param {Object} workspaceInfo - Workspace information
-   * @param {Object} options - Import options
-   * @returns {Promise<Object>} - Created workspace object
+   * @param workspaceInfo - Workspace information
+   * @param options - Import options
+   * @returns - Created workspace object
    * @private
    */
   async _createWorkspaceFromImport(workspaceInfo: WorkspaceData, options: WorkspaceImportOptions) {
@@ -181,8 +181,7 @@ export class WorkspaceHandler {
 
   /**
    * Switches to the newly created workspace
-   * @param {Object} workspace - Workspace to switch to
-   * @returns {Promise<void>}
+   * @param workspace - Workspace to switch to
    * @private
    */
   async _switchToWorkspace(workspace: WorkspaceData) {
@@ -200,8 +199,8 @@ export class WorkspaceHandler {
 
   /**
    * Determines if credentials should be imported based on options
-   * @param {Object} options - Import options
-   * @returns {boolean} - Whether to import credentials
+   * @param options - Import options
+   * @returns - Whether to import credentials
    * @private
    */
   _shouldImportCredentials(options: WorkspaceImportOptions) {
@@ -216,8 +215,8 @@ export class WorkspaceHandler {
 
   /**
    * Sanitizes authentication data for export
-   * @param {Object} authData - Authentication data to sanitize
-   * @returns {Object} - Sanitized authentication data
+   * @param authData - Authentication data to sanitize
+   * @returns - Sanitized authentication data
    * @private
    */
   _sanitizeWorkspaceAuthData(authData: WorkspaceAuthData): WorkspaceAuthData {
@@ -242,8 +241,8 @@ export class WorkspaceHandler {
 
   /**
    * Validates and sanitizes authentication data for import
-   * @param {Object} authData - Authentication data to validate
-   * @returns {Object} - Validated and sanitized authentication data
+   * @param authData - Authentication data to validate
+   * @returns - Validated and sanitized authentication data
    * @private
    */
   _validateAndSanitizeWorkspaceAuthData(authData: WorkspaceAuthData): WorkspaceAuthData {
@@ -256,7 +255,7 @@ export class WorkspaceHandler {
 
   /**
    * Generates a unique workspace ID
-   * @returns {string} - Unique workspace ID
+   * @returns - Unique workspace ID
    * @private
    */
   _generateWorkspaceId() {
@@ -265,8 +264,8 @@ export class WorkspaceHandler {
 
   /**
    * Gets statistics about workspace for reporting
-   * @param {Object} workspaceData - Workspace data object
-   * @returns {Object} - Statistics object
+   * @param workspaceData - Workspace data object
+   * @returns - Statistics object
    */
   getWorkspaceStatistics(workspaceData: WorkspaceData | null) {
     if (!workspaceData) {
@@ -288,8 +287,8 @@ export class WorkspaceHandler {
 
   /**
    * Validates workspace data for export
-   * @param {Object} workspaceData - Workspace data to validate
-   * @returns {Object} - Validation result
+   * @param workspaceData - Workspace data to validate
+   * @returns - Validation result
    */
   validateWorkspaceForExport(workspaceData: WorkspaceData | null) {
     if (!workspaceData) {

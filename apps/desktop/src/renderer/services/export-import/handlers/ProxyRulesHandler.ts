@@ -27,8 +27,8 @@ export class ProxyRulesHandler {
 
   /**
    * Exports proxy rules data for inclusion in export file
-   * @param {Object} options - Export options
-   * @returns {Promise<Array|null>} - Array of proxy rules or null if not selected
+   * @param options - Export options
+   * @returns - Array of proxy rules or null if not selected
    */
   async exportProxyRules(options: ExportOptions): Promise<ProxyRule[] | null> {
     const { selectedItems } = options;
@@ -63,9 +63,9 @@ export class ProxyRulesHandler {
 
   /**
    * Imports proxy rules from import data
-   * @param {Array} rulesToImport - Proxy rules to import
-   * @param {Object} options - Import options
-   * @returns {Promise<Object>} - Import statistics
+   * @param rulesToImport - Proxy rules to import
+   * @param options - Import options
+   * @returns - Import statistics
    */
   async importProxyRules(rulesToImport: ProxyRule[] | null, options: { importMode?: string }) {
     const stats: { imported: number; skipped: number; errors: Array<{ pattern: string; error: string }> } = {
@@ -123,10 +123,10 @@ export class ProxyRulesHandler {
 
   /**
    * Imports a single proxy rule with duplicate detection
-   * @param {Object} rule - Proxy rule to import
-   * @param {Array} existingRules - Existing proxy rules for duplicate detection
-   * @param {Object} options - Import options
-   * @returns {Promise<Object>} - Import result
+   * @param rule - Proxy rule to import
+   * @param existingRules - Existing proxy rules for duplicate detection
+   * @param options - Import options
+   * @returns - Import result
    * @private
    */
   async _importSingleProxyRule(rule: ProxyRule, existingRules: ProxyRule[], options: { importMode?: string }) {
@@ -154,7 +154,7 @@ export class ProxyRulesHandler {
 
   /**
    * Gets existing proxy rules from the system
-   * @returns {Promise<Array>} - Array of existing proxy rules
+   * @returns - Array of existing proxy rules
    * @private
    */
   async _getExistingProxyRules() {
@@ -168,8 +168,7 @@ export class ProxyRulesHandler {
 
   /**
    * Saves a proxy rule using the system API
-   * @param {Object} rule - Proxy rule to save
-   * @returns {Promise<void>}
+   * @param rule - Proxy rule to save
    * @private
    */
   async _saveProxyRule(rule: ProxyRule) {
@@ -182,7 +181,6 @@ export class ProxyRulesHandler {
 
   /**
    * Clears all existing proxy rules (used in replace mode)
-   * @returns {Promise<void>}
    * @private
    */
   async _clearExistingProxyRules() {
@@ -206,7 +204,7 @@ export class ProxyRulesHandler {
 
   /**
    * Emits an event to notify the UI that proxy rules have been updated
-   * @param {Object} stats - Import statistics
+   * @param stats - Import statistics
    * @private
    */
   _emitProxyRulesUpdatedEvent(stats: { imported: number; skipped: number }) {
@@ -227,8 +225,8 @@ export class ProxyRulesHandler {
 
   /**
    * Validates proxy rules array for export
-   * @param {Array} rules - Proxy rules to validate
-   * @returns {Object} - Validation result
+   * @param rules - Proxy rules to validate
+   * @returns - Validation result
    */
   validateProxyRulesForExport(rules: ProxyRule[] | undefined) {
     if (!Array.isArray(rules)) {
@@ -258,8 +256,8 @@ export class ProxyRulesHandler {
 
   /**
    * Gets statistics about proxy rules for reporting
-   * @param {Array} rules - Proxy rules array
-   * @returns {Object} - Statistics object
+   * @param rules - Proxy rules array
+   * @returns - Statistics object
    */
   getProxyRulesStatistics(rules: ProxyRule[] | undefined) {
     if (!Array.isArray(rules)) {
@@ -304,8 +302,8 @@ export class ProxyRulesHandler {
 
   /**
    * Analyzes proxy rules for potential conflicts or issues
-   * @param {Array} rules - Proxy rules to analyze
-   * @returns {Object} - Analysis result with warnings and suggestions
+   * @param rules - Proxy rules to analyze
+   * @returns - Analysis result with warnings and suggestions
    */
   analyzeProxyRules(rules: ProxyRule[] | undefined) {
     if (!Array.isArray(rules)) {

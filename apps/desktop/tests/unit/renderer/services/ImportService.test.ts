@@ -87,16 +87,6 @@ describe('ImportService._validateImportOptions', () => {
     ).toThrow('File content must be provided');
   });
 
-  it('throws when fileContent is not a string', () => {
-    const service = new ImportService(makeDeps());
-    // intentionally passing invalid input to test runtime validation
-    expect(() =>
-      service._validateImportOptions({
-        fileContent: 123,
-        selectedItems: { sources: true },
-      } as unknown as ImportOptions),
-    ).toThrow('File content must be provided as a string');
-  });
 
   it('throws when selectedItems is missing', () => {
     const service = new ImportService(makeDeps());

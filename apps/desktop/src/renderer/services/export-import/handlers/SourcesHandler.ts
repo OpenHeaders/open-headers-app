@@ -27,8 +27,8 @@ export class SourcesHandler {
 
   /**
    * Exports sources data for inclusion in export file
-   * @param {Object} options - Export options
-   * @returns {Promise<Array|null>} - Array of sources or null if not selected
+   * @param options - Export options
+   * @returns - Array of sources or null if not selected
    */
   async exportSources(options: ExportOptions): Promise<Source[] | null> {
     const { selectedItems } = options;
@@ -63,9 +63,9 @@ export class SourcesHandler {
 
   /**
    * Imports sources from import data
-   * @param {Array} sourcesToImport - Sources to import
-   * @param {Object} options - Import options
-   * @returns {Promise<Object>} - Import statistics
+   * @param sourcesToImport - Sources to import
+   * @param options - Import options
+   * @returns - Import statistics
    */
   async importSources(
     sourcesToImport: Source[] | undefined,
@@ -115,9 +115,9 @@ export class SourcesHandler {
 
   /**
    * Imports a single source with duplicate detection
-   * @param {Object} source - Source to import
-   * @param {Object} options - Import options
-   * @returns {Promise<Object>} - Import result
+   * @param source - Source to import
+   * @param options - Import options
+   * @returns - Import result
    * @private
    */
   async _importSingleSource(source: Source, options: { importMode?: string }) {
@@ -146,7 +146,7 @@ export class SourcesHandler {
 
   /**
    * Gets current sources from the application state
-   * @returns {Array} - Current sources
+   * @returns - Current sources
    * @private
    */
   _getCurrentSources(): Source[] {
@@ -160,8 +160,8 @@ export class SourcesHandler {
 
   /**
    * Adds a source using the application's add source function
-   * @param {Object} source - Source to add
-   * @returns {Promise<boolean>} - Success status
+   * @param source - Source to add
+   * @returns - Success status
    * @private
    */
   async _addSource(source: Source) {
@@ -174,7 +174,6 @@ export class SourcesHandler {
 
   /**
    * Clears all existing sources (used in replace mode)
-   * @returns {Promise<void>}
    * @private
    */
   async _clearExistingSources() {
@@ -194,8 +193,8 @@ export class SourcesHandler {
 
   /**
    * Validates sources array for export
-   * @param {Array} sources - Sources to validate
-   * @returns {Object} - Validation result
+   * @param sources - Sources to validate
+   * @returns - Validation result
    */
   validateSourcesForExport(sources: Source[] | undefined) {
     if (!Array.isArray(sources)) {
@@ -225,8 +224,8 @@ export class SourcesHandler {
 
   /**
    * Gets statistics about sources for reporting
-   * @param {Array} sources - Sources array
-   * @returns {Object} - Statistics object
+   * @param sources - Sources array
+   * @returns - Statistics object
    */
   getSourcesStatistics(sources: Source[] | undefined) {
     if (!Array.isArray(sources)) {

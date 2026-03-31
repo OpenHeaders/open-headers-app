@@ -6,7 +6,7 @@
  */
 
 import { getCentralizedEnvironmentService } from '@/renderer/services/CentralizedEnvironmentService';
-import { DEFAULTS, EVENTS, IMPORT_MODES } from '@/renderer/services/export-import/core/ExportImportConfig';
+import { DEFAULTS, IMPORT_MODES } from '@/renderer/services/export-import/core/ExportImportConfig';
 import type {
   EnvironmentSchema,
   EnvironmentVariable,
@@ -71,8 +71,8 @@ export class EnvironmentsHandler {
 
   /**
    * Exports environment data for inclusion in export file
-   * @param {Object} options - Export options
-   * @returns {Promise<Object|null>} - Environment data or null if not selected
+   * @param options - Export options
+   * @returns - Environment data or null if not selected
    */
   async exportEnvironments(options: ExportOptions) {
     const { environmentOption, selectedEnvironments } = options;
@@ -101,9 +101,9 @@ export class EnvironmentsHandler {
 
   /**
    * Exports environment schema only
-   * @param {Object} fullSchema - Complete environment schema
-   * @param {Array} selectedEnvironments - Selected environment names
-   * @returns {Object} - Schema export data
+   * @param fullSchema - Complete environment schema
+   * @param selectedEnvironments - Selected environment names
+   * @returns - Schema export data
    * @private
    */
   _exportEnvironmentSchema(fullSchema: EnvironmentSchema, selectedEnvironments: string[] | undefined) {
@@ -128,9 +128,9 @@ export class EnvironmentsHandler {
 
   /**
    * Exports full environments with values
-   * @param {Object} fullSchema - Complete environment schema
-   * @param {Array} selectedEnvironments - Selected environment names
-   * @returns {Object} - Full environment export data
+   * @param fullSchema - Complete environment schema
+   * @param selectedEnvironments - Selected environment names
+   * @returns - Full environment export data
    * @private
    */
   _exportFullEnvironments(fullSchema: EnvironmentSchema, selectedEnvironments: string[] | undefined) {
@@ -172,9 +172,9 @@ export class EnvironmentsHandler {
 
   /**
    * Imports environment data from import payload
-   * @param {Object} importData - Import data containing environment info
-   * @param {Object} options - Import options
-   * @returns {Promise<Object>} - Import statistics
+   * @param importData - Import data containing environment info
+   * @param options - Import options
+   * @returns - Import statistics
    */
   async importEnvironments(importData: ImportData, options: ImportOptions) {
     const stats: ImportStats = {
@@ -218,9 +218,9 @@ export class EnvironmentsHandler {
 
   /**
    * Imports full environment data with values
-   * @param {Object} environmentsData - Environment data to import
-   * @param {Object} options - Import options
-   * @returns {Promise<Object>} - Import statistics
+   * @param environmentsData - Environment data to import
+   * @param options - Import options
+   * @returns - Import statistics
    * @private
    */
   async _importFullEnvironments(
@@ -310,9 +310,9 @@ export class EnvironmentsHandler {
 
   /**
    * Imports environment schema and creates empty variables
-   * @param {Object} schemaData - Environment schema data
-   * @param {Object} options - Import options
-   * @returns {Promise<Object>} - Import statistics
+   * @param schemaData - Environment schema data
+   * @param options - Import options
+   * @returns - Import statistics
    * @private
    */
   async _importEnvironmentSchema(schemaData: EnvironmentSchema, options: ImportOptions) {
@@ -403,9 +403,9 @@ export class EnvironmentsHandler {
 
   /**
    * Creates variables from schema definitions
-   * @param {string} envName - Environment name
-   * @param {Array} variableDefinitions - Variable definitions from schema
-   * @returns {Promise<Object>} - Creation statistics
+   * @param envName - Environment name
+   * @param variableDefinitions - Variable definitions from schema
+   * @returns - Creation statistics
    * @private
    */
   async _createVariablesFromSchema(
@@ -462,9 +462,8 @@ export class EnvironmentsHandler {
 
   /**
    * Batch creates multiple variables in an environment
-   * @param {string} envName - Environment name
-   * @param {Array} variablesToSet - Variables to create
-   * @returns {Promise<void>}
+   * @param envName - Environment name
+   * @param variablesToSet - Variables to create
    * @private
    */
   async _batchCreateVariables(envName: string, variablesToSet: VariableToSet[]) {
@@ -473,33 +472,9 @@ export class EnvironmentsHandler {
   }
 
   /**
-   * Emits an event to notify that environment variables have changed
-   * @param {string} envName - Environment name
-   * @param {Object} variables - Updated variables
-   * @private
-   */
-  _emitEnvironmentVariablesChangedEvent(
-    envName: string,
-    variables: Record<string, { value: string; isSecret: boolean }>,
-  ) {
-    try {
-      window.dispatchEvent(
-        new CustomEvent(EVENTS.ENVIRONMENT_VARIABLES_CHANGED, {
-          detail: {
-            environment: envName,
-            variables: variables,
-          },
-        }),
-      );
-    } catch (error) {
-      log.warn('Failed to emit environment variables changed event:', error);
-    }
-  }
-
-  /**
    * Gets statistics about environments for reporting
-   * @param {Object} environmentData - Environment data object
-   * @returns {Object} - Statistics object
+   * @param environmentData - Environment data object
+   * @returns - Statistics object
    */
   getEnvironmentStatistics(environmentData: EnvironmentData) {
     const stats = {
@@ -536,8 +511,8 @@ export class EnvironmentsHandler {
 
   /**
    * Validates environment data for export
-   * @param {Object} environmentData - Environment data to validate
-   * @returns {Object} - Validation result
+   * @param environmentData - Environment data to validate
+   * @returns - Validation result
    */
   validateEnvironmentsForExport(environmentData: EnvironmentData) {
     if (!environmentData || typeof environmentData !== 'object') {

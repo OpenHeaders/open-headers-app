@@ -50,10 +50,10 @@ interface ErrorContext {
  * Creates a detailed success message showing what was exported and where.
  * Handles both single-file and multi-file export formats.
  *
- * @param {Object} options - Export options used
- * @param {Object} exportedData - Data that was exported
- * @param {Array<string>} filePaths - Paths of files that were written
- * @returns {string} - Formatted success message
+ * @param options - Export options used
+ * @param exportedData - Data that was exported
+ * @param filePaths - Paths of files that were written
+ * @returns - Formatted success message
  */
 export function generateExportSuccessMessage(options: ExportOptions, exportedData: ExportData, filePaths: string[]) {
   const { selectedItems, fileFormat, environmentOption, includeWorkspace, includeCredentials } = options;
@@ -105,9 +105,9 @@ export function generateExportSuccessMessage(options: ExportOptions, exportedDat
  * Creates a comprehensive success message showing import statistics including
  * what was imported, what was skipped, and any new workspaces created.
  *
- * @param {Object} importStats - Statistics about what was imported
- * @param {boolean} isGitSync - Whether this was a Git sync operation
- * @returns {string} - Formatted success message
+ * @param importStats - Statistics about what was imported
+ * @param isGitSync - Whether this was a Git sync operation
+ * @returns - Formatted success message
  */
 export function generateImportSuccessMessage(importStats: ImportStatsLike, isGitSync = false) {
   const {
@@ -177,8 +177,8 @@ export function generateImportSuccessMessage(importStats: ImportStatsLike, isGit
  * Creates a structured summary suitable for logging and debugging.
  * Includes all import statistics in a compact format.
  *
- * @param {Object} importStats - Statistics about what was imported
- * @returns {string} - Detailed summary for logging
+ * @param importStats - Statistics about what was imported
+ * @returns - Detailed summary for logging
  */
 export function generateImportSummary(importStats: ImportStatsLike) {
   const {
@@ -211,9 +211,9 @@ export function generateImportSummary(importStats: ImportStatsLike) {
  * Analyzes import data and options to identify potential issues such as
  * version mismatches, large datasets, or destructive operations.
  *
- * @param {Object} importData - The import data being processed
- * @param {Object} options - Import options
- * @returns {string|null} - Warning message or null if no warnings
+ * @param importData - The import data being processed
+ * @param options - Import options
+ * @returns - Warning message or null if no warnings
  */
 export function generateImportWarnings(importData: ImportData, options: ImportOptions) {
   const warnings = [];
@@ -252,9 +252,9 @@ export function generateImportWarnings(importData: ImportData, options: ImportOp
  * Creates a message informing users about environment variables that were created
  * during import, including which environments were affected.
  *
- * @param {number} count - Number of variables created
- * @param {Array<string>} environmentNames - Names of environments affected
- * @returns {string|null} - Formatted message or null if no variables created
+ * @param count - Number of variables created
+ * @param environmentNames - Names of environments affected
+ * @returns - Formatted message or null if no variables created
  */
 export function generateEnvironmentVariablesMessage(count: number, environmentNames: string[] = []) {
   if (count === 0) {
@@ -272,10 +272,10 @@ export function generateEnvironmentVariablesMessage(count: number, environmentNa
  * Creates detailed error messages that include contextual information about
  * the failed operation, such as file names, data types, and processing steps.
  *
- * @param {Error} error - The error that occurred
- * @param {string} operation - The operation that failed ('export' or 'import')
- * @param {Object} context - Additional context about the operation
- * @returns {string} - Formatted error message
+ * @param error - The error that occurred
+ * @param operation - The operation that failed ('export' or 'import')
+ * @param context - Additional context about the operation
+ * @returns - Formatted error message
  */
 export function generateErrorMessage(error: Error, operation: string, context: ErrorContext = {}) {
   const baseMessage = operation === 'export' ? 'Error exporting data' : 'Error importing data';
@@ -305,11 +305,11 @@ export function generateErrorMessage(error: Error, operation: string, context: E
  * Creates progress messages with percentage completion for operations that
  * process multiple items, preventing UI freezing during large imports.
  *
- * @param {string} operation - Current operation
- * @param {number} current - Current progress
- * @param {number} total - Total items to process
- * @param {string} itemType - Type of items being processed
- * @returns {string} - Progress message
+ * @param operation - Current operation
+ * @param current - Current progress
+ * @param total - Total items to process
+ * @param itemType - Type of items being processed
+ * @returns - Progress message
  */
 export function generateProgressMessage(operation: string, current: number, total: number, itemType = 'items') {
   const percentage = total > 0 ? Math.round((current / total) * 100) : 0;

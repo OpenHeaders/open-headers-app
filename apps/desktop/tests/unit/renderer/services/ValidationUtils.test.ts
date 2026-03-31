@@ -182,10 +182,6 @@ describe('validateEnvironmentVariable', () => {
     expect(validateEnvironmentVariable({}).success).toBe(false);
   });
 
-  it('rejects non-string name', () => {
-    expect(validateEnvironmentVariable({ name: 123 }).success).toBe(false);
-  });
-
   it('rejects name exceeding max length', () => {
     const r = validateEnvironmentVariable({ name: 'V'.repeat(VALIDATION_RULES.MAX_NAME_LENGTH + 1) });
     expect(r.success).toBe(false);
@@ -256,10 +252,7 @@ describe('validateProxyRule', () => {
     expect(r.error).toContain('header rule ID');
   });
 
-  it('rejects dynamic rule with non-string headerRuleId', () => {
-    const r = validateProxyRule({ isDynamic: true, headerRuleId: 123 });
-    expect(r.success).toBe(false);
-  });
+
 
   it('accepts valid dynamic rule with UUID headerRuleId', () => {
     expect(
@@ -367,10 +360,6 @@ describe('validateVersion', () => {
   it('rejects falsy version', () => {
     expect(validateVersion('').success).toBe(false);
     expect(validateVersion(null as unknown as string).success).toBe(false);
-  });
-
-  it('rejects non-string version', () => {
-    expect(validateVersion(123 as unknown as string).success).toBe(false);
   });
 
   it('succeeds for supported version without warning', () => {

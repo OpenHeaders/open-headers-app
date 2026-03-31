@@ -161,10 +161,6 @@ describe('FileOperations', () => {
       expect(result.error).toContain('non-empty string');
     });
 
-    it('rejects non-string path', () => {
-      const result = validateFilePath(123 as unknown as string);
-      expect(result.success).toBe(false);
-    });
   });
 
   // ========================================================================

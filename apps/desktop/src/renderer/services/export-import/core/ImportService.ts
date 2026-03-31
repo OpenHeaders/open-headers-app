@@ -65,8 +65,8 @@ export class ImportService {
 
   /**
    * Executes the complete import process
-   * @param {Object} importOptions - Import configuration options
-   * @returns {Promise<void>}
+   * @param importOptions - Import configuration options
+   * @returns Promise that resolves when complete
    */
   async execute(importOptions: ImportOptions) {
     const startTime = Date.now();
@@ -110,8 +110,8 @@ export class ImportService {
 
   /**
    * Parses and validates import files
-   * @param {Object} importOptions - Import options
-   * @returns {Promise<Object>} - Parsed import data and environment data
+   * @param importOptions - Import options
+   * @returns - Parsed import data and environment data
    * @private
    */
   async _parseImportFiles(importOptions: ImportOptions) {
@@ -157,9 +157,9 @@ export class ImportService {
 
   /**
    * Handles workspace import if workspace data is present
-   * @param {Object} importData - Import data
-   * @param {Object} importOptions - Import options
-   * @returns {Promise<Object>} - Workspace import statistics
+   * @param importData - Import data
+   * @param importOptions - Import options
+   * @returns - Workspace import statistics
    * @private
    */
   async _handleWorkspaceImport(importData: ImportData, importOptions: ImportOptions) {
@@ -173,10 +173,10 @@ export class ImportService {
 
   /**
    * Imports all selected data types
-   * @param {Object} importData - Import data
-   * @param {Object} envData - Environment data (if separate)
-   * @param {Object} importOptions - Import options
-   * @returns {Promise<Object>} - Combined import statistics
+   * @param importData - Import data
+   * @param _envData - Environment data (if separate)
+   * @param importOptions - Import options
+   * @returns Combined import statistics
    * @private
    */
   async _importAllDataTypes(importData: ImportData, _envData: ImportData | null, importOptions: ImportOptions) {
@@ -236,9 +236,9 @@ export class ImportService {
 
   /**
    * Finalizes the import process with events and messages
-   * @param {Object} importStats - Import statistics
-   * @param {Object} importOptions - Import options
-   * @returns {Promise<void>}
+   * @param importStats - Import statistics
+   * @param importOptions - Import options
+   * @returns Promise that resolves when complete
    * @private
    */
   async _finalizeImport(importStats: ImportStats, importOptions: ImportOptions) {
@@ -265,8 +265,8 @@ export class ImportService {
 
   /**
    * Shows import warnings if any potential issues are detected
-   * @param {Object} importData - Import data to analyze
-   * @param {Object} importOptions - Import options
+   * @param importData - Import data to analyze
+   * @param importOptions - Import options
    * @private
    */
   _showImportWarnings(importData: ImportData, importOptions: ImportOptions) {
@@ -278,7 +278,7 @@ export class ImportService {
 
   /**
    * Validates import options
-   * @param {Object} importOptions - Import options to validate
+   * @param importOptions - Import options to validate
    * @throws {Error} - If validation fails
    * @private
    */
@@ -289,7 +289,7 @@ export class ImportService {
 
     const { fileContent, selectedItems, importMode } = importOptions;
 
-    if (!fileContent || typeof fileContent !== 'string') {
+    if (!fileContent) {
       throw new Error('File content must be provided as a string');
     }
 
@@ -302,7 +302,7 @@ export class ImportService {
     }
 
     // Check if at least one item is selected
-    const hasSelection = Object.values(selectedItems).some((selected) => selected === true);
+    const hasSelection = Object.values(selectedItems).some((selected) => selected);
     if (!hasSelection) {
       throw new Error('At least one data type must be selected for import');
     }
@@ -310,7 +310,7 @@ export class ImportService {
 
   /**
    * Validates the complete import payload
-   * @param {Object} importData - Import data to validate
+   * @param importData - Import data to validate
    * @throws {Error} - If validation fails
    * @private
    */
@@ -327,8 +327,8 @@ export class ImportService {
 
   /**
    * Checks if any data was actually imported
-   * @param {Object} importStats - Import statistics
-   * @returns {boolean} - Whether any data was imported
+   * @param importStats - Import statistics
+   * @returns - Whether any data was imported
    * @private
    */
   _hasImportedData(importStats: ImportStats) {
@@ -343,8 +343,8 @@ export class ImportService {
 
   /**
    * Gets import statistics for reporting
-   * @param {Object} importStats - Import statistics to analyze
-   * @returns {Object} - Comprehensive import statistics
+   * @param importStats - Import statistics to analyze
+   * @returns - Comprehensive import statistics
    */
   getImportStatistics(importStats: ImportStats) {
     const stats = {

@@ -22,10 +22,10 @@ import { ERROR_MESSAGES, FILE_FILTERS } from '@/renderer/services/export-import/
  * Creates unique filenames by appending ISO timestamp to prevent overwrites.
  * Format: prefix_suffix_YYYY-MM-DDTHH-MM-SS.extension
  *
- * @param {string} prefix - Filename prefix (e.g., 'open-headers-config')
- * @param {string} suffix - Optional suffix (e.g., 'env')
- * @param {string} extension - File extension (default: 'json')
- * @returns {string} - Generated filename with timestamp
+ * @param prefix - Filename prefix (e.g., 'open-headers-config')
+ * @param suffix - Optional suffix (e.g., 'env')
+ * @param extension - File extension (default: 'json')
+ * @returns - Generated filename with timestamp
  */
 export function generateTimestampedFilename(prefix = 'open-headers-config', suffix = '', extension = 'json') {
   const timestamp = new Date().toISOString().replace(/:/g, '-').split('.')[0];
@@ -39,11 +39,11 @@ export function generateTimestampedFilename(prefix = 'open-headers-config', suff
  * Opens a native file save dialog with JSON file filters. Handles user cancellation
  * and provides consistent error handling across platforms.
  *
- * @param {Object} options - Dialog options
- * @param {string} options.title - Dialog title
- * @param {string} options.defaultPath - Default filename
- * @param {string} options.buttonLabel - Save button label
- * @returns {Promise<string|null>} - Selected file path or null if cancelled
+ * @param options - Dialog options
+ * @param options.title - Dialog title
+ * @param options.defaultPath - Default filename
+ * @param options.buttonLabel - Save button label
+ * @returns - Selected file path or null if cancelled
  */
 export async function showExportFileDialog({
   title = 'Export Configuration',
@@ -74,11 +74,11 @@ export async function showExportFileDialog({
  * Opens a native file open dialog with JSON file filters. Supports both single
  * and multiple file selection modes.
  *
- * @param {Object} options - Dialog options
- * @param {string} options.title - Dialog title
- * @param {string} options.buttonLabel - Open button label
- * @param {boolean} options.multiSelect - Allow multiple file selection
- * @returns {Promise<string[]|null>} - Selected file paths or null if cancelled
+ * @param options - Dialog options
+ * @param options.title - Dialog title
+ * @param options.buttonLabel - Open button label
+ * @param options.multiSelect - Allow multiple file selection
+ * @returns - Selected file paths or null if cancelled
  */
 export async function showImportFileDialog({
   title = 'Import Configuration',
@@ -105,10 +105,9 @@ export async function showImportFileDialog({
  * Serializes JavaScript objects to JSON and writes to file. Supports both
  * pretty-printed (human-readable) and compact formats.
  *
- * @param {string} filePath - Path to write the file
- * @param {Object} data - Data to write
- * @param {boolean} pretty - Whether to pretty-print the JSON (default: true)
- * @returns {Promise<void>}
+ * @param filePath - Path to write the file
+ * @param data - Data to write
+ * @param pretty - Whether to pretty-print the JSON (default: true)
  */
 export async function writeJsonFile(filePath: string, data: object, pretty = true) {
   try {
@@ -121,15 +120,13 @@ export async function writeJsonFile(filePath: string, data: object, pretty = tru
 
 /**
  * Reads and parses a JSON file
- * @param {string} filePath - Path to the file to read
- * @returns {Promise<Object>} - Parsed JSON data
+ * @param filePath - Path to the file to read
+ * @returns - Parsed JSON data
  */
 export async function readJsonFile(filePath: string) {
   try {
     const content = await window.electronAPI.readFile(filePath, 'utf-8');
-    if (typeof content !== 'string') throw new Error(`Expected string content from ${filePath}`);
-
-    return JSON.parse(content);
+    return JSON.parse(String(content));
   } catch (error) {
     throw new Error(`Failed to read file ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -137,9 +134,9 @@ export async function readJsonFile(filePath: string) {
 
 /**
  * Generates a companion file path for environment data
- * @param {string} mainFilePath - Path to the main export file
- * @param {string} envFileName - Environment file name
- * @returns {string} - Path for the environment file
+ * @param mainFilePath - Path to the main export file
+ * @param envFileName - Environment file name
+ * @returns - Path for the environment file
  */
 export function generateCompanionFilePath(mainFilePath: string, envFileName: string) {
   const lastSlashIndex = mainFilePath.lastIndexOf('/');
@@ -161,11 +158,11 @@ export function generateCompanionFilePath(mainFilePath: string, envFileName: str
  * Performs security checks to prevent directory traversal attacks and access
  * to system files. Validates against common dangerous patterns.
  *
- * @param {string} filePath - File path to validate
- * @returns {Object} - Validation result
+ * @param filePath - File path to validate
+ * @returns - Validation result
  */
 export function validateFilePath(filePath: string) {
-  if (!filePath || typeof filePath !== 'string') {
+  if (!filePath) {
     return {
       success: false,
       error: 'File path must be a non-empty string',
@@ -199,10 +196,8 @@ export function validateFilePath(filePath: string) {
  * Coordinates the export of multiple related files (main config + environment data).
  * Automatically generates companion file paths in the same directory as the main file.
  *
- * @param {Object} options - Export options
- * @param {Object} mainData - Main configuration data
- * @param {Object} environmentData - Environment data (optional)
- * @returns {Promise<Array<string>>} - Array of written file paths
+ * @param options - Export options including mainData and environmentData
+ * @returns Array of written file paths
  */
 export async function handleMultiFileExport({
   title = 'Export Configuration',
@@ -250,10 +245,8 @@ export async function handleMultiFileExport({
  * Simplified export flow for single-file exports. Shows dialog, writes file,
  * and returns the path of the written file.
  *
- * @param {Object} options - Export options
- * @param {string} filename - Default filename
- * @param {Object} data - Data to export
- * @returns {Promise<string>} - Path to written file
+ * @param options - Export options including filename and data
+ * @returns Path to written file
  */
 export async function handleSingleFileExport({ filename, data }: { filename: string; data: object }) {
   const filePath = await showExportFileDialog({

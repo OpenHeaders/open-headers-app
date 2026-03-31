@@ -45,8 +45,8 @@ interface ImportPayload {
  * Performs initial validation to ensure the data is a valid object (not null, array, or primitive).
  * This is the first validation step before type-specific validations.
  *
- * @param {any} data - The data to validate
- * @returns {Object} - Validation result with success flag and error message
+ * @param data - The data to validate
+ * @returns - Validation result with success flag and error message
  */
 export function validateImportData(data: unknown): ValidationResult {
   if (!data || typeof data !== 'object') {
@@ -72,12 +72,12 @@ export function validateImportData(data: unknown): ValidationResult {
  * Combines JSON parsing with basic structure validation. Returns both
  * validation result and parsed data if successful.
  *
- * @param {string} fileContent - Raw file content
- * @returns {Object} - Validation result with parsed data or error
+ * @param fileContent - Raw file content
+ * @returns - Validation result with parsed data or error
  */
 export function validateAndParseFileContent(fileContent: string): ValidationResult {
   try {
-    if (!fileContent || typeof fileContent !== 'string') {
+    if (!fileContent) {
       return {
         success: false,
         error: 'File content is empty or invalid',
@@ -109,8 +109,8 @@ export function validateAndParseFileContent(fileContent: string): ValidationResu
  * Validates workspace objects for required fields (name, type) and enforces
  * business rules like maximum name length.
  *
- * @param {Object} workspace - Workspace configuration object
- * @returns {Object} - Validation result
+ * @param workspaceInput - Workspace configuration object
+ * @returns - Validation result
  */
 export function validateWorkspaceConfig(workspaceInput: unknown): ValidationResult {
   if (!workspaceInput || typeof workspaceInput !== 'object') {
@@ -144,8 +144,8 @@ export function validateWorkspaceConfig(workspaceInput: unknown): ValidationResu
 
 /**
  * Validates environment variable definition
- * @param {Object} variable - Environment variable object
- * @returns {Object} - Validation result
+ * @param variableInput - Environment variable object
+ * @returns - Validation result
  */
 export function validateEnvironmentVariable(variableInput: unknown): ValidationResult {
   if (!variableInput || typeof variableInput !== 'object') {
@@ -157,7 +157,7 @@ export function validateEnvironmentVariable(variableInput: unknown): ValidationR
 
   const variable = variableInput as { name?: string };
 
-  if (!variable.name || typeof variable.name !== 'string') {
+  if (!variable.name) {
     return {
       success: false,
       error: 'Environment variable must have a valid name',
@@ -177,8 +177,8 @@ export function validateEnvironmentVariable(variableInput: unknown): ValidationR
 
 /**
  * Validates proxy rule configuration
- * @param {Object} rule - Proxy rule object
- * @returns {Object} - Validation result
+ * @param ruleInput - Proxy rule object
+ * @returns - Validation result
  */
 export function validateProxyRule(ruleInput: unknown): ValidationResult {
   if (!ruleInput || typeof ruleInput !== 'object') {
@@ -210,7 +210,7 @@ export function validateProxyRule(ruleInput: unknown): ValidationResult {
         error: 'Static proxy rule must have at least one domain',
       };
     }
-    if (!rule.headerName || typeof rule.headerName !== 'string') {
+    if (!rule.headerName) {
       return {
         success: false,
         error: 'Static proxy rule must have a valid header name',
@@ -220,7 +220,7 @@ export function validateProxyRule(ruleInput: unknown): ValidationResult {
 
   // Validate dynamic rules
   if (isDynamicRule) {
-    if (!rule.headerRuleId || typeof rule.headerRuleId !== 'string') {
+    if (!rule.headerRuleId) {
       return {
         success: false,
         error: 'Dynamic proxy rule must have a valid header rule ID',
@@ -237,8 +237,8 @@ export function validateProxyRule(ruleInput: unknown): ValidationResult {
  * Validates source objects for required fields and type-specific requirements.
  * Different source types (http, file, env) have different validation rules.
  *
- * @param {Object} source - Source object
- * @returns {Object} - Validation result
+ * @param source - Source object
+ * @returns - Validation result
  */
 export function validateSource(source: Partial<Source>): ValidationResult {
   if (!source || typeof source !== 'object') {
@@ -262,7 +262,7 @@ export function validateSource(source: Partial<Source>): ValidationResult {
   switch (source.sourceType) {
     case 'http':
       // For HTTP sources, the URL is stored in sourcePath field
-      if (!source.sourcePath || typeof source.sourcePath !== 'string') {
+      if (!source.sourcePath) {
         return {
           success: false,
           error: 'HTTP source must have a valid URL in sourcePath',
@@ -279,7 +279,7 @@ export function validateSource(source: Partial<Source>): ValidationResult {
       }
       break;
     case 'file':
-      if (!source.sourcePath || typeof source.sourcePath !== 'string') {
+      if (!source.sourcePath) {
         return {
           success: false,
           error: 'File source must have a valid file path',
@@ -287,7 +287,7 @@ export function validateSource(source: Partial<Source>): ValidationResult {
       }
       break;
     case 'env':
-      if (!source.sourcePath || typeof source.sourcePath !== 'string') {
+      if (!source.sourcePath) {
         return {
           success: false,
           error: 'Environment source must have a valid variable name',
@@ -306,11 +306,11 @@ export function validateSource(source: Partial<Source>): ValidationResult {
  * Returns warnings for unsupported versions instead of hard errors to allow
  * graceful degradation.
  *
- * @param {string} version - Version string to validate
- * @returns {Object} - Validation result
+ * @param version - Version string to validate
+ * @returns - Validation result
  */
 export function validateVersion(version: string): ValidationResult {
-  if (!version || typeof version !== 'string') {
+  if (!version) {
     return {
       success: false,
       error: 'Version must be a valid string',
@@ -329,8 +329,8 @@ export function validateVersion(version: string): ValidationResult {
 
 /**
  * Validates environment schema structure
- * @param {Object} schema - Environment schema object
- * @returns {Object} - Validation result
+ * @param schemaInput - Environment schema object
+ * @returns - Validation result
  */
 export function validateEnvironmentSchema(schemaInput: unknown): ValidationResult {
   if (!schemaInput || typeof schemaInput !== 'object') {
@@ -368,8 +368,8 @@ export function validateEnvironmentSchema(schemaInput: unknown): ValidationResul
  * Performs comprehensive validation of an entire import payload, including
  * all nested objects. Aggregates all errors and warnings into a single result.
  *
- * @param {Object} payload - Complete import payload
- * @returns {Object} - Comprehensive validation result with aggregated errors/warnings
+ * @param payload - Complete import payload
+ * @returns - Comprehensive validation result with aggregated errors/warnings
  */
 export function validateImportPayload(payload: ImportPayload): ValidationResult {
   const errors = [];
