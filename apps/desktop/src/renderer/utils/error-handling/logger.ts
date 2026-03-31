@@ -119,9 +119,6 @@ class Logger {
     }
   }
 
-  setDebugMode(enabled: boolean) {
-    setGlobalLogLevel(enabled ? 'debug' : 'info');
-  }
 }
 
 // Factory function to create logger instances

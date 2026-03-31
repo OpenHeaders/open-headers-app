@@ -68,5 +68,3 @@ export const showMessage = (type: MessageType, content: MessageContent, duration
 
 export const successMessage = (content: MessageContent, duration?: number) => showMessage('success', content, duration);
 export const errorMessage = (content: MessageContent, duration?: number) => showMessage('error', content, duration);
-export const warningMessage = (content: MessageContent, duration?: number) => showMessage('warning', content, duration);
-export const infoMessage = (content: MessageContent, duration?: number) => showMessage('info', content, duration);

@@ -235,8 +235,7 @@ export function convertNewRecordingFormat(recordInput: RawRecordingRecord) {
             request.responseSize = eventData.responseBody ? eventData.responseBody.length : 0;
 
             if (eventData.timing?.endTime) {
-              const responseTimestamp = event.timestamp - (startTime ?? 0);
-              request.endTime = responseTimestamp;
+              request.endTime = event.timestamp - (startTime ?? 0);
               request.duration = eventData.timing.endTime - (request.timing?.startTime || 0);
             }
 

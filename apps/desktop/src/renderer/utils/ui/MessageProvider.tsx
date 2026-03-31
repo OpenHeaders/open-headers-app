@@ -48,19 +48,19 @@ export const MessageProvider = ({ children }: MessageProviderProps) => {
     // Show the message using the Ant Design message API
     switch (type) {
       case 'success':
-        messageApi.success(content, duration);
+        void messageApi.success(content, duration);
         break;
       case 'error':
-        messageApi.error(content, duration);
+        void messageApi.error(content, duration);
         break;
       case 'warning':
-        messageApi.warning(content, duration);
+        void messageApi.warning(content, duration);
         break;
       case 'info':
-        messageApi.info(content, duration);
+        void messageApi.info(content, duration);
         break;
       default:
-        messageApi.info(content, duration);
+        void messageApi.info(content, duration);
     }
   };
 

@@ -3,14 +3,10 @@
  * Provides functions for detecting, extracting, and validating environment variables
  */
 
-import { createLogger } from '@/renderer/utils/error-handling/logger';
-
-const _log = createLogger('EnvironmentVariableValidation');
-
 /**
  * Regular expression to match environment variables in the format {{VAR_NAME}}
  */
-const ENV_VAR_PATTERN = /\{\{([^}]+)\}\}/g;
+const ENV_VAR_PATTERN = /{{([^}]+)}}/g;
 
 /** Result of validateEnvironmentVariables */
 export interface EnvVarValidation {
@@ -33,11 +29,11 @@ interface RuleForValidation {
 
 /**
  * Extract all environment variable names from a text string
- * @param {string} text - Text to extract variables from
- * @returns {Array<string>} Array of variable names (without the {{ }})
+ * @param text - Text to extract variables from
+ * @returns Array of variable names (without the {{ }})
  */
 export function extractEnvironmentVariables(text: string | null | undefined): string[] {
-  if (!text || typeof text !== 'string') {
+  if (!text) {
     return [];
   }
 
@@ -56,11 +52,11 @@ export function extractEnvironmentVariables(text: string | null | undefined): st
 
 /**
  * Check if a text contains environment variables
- * @param {string} text - Text to check
- * @returns {boolean} True if contains environment variables
+ * @param text - Text to check
+ * @returns True if contains environment variables
  */
 export function hasEnvironmentVariables(text: string | null | undefined): boolean {
-  if (!text || typeof text !== 'string') {
+  if (!text) {
     return false;
   }
 
@@ -69,8 +65,8 @@ export function hasEnvironmentVariables(text: string | null | undefined): boolea
 
 /**
  * Extract environment variables from all fields of a header rule
- * @param {Object} rule - Header rule object
- * @returns {Array<string>} Array of all variable names used in the rule
+ * @param rule - Header rule object
+ * @returns Array of all variable names used in the rule
  */
 export function extractVariablesFromRule(rule: RuleForValidation): string[] {
   const variables = [];
@@ -108,9 +104,9 @@ export function extractVariablesFromRule(rule: RuleForValidation): string[] {
 
 /**
  * Check which environment variables are missing
- * @param {Array<string>} requiredVars - Variable names required
- * @param {Object} availableVars - Available variables object
- * @returns {Array<string>} Array of missing variable names
+ * @param requiredVars - Variable names required
+ * @param availableVars - Available variables object
+ * @returns Array of missing variable names
  */
 export function findMissingVariables(
   requiredVars: string[] | null,
@@ -129,9 +125,9 @@ export function findMissingVariables(
 
 /**
  * Validate environment variables in a text and return validation result
- * @param {string} text - Text to validate
- * @param {Object} availableVars - Available variables object
- * @returns {Object} Validation result { isValid, missingVars, usedVars }
+ * @param text - Text to validate
+ * @param availableVars - Available variables object
+ * @returns Validation result { isValid, missingVars, usedVars }
  */
 export function validateEnvironmentVariables(
   text: string | null | undefined,
@@ -150,9 +146,9 @@ export function validateEnvironmentVariables(
 
 /**
  * Validate all environment variables in a header rule
- * @param {Object} rule - Header rule to validate
- * @param {Object} availableVars - Available variables object
- * @returns {Object} Validation result with details for each field
+ * @param rule - Header rule to validate
+ * @param availableVars - Available variables object
+ * @returns Validation result with details for each field
  */
 export function validateRuleEnvironmentVariables(
   rule: RuleForValidation,
@@ -223,17 +219,17 @@ export function validateRuleEnvironmentVariables(
 
 /**
  * Resolve environment variables in a text string
- * @param {string} text - Text with environment variables
- * @param {Object} variables - Variables object
- * @param {Object} options - Resolution options
- * @returns {string} Text with variables resolved
+ * @param text - Text with environment variables
+ * @param variables - Variables object
+ * @param options - Resolution options
+ * @returns Text with variables resolved
  */
 export function resolveEnvironmentVariables(
   text: string | null | undefined,
   variables: Record<string, string | null | undefined>,
   options: { keepUnresolved?: boolean; placeholderPrefix?: string } = {},
 ) {
-  if (!text || typeof text !== 'string') {
+  if (!text) {
     return text;
   }
 
@@ -259,10 +255,10 @@ export function resolveEnvironmentVariables(
 
 /**
  * Resolve all environment variables in a header rule
- * @param {Object} rule - Header rule to resolve
- * @param {Object} variables - Variables object
- * @param {Object} options - Resolution options
- * @returns {Object} Rule with resolved variables
+ * @param rule - Header rule to resolve
+ * @param variables - Variables object
+ * @param options - Resolution options
+ * @returns Rule with resolved variables
  */
 export function resolveRuleEnvironmentVariables(
   rule: RuleForValidation,
@@ -301,9 +297,9 @@ export function resolveRuleEnvironmentVariables(
 
 /**
  * Check if a rule should be applied based on environment variable availability
- * @param {Object} rule - Header rule to check
- * @param {Object} availableVars - Available variables object
- * @returns {Object} Result { shouldApply, reason, missingVars }
+ * @param rule - Header rule to check
+ * @param availableVars - Available variables object
+ * @returns Result { shouldApply, reason, missingVars }
  */
 export function checkRuleActivation(
   rule: RuleForValidation,
@@ -340,8 +336,8 @@ export function checkRuleActivation(
 
 /**
  * Format missing variables for display
- * @param {Array<string>} missingVars - Array of missing variable names
- * @returns {string} Formatted string for display
+ * @param missingVars - Array of missing variable names
+ * @returns Formatted string for display
  */
 export function formatMissingVariables(missingVars: string[] | null): string {
   if (!missingVars || missingVars.length === 0) {
@@ -357,9 +353,9 @@ export function formatMissingVariables(missingVars: string[] | null): string {
 
 /**
  * Get a preview of resolved text with indicators for missing variables
- * @param {string} text - Text with environment variables
- * @param {Object} variables - Available variables
- * @returns {Object} Preview object { text, hasMissing, missingCount }
+ * @param text - Text with environment variables
+ * @param variables - Available variables
+ * @returns Preview object { text, hasMissing, missingCount }
  */
 export function getResolvedPreview(
   text: string | null | undefined,
