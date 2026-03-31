@@ -47,9 +47,9 @@ interface GitStatus {
 class GitInitializer {
   private gitPath: string | null;
   private initialized: boolean;
-  private tempDir: string;
-  private sshDir: string;
-  private executor: GitExecutor;
+  private readonly tempDir: string;
+  private readonly sshDir: string;
+  private readonly executor: GitExecutor;
 
   constructor() {
     this.gitPath = null;

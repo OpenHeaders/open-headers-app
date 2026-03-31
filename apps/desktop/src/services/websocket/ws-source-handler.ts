@@ -20,7 +20,12 @@ interface SourceHandlerDeps {
   _broadcastToAll(message: string): number;
 }
 
-class WSSourceHandler {
+/** Subset of WSSourceHandler consumed by WSClientHandler during client initialization. */
+export interface SourceClientSender {
+  sendSourcesToClient(ws: WebSocket): Promise<void>;
+}
+
+class WSSourceHandler implements SourceClientSender {
   wsService: SourceHandlerDeps;
 
   constructor(wsService: SourceHandlerDeps) {
@@ -113,4 +118,3 @@ class WSSourceHandler {
 }
 
 export { WSSourceHandler };
-export default WSSourceHandler;

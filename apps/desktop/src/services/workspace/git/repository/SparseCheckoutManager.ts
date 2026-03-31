@@ -3,12 +3,10 @@
  * Manages selective file checkout for large repositories
  */
 
-import fs from 'node:fs';
 import path from 'node:path';
 import type { GitExecutor } from '@/services/workspace/git/core/GitExecutor';
 import mainLogger from '@/utils/mainLogger';
 
-const _fsPromises = fs.promises;
 const { createLogger } = mainLogger;
 
 const log = createLogger('SparseCheckoutManager');
@@ -19,11 +17,6 @@ interface SparseCheckoutResult {
   patterns?: string[];
 }
 
-interface SparseCheckoutStatus {
-  enabled: boolean;
-  patterns: string[];
-  mode: string;
-}
 
 class SparseCheckoutManager {
   private executor: GitExecutor;
@@ -119,23 +112,18 @@ class SparseCheckoutManager {
   async removePatterns(repoDir: string, patterns: string[]): Promise<SparseCheckoutResult> {
     log.info('Removing sparse checkout patterns:', patterns);
 
-    try {
-      // Get current patterns
-      const currentPatterns = await this.getPatterns(repoDir);
+    // Get current patterns
+    const currentPatterns = await this.getPatterns(repoDir);
 
-      // Remove specified patterns
-      const newPatterns = currentPatterns.filter((p) => !patterns.includes(p));
+    // Remove specified patterns
+    const newPatterns = currentPatterns.filter((p) => !patterns.includes(p));
 
-      if (newPatterns.length === 0) {
-        throw new Error('Cannot remove all patterns. Use disable() instead.');
-      }
-
-      // Set new patterns
-      return await this.setPatterns(repoDir, newPatterns);
-    } catch (error) {
-      log.error('Failed to remove sparse checkout patterns:', error);
-      throw error;
+    if (newPatterns.length === 0) {
+      throw new Error('Cannot remove all patterns. Use disable() instead.');
     }
+
+    // Set new patterns
+    return await this.setPatterns(repoDir, newPatterns);
   }
 
   /**
@@ -192,7 +180,7 @@ class SparseCheckoutManager {
    */
   validatePatterns(patterns: string[]): void {
     for (const pattern of patterns) {
-      if (typeof pattern !== 'string' || pattern.length === 0) {
+      if (pattern.length === 0) {
         throw new Error(`Invalid pattern: ${pattern}`);
       }
 
@@ -219,7 +207,7 @@ class SparseCheckoutManager {
 
     // Add each config path
     for (const [_key, configPath] of Object.entries(configPaths)) {
-      if (configPath && typeof configPath === 'string') {
+      if (configPath) {
         // Convert path to sparse checkout pattern
         const pattern = this.pathToPattern(configPath);
         if (pattern) {
@@ -251,45 +239,6 @@ class SparseCheckoutManager {
   }
 
   /**
-   * Get sparse checkout status
-   */
-  async getStatus(repoDir: string): Promise<SparseCheckoutStatus> {
-    try {
-      const enabled = await this.isEnabled(repoDir);
-
-      if (!enabled) {
-        return {
-          enabled: false,
-          patterns: [],
-          mode: 'none',
-        };
-      }
-
-      const patterns = await this.getPatterns(repoDir);
-
-      // Check if using cone mode
-      let mode = 'legacy';
-      try {
-        const { stdout } = await this.executor.execute('config --get core.sparseCheckoutCone', { cwd: repoDir });
-        if (stdout.trim() === 'true') {
-          mode = 'cone';
-        }
-      } catch (_error) {
-        // Config not set, using legacy mode
-      }
-
-      return {
-        enabled,
-        patterns,
-        mode,
-      };
-    } catch (error) {
-      log.error('Failed to get sparse checkout status:', error);
-      throw error;
-    }
-  }
-
-  /**
    * Optimize patterns for cone mode
    */
   optimizePatternsForCone(patterns: string[]): string[] {
@@ -315,6 +264,6 @@ class SparseCheckoutManager {
   }
 }
 
-export type { SparseCheckoutResult, SparseCheckoutStatus };
+export type { SparseCheckoutResult };
 export { SparseCheckoutManager };
 export default SparseCheckoutManager;

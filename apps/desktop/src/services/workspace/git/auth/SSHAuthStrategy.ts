@@ -32,7 +32,7 @@ interface SSHValidationResult {
 }
 
 class SSHAuthStrategy {
-  private sshDir: string;
+  private readonly sshDir: string;
 
   constructor(sshDir: string) {
     this.sshDir = sshDir;
@@ -150,21 +150,23 @@ class SSHAuthStrategy {
       return url.replace(/^git@[^:]+:/, `git@${keyHash}.git:`);
     }
 
+    let urlObj: URL;
     try {
-      const urlObj = new URL(url);
-      const pathParts = urlObj.pathname.split('/').filter((p) => p);
-
-      if (pathParts.length < 2) {
-        throw new Error('Invalid repository URL');
-      }
-
-      const owner = pathParts[0];
-      const repo = pathParts[1].replace(/\.git$/, '');
-
-      return `git@${keyHash}.git:${owner}/${repo}.git`;
+      urlObj = new URL(url);
     } catch (error) {
       throw new Error(`Failed to convert URL to SSH format: ${errorMessage(error)}`);
     }
+
+    const pathParts = urlObj.pathname.split('/').filter((p) => p);
+
+    if (pathParts.length < 2) {
+      throw new Error('Failed to convert URL to SSH format: Invalid repository URL');
+    }
+
+    const owner = pathParts[0];
+    const repo = pathParts[1].replace(/\.git$/, '');
+
+    return `git@${keyHash}.git:${owner}/${repo}.git`;
   }
 
   /**

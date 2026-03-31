@@ -72,4 +72,3 @@ class WSEnvironmentHandler {
 }
 
 export { WSEnvironmentHandler };
-export default WSEnvironmentHandler;

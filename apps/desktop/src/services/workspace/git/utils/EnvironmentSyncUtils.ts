@@ -11,7 +11,7 @@
 
 import { errorMessage, toError } from '@openheaders/core';
 import { toErrno } from '@/types/common';
-import type { EnvironmentMap, EnvironmentVariable } from '@/types/environment';
+import type { EnvironmentMap } from '@/types/environment';
 import atomicWriter from '@/utils/atomicFileWriter';
 import mainLogger from '@/utils/mainLogger';
 
@@ -22,12 +22,6 @@ const log = createLogger('EnvironmentSyncUtils');
 // Constants
 const ENV_FILE_READ_MAX_RETRIES = 3;
 const ENV_FILE_READ_RETRY_DELAY = 500; // Base delay between retries in ms
-
-interface ExtractedVarData {
-  value: string;
-  isSecret: boolean;
-  hasNonEmptyValue: boolean;
-}
 
 interface ReadFileResult {
   exists: boolean;
@@ -174,17 +168,6 @@ async function cleanupOldBackups(
     // Ignore cleanup errors
     log.debug(`Backup cleanup skipped: ${errorMessage(error)}`);
   }
-}
-
-/**
- * Extract value and isSecret from an EnvironmentVariable
- */
-function _extractVarData(varData: EnvironmentVariable): ExtractedVarData {
-  return {
-    value: varData.value ?? '',
-    isSecret: varData.isSecret,
-    hasNonEmptyValue: !!varData.value,
-  };
 }
 
 /**

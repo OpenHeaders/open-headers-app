@@ -64,8 +64,8 @@ interface CleanupStats {
 }
 
 class GitCleanupManager {
-  private tempDir: string;
-  private sshDir: string;
+  private readonly tempDir: string;
+  private readonly sshDir: string;
 
   constructor(paths: CleanupPaths) {
     this.tempDir = paths.tempDir;
@@ -91,18 +91,15 @@ class GitCleanupManager {
 
     try {
       if (cleanTemp) {
-        const tempResult = await this.cleanupTempFiles(force);
-        results.tempFiles = tempResult;
+        results.tempFiles = await this.cleanupTempFiles(force);
       }
 
       if (cleanOldRepos) {
-        const repoResult = await this.cleanupOldRepositories(force);
-        results.oldRepos = repoResult;
+        results.oldRepos = await this.cleanupOldRepositories(force);
       }
 
       if (cleanSSHKeys) {
-        const sshResult = await this.cleanupOldSSHKeys(force);
-        results.sshKeys = sshResult;
+        results.sshKeys = await this.cleanupOldSSHKeys(force);
       }
 
       results.success = true;
@@ -467,7 +464,7 @@ class GitCleanupManager {
     };
 
     // Perform initial cleanup
-    performCleanup();
+    void performCleanup();
 
     // Schedule periodic cleanup
     const interval = setInterval(performCleanup, intervalHours * 60 * 60 * 1000);

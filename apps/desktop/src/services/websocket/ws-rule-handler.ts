@@ -35,7 +35,12 @@ interface RuleHandlerDeps {
   _broadcastToAll(message: string): number;
 }
 
-class WSRuleHandler {
+/** Subset of WSRuleHandler consumed by WSClientHandler during client initialization. */
+export interface RuleClientSender {
+  sendRulesToClient(ws: WebSocket): Promise<void>;
+}
+
+class WSRuleHandler implements RuleClientSender {
   wsService: RuleHandlerDeps;
 
   /**
@@ -316,4 +321,3 @@ class WSRuleHandler {
 }
 
 export { WSRuleHandler };
-export default WSRuleHandler;

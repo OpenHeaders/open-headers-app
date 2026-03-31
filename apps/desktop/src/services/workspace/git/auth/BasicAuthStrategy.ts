@@ -3,11 +3,6 @@
  */
 
 import { errorMessage } from '@openheaders/core';
-import mainLogger from '@/utils/mainLogger';
-
-const { createLogger } = mainLogger;
-
-const _log = createLogger('BasicAuthStrategy');
 
 interface AuthData {
   username?: string;

@@ -94,11 +94,6 @@ interface RecordingStateSyncData {
   state: string;
 }
 
-interface SaveRecordingMessageData {
-  type: string;
-  recording: WorkflowRecordingPayload;
-}
-
 class WSRecordingHandler {
   wsService: RecordingHandlerDeps;
   videoCaptureService: VideoCaptureServiceLike | null;
@@ -286,7 +281,7 @@ class WSRecordingHandler {
       await fsPromises.mkdir(recordingsPath, { recursive: true });
 
       const originalRecordId = recordingData.record?.metadata?.recordId;
-      const recordId = originalRecordId || `record-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const recordId = originalRecordId || `record-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
       log.info(`Saving recording - Using ID: ${recordId}, Original ID: ${originalRecordId}`);
 
@@ -353,7 +348,7 @@ class WSRecordingHandler {
       } catch (preprocessError: unknown) {
         log.error('Failed to preprocess recording:', preprocessError);
         this.notifyRecordingProgress(recordId, 'error', 0);
-        throw new Error(`Preprocessing failed: ${errorMessage(preprocessError)}`);
+        return { success: false, error: `Preprocessing failed: ${errorMessage(preprocessError)}` };
       }
 
       this.notifyRecordingProgress(recordId, 'saving', 80);
@@ -527,7 +522,7 @@ class WSRecordingHandler {
 
     // Ensure consistent record ID
     if (!recording.record.metadata.recordId) {
-      const generatedId = `record-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const generatedId = `record-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
       recording.record.metadata.recordId = generatedId;
       log.info(`Generated record ID: ${generatedId}`);
     }
@@ -601,4 +596,3 @@ class WSRecordingHandler {
 
 export type { RecordingStateSyncData, StartSyncRecordingData, StopSyncRecordingData };
 export { WSRecordingHandler };
-export default WSRecordingHandler;

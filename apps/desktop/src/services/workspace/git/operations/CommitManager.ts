@@ -150,7 +150,7 @@ class CommitManager {
       }
 
       // Should never reach here due to validation above
-      throw new Error('Unexpected state in commitConfiguration');
+      return { success: false, message: 'Unexpected state in commitConfiguration' };
     } catch (error) {
       log.error('Failed to commit configuration:', error);
       throw error;

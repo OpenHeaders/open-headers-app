@@ -254,6 +254,7 @@ class TeamWorkspaceSyncer {
 
           default: {
             const _exhaustive: never = status.status;
+            // noinspection ExceptionCaughtLocallyJS — exhaustive switch guard, unreachable at runtime
             throw new Error(`Unhandled sync status: ${_exhaustive}`);
           }
         }

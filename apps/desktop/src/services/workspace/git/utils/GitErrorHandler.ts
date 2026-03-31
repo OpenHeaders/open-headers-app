@@ -373,13 +373,11 @@ class GitErrorHandler {
       const handled = this.handle(toError(error), context);
 
       // Re-throw as enhanced error
-      const enhancedError = this.createError(handled.message, handled.type, {
+      throw this.createError(handled.message, handled.type, {
         original: errorMessage(error),
         recovery: handled.recovery,
         context: handled.context,
       });
-
-      throw enhancedError;
     }
   }
 
@@ -423,4 +421,3 @@ class GitErrorHandler {
 
 export type { EnhancedError, ErrorType, HandledError };
 export { ERROR_TYPES, GitErrorHandler };
-export default GitErrorHandler;

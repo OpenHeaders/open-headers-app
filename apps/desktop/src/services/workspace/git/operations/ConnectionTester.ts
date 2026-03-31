@@ -5,10 +5,8 @@
 
 import { errorMessage, toError } from '@openheaders/core';
 import electron from 'electron';
-import type { ConfigFileDetector } from '@/services/workspace/ConfigFileDetector';
 import type GitAuthenticator from '@/services/workspace/git/auth/GitAuthenticator';
 import type { GitExecutor } from '@/services/workspace/git/core/GitExecutor';
-import type { GitBranchManager } from '@/services/workspace/git/repository/GitBranchManager';
 import type { ProgressStep } from '@/services/workspace/git/utils/GitConnectionProgress';
 import GitConnectionProgress from '@/services/workspace/git/utils/GitConnectionProgress';
 import type { WorkspaceAuthData } from '@/types/workspace';
@@ -69,21 +67,15 @@ interface RepositoryAccessResult {
 interface Dependencies {
   executor: GitExecutor;
   authManager: GitAuthenticator;
-  configDetector: ConfigFileDetector;
-  branchManager: GitBranchManager;
 }
 
 class ConnectionTester {
-  private executor: GitExecutor;
-  private authManager: GitAuthenticator;
-  private configDetector: ConfigFileDetector;
-  private branchManager: GitBranchManager;
+  private readonly executor: GitExecutor;
+  private readonly authManager: GitAuthenticator;
 
   constructor(dependencies: Dependencies) {
     this.executor = dependencies.executor;
     this.authManager = dependencies.authManager;
-    this.configDetector = dependencies.configDetector;
-    this.branchManager = dependencies.branchManager;
   }
 
   /**
@@ -108,152 +100,11 @@ class ConnectionTester {
     progress.report('Starting connection test', 'running');
 
     try {
-      // Mark initialization as complete
-      progress.success('Starting connection test', 'Connection test initialized');
-
-      // Step 1: Validate authentication data
-      progress.report('Validating authentication', 'running', `Method: ${authType}`);
-
-      const authValidation = this.authManager.validateAuthData(authType, authData);
-      if (!authValidation.valid) {
-        throw new Error(`Authentication validation failed: ${authValidation.error}`);
-      }
-      progress.success('Validating authentication', 'Authentication data validated');
-
-      // Step 2: Setup authentication
-      progress.report('Setting up authentication', 'running');
-      const authResult = await this.authManager.setupAuth(url, authType, authData);
-      const { effectiveUrl, env } = authResult;
-      progress.success('Setting up authentication', 'Authentication configured');
-
-      // Step 2a: For GitHub with token, do specific validation
-      const isGitHub = url.includes('github.com');
-      if (isGitHub && authType === 'token' && authData.token) {
-        progress.report('Validating GitHub token', 'running', 'Checking token validity');
-        const tokenValidation = await this.validateGitHubToken(authData.token);
-        if (!tokenValidation.valid) {
-          progress.error('Validating GitHub token', tokenValidation.error!);
-          throw new Error(tokenValidation.error);
-        }
-        progress.success('Validating GitHub token', 'Token is valid');
-
-        // Step 2b: Check write permissions if needed
-        if (checkWriteAccess) {
-          progress.report('Checking write permissions', 'running', 'Verifying repository write access');
-          const repoInfo = this.parseGitHubUrl(url);
-          if (repoInfo) {
-            const writeAccess = await this.checkGitHubWriteAccess(authData.token, repoInfo.owner, repoInfo.repo);
-            if (!writeAccess.hasAccess) {
-              progress.error('Checking write permissions', writeAccess.error!);
-              throw new Error(writeAccess.error);
-            }
-            progress.success('Checking write permissions', 'Write access confirmed');
-          }
-        }
-      }
-
-      try {
-        // Step 3: Test repository access
-        progress.report('Testing repository access', 'running', 'Checking repository availability');
-
-        const accessResult = await this.testRepositoryAccess(effectiveUrl, env);
-
-        if (!accessResult.accessible) {
-          throw new Error(accessResult.error || 'Repository not accessible');
-        }
-        progress.success('Testing repository access', 'Repository is accessible');
-
-        // Step 4: Check branch existence
-        progress.report('Branch validation', 'running', `Checking branch '${branch}'`);
-
-        const branchResult = await this.checkBranch(effectiveUrl, branch, env);
-
-        if (branchResult.exists) {
-          progress.success('Branch validation', `Branch '${branch}' found`);
-        } else {
-          if (isInvite) {
-            progress.error('Branch validation', `Branch '${branch}' not found - required for joining workspace`);
-            throw new Error(
-              `Branch '${branch}' does not exist in the repository. Please contact the workspace administrator.`,
-            );
-          } else if (checkWriteAccess) {
-            progress.warning('Branch validation', `Branch '${branch}' not found (will be created automatically)`);
-          } else {
-            progress.warning('Branch validation', `Branch '${branch}' not found`);
-          }
-        }
-
-        // Step 5: Check directory path
-        const pathToCheck = filePath || configDir || 'config/';
-        progress.report('Directory path validation', 'running', `Checking path '${pathToCheck}'`);
-
-        if (isInvite) {
-          progress.success('Directory path validation', `Path '${pathToCheck}' must exist with configuration files`);
-        } else if (checkWriteAccess) {
-          progress.success('Directory path validation', `Path '${pathToCheck}' will be created if it doesn't exist`);
-        } else {
-          progress.success('Directory path validation', `Path '${pathToCheck}' will be checked after cloning`);
-        }
-
-        // Step 6: Check for configuration files
-        progress.report('Configuration validation', 'running', 'Checking for configuration files');
-
-        const configResult = await this.checkConfigFiles(effectiveUrl, branch, configDir || filePath);
-
-        if (configResult.hasConfig === null) {
-          if (isInvite) {
-            progress.success('Configuration validation', 'Configuration files will be validated after joining');
-          } else if (checkWriteAccess) {
-            progress.success('Configuration validation', 'Configuration will be created in the repository');
-          } else {
-            progress.success('Configuration validation', 'Configuration check requires cloning');
-          }
-        } else if (configResult.hasConfig) {
-          progress.success('Configuration validation', 'Configuration files found');
-        } else {
-          if (isInvite) {
-            progress.success('Configuration validation', 'Configuration will be synchronized after joining');
-          } else if (checkWriteAccess) {
-            progress.warning('Configuration validation', 'No configuration files found (will be created)');
-          } else {
-            progress.warning('Configuration validation', 'No configuration files found');
-          }
-        }
-
-        // Compile results
-        const result: ConnectionTestResult = {
-          success: true,
-          accessible: true,
-          authenticated: authType !== 'none',
-          repository: {
-            url,
-            defaultBranch: accessResult.defaultBranch || 'main',
-            isPrivate: accessResult.isPrivate ?? true,
-          },
-          branch: {
-            name: branch,
-            exists: branchResult.exists,
-            isDefault: branch === accessResult.defaultBranch,
-            alternatives: branchResult.alternatives,
-          },
-          configuration: {
-            hasConfig: configResult.hasConfig,
-            configFiles: configResult.files,
-            configDir: configResult.configDir,
-          },
-          warnings: this.collectWarnings(accessResult, branchResult, configResult),
-        };
-
-        progress.success('Connection test complete', 'All checks passed');
-
-        return {
-          ...result,
-          progressSteps: progress.getSummary(),
-        };
-      } finally {
-        // Cleanup authentication resources
-        await this.authManager.cleanup(authType, authResult);
-      }
+      const result = await this._runConnectionTest(
+        { url, branch, authType, authData, configDir, filePath, checkWriteAccess, isInvite },
+        progress,
+      );
+      return { ...result, progressSteps: progress.getSummary() };
     } catch (error) {
       log.error('Connection test failed:', error);
 
@@ -272,6 +123,170 @@ class ConnectionTester {
         hint: this.getErrorHint(toError(error)),
         progressSteps: progress.getSummary(),
       };
+    }
+  }
+
+  /**
+   * Run the connection test steps. Throws on failure so the caller can
+   * uniformly format errors.
+   */
+  private async _runConnectionTest(
+    opts: {
+      url: string;
+      branch: string;
+      authType: string;
+      authData: WorkspaceAuthData;
+      configDir?: string;
+      filePath?: string;
+      checkWriteAccess: boolean;
+      isInvite: boolean;
+    },
+    progress: GitConnectionProgress,
+  ): Promise<ConnectionTestResult> {
+    const { url, branch, authType, authData, configDir, filePath, checkWriteAccess, isInvite } = opts;
+
+    // Mark initialization as complete
+    progress.success('Starting connection test', 'Connection test initialized');
+
+    // Step 1: Validate authentication data
+    progress.report('Validating authentication', 'running', `Method: ${authType}`);
+
+    const authValidation = this.authManager.validateAuthData(authType, authData);
+    if (!authValidation.valid) {
+      throw new Error(`Authentication validation failed: ${authValidation.error}`);
+    }
+    progress.success('Validating authentication', 'Authentication data validated');
+
+    // Step 2: Setup authentication
+    progress.report('Setting up authentication', 'running');
+    const authResult = await this.authManager.setupAuth(url, authType, authData);
+    const { effectiveUrl, env } = authResult;
+    progress.success('Setting up authentication', 'Authentication configured');
+
+    // Step 2a: For GitHub with token, do specific validation
+    const isGitHub = url.includes('github.com');
+    if (isGitHub && authType === 'token' && authData.token) {
+      progress.report('Validating GitHub token', 'running', 'Checking token validity');
+      const tokenValidation = await this.validateGitHubToken(authData.token);
+      if (!tokenValidation.valid) {
+        progress.error('Validating GitHub token', tokenValidation.error!);
+        throw new Error(tokenValidation.error);
+      }
+      progress.success('Validating GitHub token', 'Token is valid');
+
+      // Step 2b: Check write permissions if needed
+      if (checkWriteAccess) {
+        progress.report('Checking write permissions', 'running', 'Verifying repository write access');
+        const repoInfo = this.parseGitHubUrl(url);
+        if (repoInfo) {
+          const writeAccess = await this.checkGitHubWriteAccess(authData.token, repoInfo.owner, repoInfo.repo);
+          if (!writeAccess.hasAccess) {
+            progress.error('Checking write permissions', writeAccess.error!);
+            throw new Error(writeAccess.error);
+          }
+          progress.success('Checking write permissions', 'Write access confirmed');
+        }
+      }
+    }
+
+    try {
+      // Step 3: Test repository access
+      progress.report('Testing repository access', 'running', 'Checking repository availability');
+
+      const accessResult = await this.testRepositoryAccess(effectiveUrl, env);
+
+      if (!accessResult.accessible) {
+        throw new Error(accessResult.error || 'Repository not accessible');
+      }
+      progress.success('Testing repository access', 'Repository is accessible');
+
+      // Step 4: Check branch existence
+      progress.report('Branch validation', 'running', `Checking branch '${branch}'`);
+
+      const branchResult = await this.checkBranch(effectiveUrl, branch, env);
+
+      if (branchResult.exists) {
+        progress.success('Branch validation', `Branch '${branch}' found`);
+      } else {
+        if (isInvite) {
+          progress.error('Branch validation', `Branch '${branch}' not found - required for joining workspace`);
+          throw new Error(
+            `Branch '${branch}' does not exist in the repository. Please contact the workspace administrator.`,
+          );
+        } else if (checkWriteAccess) {
+          progress.warning('Branch validation', `Branch '${branch}' not found (will be created automatically)`);
+        } else {
+          progress.warning('Branch validation', `Branch '${branch}' not found`);
+        }
+      }
+
+      // Step 5: Check directory path
+      const pathToCheck = filePath || configDir || 'config/';
+      progress.report('Directory path validation', 'running', `Checking path '${pathToCheck}'`);
+
+      if (isInvite) {
+        progress.success('Directory path validation', `Path '${pathToCheck}' must exist with configuration files`);
+      } else if (checkWriteAccess) {
+        progress.success('Directory path validation', `Path '${pathToCheck}' will be created if it doesn't exist`);
+      } else {
+        progress.success('Directory path validation', `Path '${pathToCheck}' will be checked after cloning`);
+      }
+
+      // Step 6: Check for configuration files
+      progress.report('Configuration validation', 'running', 'Checking for configuration files');
+
+      const configResult = await this.checkConfigFiles(effectiveUrl, branch, configDir || filePath);
+
+      if (configResult.hasConfig === null) {
+        if (isInvite) {
+          progress.success('Configuration validation', 'Configuration files will be validated after joining');
+        } else if (checkWriteAccess) {
+          progress.success('Configuration validation', 'Configuration will be created in the repository');
+        } else {
+          progress.success('Configuration validation', 'Configuration check requires cloning');
+        }
+      } else if (configResult.hasConfig) {
+        progress.success('Configuration validation', 'Configuration files found');
+      } else {
+        if (isInvite) {
+          progress.success('Configuration validation', 'Configuration will be synchronized after joining');
+        } else if (checkWriteAccess) {
+          progress.warning('Configuration validation', 'No configuration files found (will be created)');
+        } else {
+          progress.warning('Configuration validation', 'No configuration files found');
+        }
+      }
+
+      // Compile results
+      const result: ConnectionTestResult = {
+        success: true,
+        accessible: true,
+        authenticated: authType !== 'none',
+        repository: {
+          url,
+          defaultBranch: accessResult.defaultBranch || 'main',
+          isPrivate: accessResult.isPrivate ?? true,
+        },
+        branch: {
+          name: branch,
+          exists: branchResult.exists,
+          isDefault: branch === accessResult.defaultBranch,
+          alternatives: branchResult.alternatives,
+        },
+        configuration: {
+          hasConfig: configResult.hasConfig,
+          configFiles: configResult.files,
+          configDir: configResult.configDir,
+        },
+        warnings: this.collectWarnings(accessResult, branchResult, configResult),
+      };
+
+      progress.success('Connection test complete', 'All checks passed');
+
+      return result;
+    } finally {
+      // Cleanup authentication resources
+      await this.authManager.cleanup(authType, authResult);
     }
   }
 

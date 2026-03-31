@@ -106,8 +106,7 @@ class GitBranchManager {
       };
 
       if (includeRemote) {
-        const remoteBranches = await this.getRemoteBranches(repoDir);
-        result.remote = remoteBranches;
+        result.remote = await this.getRemoteBranches(repoDir);
       }
 
       return result;

@@ -7,7 +7,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { errorMessage, toError } from '@openheaders/core';
 // Config modules
-import { ConfigFileDetector } from '@/services/workspace/ConfigFileDetector';
 import { ConfigFileValidator } from '@/services/workspace/config-file-validator';
 // Legacy support
 import { GitAutoInstaller } from '@/services/workspace/git-auto-installer';
@@ -83,8 +82,7 @@ class GitSyncService {
   private cleanupManager: GitCleanupManager | null;
   private teamWorkspaceSyncer: TeamWorkspaceSyncer | null;
   private connectionTester: ConnectionTester | null;
-  private configDetector: ConfigFileDetector;
-  private configValidator: ConfigFileValidator;
+  private readonly configValidator: ConfigFileValidator;
   private gitAutoInstaller: GitAutoInstaller;
   private initialized: boolean;
 
@@ -103,7 +101,6 @@ class GitSyncService {
     this.teamWorkspaceSyncer = null;
     this.connectionTester = null;
 
-    this.configDetector = new ConfigFileDetector();
     this.configValidator = new ConfigFileValidator();
 
     this.gitAutoInstaller = new GitAutoInstaller();
@@ -140,7 +137,6 @@ class GitSyncService {
         branchManager: this.branchManager,
         sparseCheckoutManager: this.sparseCheckoutManager,
         commitManager: this.commitManager,
-        configDetector: this.configDetector,
         configValidator: this.configValidator,
       };
 
@@ -200,31 +196,7 @@ class GitSyncService {
     await this.ensureInitialized();
 
     try {
-      const repoDir = this.getWorkspaceRepoDir(options.workspaceId);
-
-      const repoExists = await fsPromises.access(path.join(repoDir, '.git')).then(
-        () => true,
-        () => false,
-      );
-
-      if (!repoExists) {
-        log.info(`Repository not found for workspace ${options.workspaceId}, cloning...`);
-
-        const cloneResult = await this.repositoryManager!.cloneRepository({
-          url: options.url!,
-          targetDir: repoDir,
-          branch: options.branch || 'main',
-          authType: options.authType || 'none',
-          authData: options.authData || {},
-          depth: 10,
-        });
-
-        if (!cloneResult.success) {
-          throw new Error(`Failed to clone repository: ${cloneResult.error || 'Unknown error'}`);
-        }
-      }
-
-      return await this.teamWorkspaceSyncer!.syncWorkspace({ ...options, repoDir });
+      return await this._doSyncWorkspace(options);
     } catch (error) {
       const handled = this.errorHandler.handle(toError(error), {
         operation: 'syncWorkspace',
@@ -239,104 +211,41 @@ class GitSyncService {
     }
   }
 
+  private async _doSyncWorkspace(options: SyncOptions): Promise<SyncResult> {
+    const repoDir = this.getWorkspaceRepoDir(options.workspaceId);
+
+    const repoExists = await fsPromises.access(path.join(repoDir, '.git')).then(
+      () => true,
+      () => false,
+    );
+
+    if (!repoExists) {
+      log.info(`Repository not found for workspace ${options.workspaceId}, cloning...`);
+
+      const cloneResult = await this.repositoryManager!.cloneRepository({
+        url: options.url!,
+        targetDir: repoDir,
+        branch: options.branch || 'main',
+        authType: options.authType || 'none',
+        authData: options.authData || {},
+        depth: 10,
+      });
+
+      if (!cloneResult.success) {
+        throw new Error(`Failed to clone repository: ${cloneResult.error || 'Unknown error'}`);
+      }
+    }
+
+    return await this.teamWorkspaceSyncer!.syncWorkspace({ ...options, repoDir });
+  }
+
   // ── Commit configuration ──────────────────────────────────────
 
   async commitConfiguration(options: CommitConfigurationOptions): Promise<CommitResult> {
     await this.ensureInitialized();
 
     try {
-      if (options.url && options.files) {
-        const tempDir = path.join(this.initializer.getPaths().tempDir, `commit-${Date.now()}`);
-        await fsPromises.mkdir(tempDir, { recursive: true });
-
-        try {
-          const targetBranch = options.branch || 'main';
-          let needsNewBranch = false;
-
-          try {
-            const { stdout } = await this.executor!.execute(`ls-remote --heads "${options.url}" "${targetBranch}"`, {
-              timeout: 15000,
-            });
-            needsNewBranch = !stdout.trim();
-          } catch (error) {
-            log.warn('Failed to check branch existence, will try to clone anyway:', error);
-          }
-
-          let cloneResult: { success: boolean; error?: string };
-          if (needsNewBranch) {
-            log.info(`Branch '${targetBranch}' not found, cloning default branch`);
-            cloneResult = await this.repositoryManager!.cloneRepository({
-              url: options.url,
-              targetDir: tempDir,
-              authType: options.authType || 'none',
-              authData: options.authData || {},
-              depth: 0,
-            });
-          } else {
-            cloneResult = await this.repositoryManager!.cloneRepository({
-              url: options.url,
-              targetDir: tempDir,
-              branch: targetBranch,
-              authType: options.authType || 'none',
-              authData: options.authData || {},
-              depth: 1,
-            });
-          }
-
-          if (!cloneResult.success) {
-            throw new Error(cloneResult.error || 'Failed to clone repository');
-          }
-
-          if (needsNewBranch) {
-            log.info(`Creating new branch '${targetBranch}'`);
-            await this.branchManager!.createBranch(tempDir, targetBranch);
-          }
-
-          const files: Record<string, string> = {};
-          const basePath = options.path || '';
-
-          for (const [filename, content] of Object.entries(options.files)) {
-            const filePath = path.join(basePath, filename);
-            files[filePath] = content;
-          }
-
-          const commitResult = await this.commitManager!.commitConfiguration({
-            repoDir: tempDir,
-            files,
-            message: options.message,
-            author: options.author,
-            email: options.email,
-          });
-
-          const pushResult = await this.repositoryManager!.pushRepository({
-            repoDir: tempDir,
-            branch: targetBranch,
-            authType: options.authType || 'none',
-            authData: options.authData || {},
-            setUpstream: needsNewBranch,
-          });
-
-          if (!pushResult.success) {
-            throw new Error(pushResult.error || 'Failed to push changes');
-          }
-
-          setTimeout(() => {
-            this.cleanupManager!.cleanupDirectory(tempDir).catch((err) => {
-              log.error('Failed to cleanup temp directory:', err);
-            });
-          }, 5000);
-
-          return commitResult;
-        } catch (error) {
-          await this.cleanupManager!.cleanupDirectory(tempDir).catch(() => {});
-          throw error;
-        }
-      }
-
-      if (!options.repoDir) {
-        throw new Error('repoDir is required for backend commit format');
-      }
-      return await this.commitManager!.commitConfiguration({ ...options, repoDir: options.repoDir });
+      return await this._doCommitConfiguration(options);
     } catch (error) {
       const handled = this.errorHandler.handle(toError(error), {
         operation: 'commitConfiguration',
@@ -344,6 +253,103 @@ class GitSyncService {
       });
       throw new Error(handled.message);
     }
+  }
+
+  private async _doCommitConfiguration(options: CommitConfigurationOptions): Promise<CommitResult> {
+    if (options.url && options.files) {
+      const tempDir = path.join(this.initializer.getPaths().tempDir, `commit-${Date.now()}`);
+      await fsPromises.mkdir(tempDir, { recursive: true });
+
+      try {
+        const targetBranch = options.branch || 'main';
+        let needsNewBranch = false;
+
+        try {
+          const { stdout } = await this.executor!.execute(`ls-remote --heads "${options.url}" "${targetBranch}"`, {
+            timeout: 15000,
+          });
+          needsNewBranch = !stdout.trim();
+        } catch (error) {
+          log.warn('Failed to check branch existence, will try to clone anyway:', error);
+        }
+
+        let cloneResult: { success: boolean; error?: string };
+        if (needsNewBranch) {
+          log.info(`Branch '${targetBranch}' not found, cloning default branch`);
+          cloneResult = await this.repositoryManager!.cloneRepository({
+            url: options.url,
+            targetDir: tempDir,
+            authType: options.authType || 'none',
+            authData: options.authData || {},
+            depth: 0,
+          });
+        } else {
+          cloneResult = await this.repositoryManager!.cloneRepository({
+            url: options.url,
+            targetDir: tempDir,
+            branch: targetBranch,
+            authType: options.authType || 'none',
+            authData: options.authData || {},
+            depth: 1,
+          });
+        }
+
+        if (!cloneResult.success) {
+          // noinspection ExceptionCaughtLocallyJS — caught for cleanup before re-throw
+          throw new Error(cloneResult.error || 'Failed to clone repository');
+        }
+
+        if (needsNewBranch) {
+          log.info(`Creating new branch '${targetBranch}'`);
+          await this.branchManager!.createBranch(tempDir, targetBranch);
+        }
+
+        const files: Record<string, string> = {};
+        const basePath = options.path || '';
+
+        for (const [filename, content] of Object.entries(options.files)) {
+          const filePath = path.join(basePath, filename);
+          files[filePath] = content;
+        }
+
+        const commitResult = await this.commitManager!.commitConfiguration({
+          repoDir: tempDir,
+          files,
+          message: options.message,
+          author: options.author,
+          email: options.email,
+        });
+
+        const pushResult = await this.repositoryManager!.pushRepository({
+          repoDir: tempDir,
+          branch: targetBranch,
+          authType: options.authType || 'none',
+          authData: options.authData || {},
+          setUpstream: needsNewBranch,
+        });
+
+        if (!pushResult.success) {
+          // noinspection ExceptionCaughtLocallyJS — caught for cleanup before re-throw
+          throw new Error(pushResult.error || 'Failed to push changes');
+        }
+
+        setTimeout(() => {
+          this.cleanupManager!.cleanupDirectory(tempDir).catch((err) => {
+            log.error('Failed to cleanup temp directory:', err);
+          });
+        }, 5000);
+
+        return commitResult;
+      } catch (error) {
+        await this.cleanupManager!.cleanupDirectory(tempDir).catch(() => {});
+        throw error;
+      }
+    }
+
+    if (!options.repoDir) {
+      throw new Error('repoDir is required for backend commit format');
+    }
+    return await this.commitManager!.commitConfiguration({ ...options, repoDir: options.repoDir });
   }
 
   // ── Branch operations ─────────────────────────────────────────

@@ -140,7 +140,7 @@ class GitRepositoryManager {
       // Execute clone
       progressCallback({ phase: 'clone', message: 'Cloning repository...' });
 
-      const _result = await this.executor.execute(cloneCommand, {
+      await this.executor.execute(cloneCommand, {
         env,
         timeout: 300000, // 5 minutes for clone
         maxBuffer: 50 * 1024 * 1024, // 50MB
@@ -529,20 +529,23 @@ class GitRepositoryManager {
    * Ensure directory is clean for cloning
    */
   async ensureCleanDirectory(dir: string): Promise<void> {
+    let stats: Awaited<ReturnType<typeof fsPromises.stat>>;
     try {
-      const stats = await fsPromises.stat(dir);
-      if (stats.isDirectory()) {
-        const files = await fsPromises.readdir(dir);
-        if (files.length > 0) {
-          throw new Error(`Directory ${dir} is not empty`);
-        }
-      }
+      stats = await fsPromises.stat(dir);
     } catch (error) {
       if (toErrno(error).code !== 'ENOENT') {
         throw error;
       }
       // Directory doesn't exist, create it
       await fsPromises.mkdir(dir, { recursive: true });
+      return;
+    }
+
+    if (stats.isDirectory()) {
+      const files = await fsPromises.readdir(dir);
+      if (files.length > 0) {
+        throw new Error(`Directory ${dir} is not empty`);
+      }
     }
   }
 

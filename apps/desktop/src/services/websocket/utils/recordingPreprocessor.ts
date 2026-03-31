@@ -10,7 +10,6 @@
  */
 
 import http from 'node:http';
-import nodeUrl from 'node:url';
 import type {
   DomNode,
   PageTransition,
@@ -85,7 +84,7 @@ function createResourceMap(): Map<string, string[]> {
  * Collect all URLs for each resource
  */
 function collectResourceUrl(resourceMap: Map<string, string[]>, urlStr: string): void {
-  if (!urlStr || typeof urlStr !== 'string') return;
+  if (!urlStr) return;
 
   try {
     const urlObj = new URL(urlStr);
@@ -111,7 +110,7 @@ function collectResourceUrl(resourceMap: Map<string, string[]>, urlStr: string):
  * Get the shortest URL for a resource (with caching)
  */
 function getShortestUrl(resourceMap: Map<string, string[]>, urlStr: string): string {
-  if (!urlStr || typeof urlStr !== 'string') return urlStr;
+  if (!urlStr) return urlStr;
 
   // Check cache first
   if (urlNormalizationCache.has(urlStr)) {
@@ -413,7 +412,7 @@ async function preprocessRecordingForSave(
           collectResourcesFromSnapshot(rrwebEvent.data as Snapshot, resourceMap, effectiveBaseUrl);
         } else if (rrwebEvent.type === 3 && rrwebEvent.data?.source === 8 && rrwebEvent.data?.adds) {
           rrwebEvent.data.adds.forEach((add: RRWebAdd) => {
-            if (add.rule && typeof add.rule === 'string') {
+            if (add.rule) {
               collectResourcesFromCss(add.rule, resourceMap, baseUrl);
             }
           });
@@ -433,7 +432,7 @@ async function preprocessRecordingForSave(
         const rrwebData = event.data as unknown as RRWebEvent;
         if (rrwebData?.source === 8 && rrwebData?.adds) {
           rrwebData.adds.forEach((add: RRWebAdd) => {
-            if (add.rule && typeof add.rule === 'string') {
+            if (add.rule) {
               collectResourcesFromCss(add.rule, resourceMap, baseUrl);
             }
           });
@@ -914,7 +913,7 @@ function processIncrementalSnapshot(
     // Style sheet event - collect font URLs
     if (data.adds && Array.isArray(data.adds)) {
       data.adds.forEach((add: RRWebAdd) => {
-        if (add.rule && typeof add.rule === 'string' && add.rule.includes('@font-face')) {
+        if (add.rule && add.rule.includes('@font-face')) {
           extractFontUrlsFromCss(add.rule, fontUrls, null, baseUrl, resourceMap);
         }
       });
@@ -1119,12 +1118,12 @@ async function prefetchSingleResource(resourceUrl: string, resourceType: string,
 
   return new Promise((resolve, reject) => {
     const proxyUrl = `http://127.0.0.1:${proxyPort}/${resourceUrl}`;
-    const parsedUrl = nodeUrl.parse(proxyUrl);
+    const parsedUrl = new URL(proxyUrl);
 
     const options = {
       hostname: parsedUrl.hostname,
       port: parsedUrl.port,
-      path: parsedUrl.path,
+      path: parsedUrl.pathname + parsedUrl.search,
       method: 'GET',
       headers: {
         'User-Agent': 'OpenHeaders-Preprocessor/1.0',
