@@ -31,7 +31,11 @@ const formatHotkeyForDisplay = (hotkey: string): string => {
     .replace('Control', 'Ctrl');
 };
 
-const Footer: React.FC = () => {
+interface FooterProps {
+  onActionsReady?: (actions: { onToggleRecording?: () => void; onToggleRulesPause?: () => void }) => void;
+}
+
+const Footer: React.FC<FooterProps> = ({ onActionsReady }) => {
   const version = __APP_VERSION__;
   const { token } = theme.useToken();
   const [useWidget, setUseWidget] = useState(true);
@@ -191,6 +195,25 @@ const Footer: React.FC = () => {
       message.success(checked ? 'Rules execution resumed' : 'Rules execution paused');
     });
   };
+
+  // Register keyboard-accessible actions with parent
+  // biome-ignore lint/correctness/useExhaustiveDependencies: handleGlobalRulesToggle is stable in practice — including it would cause infinite re-registration
+  const handleTogglePauseForKeyboard = useCallback(() => {
+    void handleGlobalRulesToggle(isRulesExecutionPaused);
+  }, [isRulesExecutionPaused]);
+
+  const handleToggleRecordingForKeyboard = useCallback(() => {
+    const recordBtn = document.querySelector('.recording-button') as HTMLButtonElement | null;
+    if (recordBtn && !recordBtn.disabled) recordBtn.click();
+  }, []);
+
+  useEffect(() => {
+    if (!onActionsReady) return;
+    onActionsReady({
+      onToggleRecording: handleToggleRecordingForKeyboard,
+      onToggleRulesPause: handleTogglePauseForKeyboard,
+    });
+  }, [onActionsReady, handleToggleRecordingForKeyboard, handleTogglePauseForKeyboard]);
 
   const optionsMenuItems = [
     {

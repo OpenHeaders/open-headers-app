@@ -86,6 +86,7 @@ const RecordingButton: React.FC<RecordingButtonProps> = ({ useWidget = false }) 
         icon={isRecording ? <StopOutlined /> : <VideoCameraOutlined />}
         loading={isLoading}
         onClick={handleToggleRecording}
+        className="recording-button"
         style={{
           display: 'flex',
           alignItems: 'center',

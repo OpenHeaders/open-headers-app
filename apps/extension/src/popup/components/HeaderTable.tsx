@@ -1,7 +1,7 @@
 import {
   ApiOutlined,
-  CodeOutlined,
   CheckOutlined,
+  CodeOutlined,
   CopyTwoTone,
   DeleteOutlined,
   DownOutlined,
@@ -22,7 +22,8 @@ import { App, Button, Dropdown, Empty, Input, Popconfirm, Space, Switch, Table, 
 import type { ColumnsType } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import DeleteConfirmOverlay from './DeleteConfirmOverlay';
 
 const { Search } = Input;
 const { Text } = Typography;
@@ -57,7 +58,38 @@ interface DynamicValueInfo {
   isCachedValue: boolean;
 }
 
-const HeaderTable: React.FC = () => {
+const PAGE_SIZE = 10;
+
+interface PageInfo {
+  visibleRowCount: number;
+  visibleRowIds: readonly (string | number)[];
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+  onNextPage?: () => void;
+  onPrevPage?: () => void;
+}
+
+interface HeaderTableProps {
+  focusedRowIndex?: number;
+  pendingDeleteIndex?: number;
+  onPageInfoChange?: (info: PageInfo) => void;
+  onRowActionsChange?: (actions: {
+    onToggleRow?: (index: number) => void;
+    onExpandRow?: (index: number) => void;
+    onCollapseRow?: (index: number) => void;
+    onEditRow?: (index: number) => void;
+    onCopyRow?: (index: number) => void;
+    onDeleteRow?: (index: number) => void;
+    onAddRule?: () => void;
+  }) => void;
+}
+
+const HeaderTable: React.FC<HeaderTableProps> = ({
+  focusedRowIndex = -1,
+  pendingDeleteIndex = -1,
+  onPageInfoChange,
+  onRowActionsChange,
+}) => {
   const { message } = App.useApp();
   const appLauncher = getAppLauncher();
 
@@ -68,6 +100,7 @@ const HeaderTable: React.FC = () => {
   const [filteredInfo, setFilteredInfo] = useState<Record<string, FilterValue | null>>(
     (uiState?.tableState?.filteredInfo as Record<string, FilterValue | null>) || {},
   );
+  const [currentPage, setCurrentPage] = useState(1);
   const [sortedInfo, setSortedInfo] = useState<SorterResult<TableRecord>>(
     (uiState?.tableState?.sortedInfo as SorterResult<TableRecord>) || {},
   );
@@ -147,6 +180,8 @@ const HeaderTable: React.FC = () => {
     };
   });
 
+  const dataSourceRef = useRef<TableRecord[]>([]);
+
   const filteredData = dataSource.filter(
     (item) =>
       item.headerName.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -155,9 +190,124 @@ const HeaderTable: React.FC = () => {
       item.tag.toLowerCase().includes(searchText.toLowerCase()),
   );
 
+  // Keep ref in sync for keyboard callbacks
+  dataSourceRef.current = filteredData;
+
   const enabledCount = dataSource.filter((item) => item.isEnabled).length;
   const injectingCount = dataSource.filter((item) => item.isEnabled && !item.placeholderType).length;
   const totalCount = dataSource.length;
+
+  // Report page info to keyboard navigation
+  const totalPages = Math.ceil(filteredData.length / PAGE_SIZE);
+  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const pageSlice = filteredData.slice(pageStart, pageStart + PAGE_SIZE);
+  const visibleRowCount = pageSlice.length;
+  const visibleRowIdsKey = pageSlice.map((r) => r.key).join(',');
+  // biome-ignore lint/correctness/useExhaustiveDependencies: visibleRowIdsKey is a stable string representation
+  const visibleRowIds = useMemo(() => pageSlice.map((r) => r.key), [visibleRowIdsKey]);
+
+  const goToNextPage = useCallback(() => {
+    setCurrentPage((p) => Math.min(p + 1, totalPages));
+  }, [totalPages]);
+
+  const goToPrevPage = useCallback(() => {
+    setCurrentPage((p) => Math.max(p - 1, 1));
+  }, []);
+
+  useEffect(() => {
+    if (!onPageInfoChange) return;
+    onPageInfoChange({
+      visibleRowCount,
+      visibleRowIds,
+      hasNextPage: currentPage < totalPages,
+      hasPrevPage: currentPage > 1,
+      onNextPage: goToNextPage,
+      onPrevPage: goToPrevPage,
+    });
+  }, [onPageInfoChange, visibleRowCount, visibleRowIds, currentPage, totalPages, goToNextPage, goToPrevPage]);
+
+  // Register row actions for keyboard navigation
+  const handleToggleRow = useCallback(
+    async (index: number) => {
+      const record = dataSourceRef.current[index];
+      if (!record || !isConnected) return;
+      const { runtime } = await import('../../utils/browser-api');
+      runtime.sendMessage(
+        { type: 'toggleRule', ruleId: record.id, enabled: !record.isEnabled },
+        (response: unknown) => {
+          const resp = response as { success?: boolean } | undefined;
+          if (!resp?.success) {
+            message.error('Failed to toggle rule');
+          }
+        },
+      );
+    },
+    [isConnected, message],
+  );
+
+  const handleEditRow = useCallback(
+    async (index: number) => {
+      const record = dataSourceRef.current[index];
+      if (!record || !isConnected) return;
+      await appLauncher.launchOrFocus({ tab: 'rules', subTab: 'headers', action: 'edit', itemId: record.id });
+      message.info('Opening edit dialog in OpenHeaders app');
+    },
+    [isConnected, appLauncher, message],
+  );
+
+  const handleCopyRow = useCallback((index: number) => {
+    const record = dataSourceRef.current[index];
+    if (!record?.actualValue) return;
+    void navigator.clipboard.writeText(record.actualValue);
+    setCopiedRowId(record.id);
+    setTimeout(() => setCopiedRowId(null), 1000);
+  }, []);
+
+  const handleDeleteRow = useCallback(
+    async (index: number) => {
+      const record = dataSourceRef.current[index];
+      if (!record || !isConnected) return;
+      const { runtime } = await import('../../utils/browser-api');
+      runtime.sendMessage({ type: 'deleteRule', ruleId: record.id }, (response: unknown) => {
+        const resp = response as { success?: boolean } | undefined;
+        if (resp?.success) {
+          message.success('Rule deleted');
+        } else {
+          message.error('Failed to delete rule');
+        }
+      });
+    },
+    [isConnected, message],
+  );
+
+  const handleAddRule = useCallback(() => {
+    const btn = document.querySelector('.add-rule-button') as HTMLButtonElement | null;
+    if (!btn) return;
+    btn.click();
+    // Dropdown renders async — focus the first menu item so arrow keys work
+    const tryFocus = (attempts: number) => {
+      const firstItem = document.querySelector(
+        '.ant-dropdown:not(.ant-dropdown-hidden) .ant-dropdown-menu-item:not(.ant-dropdown-menu-item-disabled)',
+      ) as HTMLElement | null;
+      if (firstItem) {
+        firstItem.focus();
+      } else if (attempts > 0) {
+        requestAnimationFrame(() => tryFocus(attempts - 1));
+      }
+    };
+    requestAnimationFrame(() => tryFocus(5));
+  }, []);
+
+  useEffect(() => {
+    if (!onRowActionsChange) return;
+    onRowActionsChange({
+      onToggleRow: handleToggleRow,
+      onEditRow: handleEditRow,
+      onCopyRow: handleCopyRow,
+      onDeleteRow: handleDeleteRow,
+      onAddRule: handleAddRule,
+    });
+  }, [onRowActionsChange, handleToggleRow, handleEditRow, handleCopyRow, handleDeleteRow, handleAddRule]);
 
   const handleChange = (
     _pagination: unknown,
@@ -279,13 +429,20 @@ const HeaderTable: React.FC = () => {
         return (
           <div
             className="value-cell"
-            style={{ display: 'flex', alignItems: 'center', gap: 4, opacity: record.isEnabled ? 1 : 0.5, whiteSpace: 'nowrap', overflow: 'hidden' }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              opacity: record.isEnabled ? 1 : 0.5,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+            }}
           >
             <Text style={{ fontSize: '13px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {displayValue}
             </Text>
-            {fullValue && (
-              copiedRowId === record.id ? (
+            {fullValue &&
+              (copiedRowId === record.id ? (
                 <CheckOutlined
                   className="value-copy-icon"
                   style={{ fontSize: '12px', color: '#52c41a', flexShrink: 0, opacity: 1 }}
@@ -301,8 +458,7 @@ const HeaderTable: React.FC = () => {
                     setTimeout(() => setCopiedRowId(null), 1000);
                   }}
                 />
-              )
-            )}
+              ))}
           </div>
         );
       },
@@ -338,9 +494,13 @@ const HeaderTable: React.FC = () => {
         return (
           <Tooltip title={tooltip} styles={{ root: { maxWidth: 500 } }}>
             <Space size={2}>
-              <Tag variant="outlined" style={{ fontSize: '12px', cursor: 'default', margin: 0 }}>{first}</Tag>
+              <Tag variant="outlined" style={{ fontSize: '12px', cursor: 'default', margin: 0 }}>
+                {first}
+              </Tag>
               {overflowCount > 0 && (
-                <Tag variant="outlined" style={{ fontSize: '12px', cursor: 'default', margin: 0 }}>+{overflowCount}</Tag>
+                <Tag variant="outlined" style={{ fontSize: '12px', cursor: 'default', margin: 0 }}>
+                  +{overflowCount}
+                </Tag>
               )}
             </Space>
           </Tooltip>
@@ -428,7 +588,9 @@ const HeaderTable: React.FC = () => {
         allTags.push({ label: record.isResponse ? 'Res' : 'Req', tooltip: record.isResponse ? 'Response' : 'Request' });
 
         // Show first 1 inline if status tag (Cached/Missing/Empty) is present, otherwise first 2
-        const hasStatusTag = allTags.length > 0 && (allTags[0].label === 'Cached' || allTags[0].label === 'Missing' || allTags[0].label === 'Empty');
+        const hasStatusTag =
+          allTags.length > 0 &&
+          (allTags[0].label === 'Cached' || allTags[0].label === 'Missing' || allTags[0].label === 'Empty');
         const maxVisible = hasStatusTag ? 1 : 2;
         const visible = allTags.slice(0, maxVisible);
         const overflowCount = allTags.length - maxVisible;
@@ -453,7 +615,15 @@ const HeaderTable: React.FC = () => {
                 title={
                   <div style={{ fontSize: 12 }}>
                     {allTags.map((t, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: i < allTags.length - 1 ? 4 : 0 }}>
+                      <div
+                        key={i}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          marginBottom: i < allTags.length - 1 ? 4 : 0,
+                        }}
+                      >
                         <span style={{ opacity: 0.6 }}>{i + 1}. </span>
                         <Tag color={t.color} variant="outlined" style={{ margin: 0, fontSize: '11px' }}>
                           {t.label}
@@ -464,7 +634,9 @@ const HeaderTable: React.FC = () => {
                 }
                 styles={{ root: { maxWidth: 400 } }}
               >
-                <Tag variant="outlined" style={{ ...tagStyle, cursor: 'help' }}>+{overflowCount}</Tag>
+                <Tag variant="outlined" style={{ ...tagStyle, cursor: 'help' }}>
+                  +{overflowCount}
+                </Tag>
               </Tooltip>
             )}
           </Space>
@@ -562,13 +734,7 @@ const HeaderTable: React.FC = () => {
             cancelText="Cancel"
             disabled={!isConnected}
           >
-            <Button
-              type="text"
-              danger
-              icon={<DeleteOutlined />}
-              size="small"
-              disabled={!isConnected}
-            />
+            <Button type="text" danger icon={<DeleteOutlined />} size="small" disabled={!isConnected} />
           </Popconfirm>
         </Space>
       ),
@@ -694,50 +860,50 @@ const HeaderTable: React.FC = () => {
   return (
     <div className="header-rules-section">
       <div className="table-toolbar">
-      <div className="header-rules-title">
-        <Space align="center" size={8}>
-          <Text style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Header Rules</Text>
-          {totalCount > 0 && (
-            <Text type="secondary" style={{ fontSize: '12px' }}>
-              {injectingCount} of {totalCount} active
-              {injectingCount < enabledCount ? `, ${enabledCount - injectingCount} unresolved` : ''}
-            </Text>
-          )}
-        </Space>
-        <Space>
-          <Dropdown menu={{ items: addRuleMenuItems }} placement="bottomRight" trigger={['click']}>
-            <Button type="primary" size="middle" className="add-rule-button">
-              <Space>
-                <PlusOutlined />
-                Add Rule
-                <DownOutlined style={{ fontSize: '10px' }} />
-              </Space>
-            </Button>
-          </Dropdown>
-          <div>
-            <Search
-              placeholder="Search anything..."
-              allowClear
-              size="small"
-              style={{ width: 300 }}
-              value={searchText}
-              onChange={(e) => handleSearchChange(e.target.value)}
-            />
-            {(searchText || Object.keys(filteredInfo).length > 0 || sortedInfo.columnKey) && (
-              <div style={{ textAlign: 'right', marginTop: 2 }}>
-                <Button
-                  onClick={clearAll}
-                  type="link"
-                  size="small"
-                  style={{ fontSize: '11px', padding: 0, height: 'auto' }}
-                >
-                  Clear filters and sorting
-                </Button>
-              </div>
+        <div className="header-rules-title">
+          <Space align="center" size={8}>
+            <Text style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Header Rules</Text>
+            {totalCount > 0 && (
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                {injectingCount} of {totalCount} active
+                {injectingCount < enabledCount ? `, ${enabledCount - injectingCount} unresolved` : ''}
+              </Text>
             )}
-          </div>
-        </Space>
-      </div>
+          </Space>
+          <Space>
+            <Dropdown menu={{ items: addRuleMenuItems }} placement="bottomRight" trigger={['click']}>
+              <Button type="primary" size="middle" className="add-rule-button">
+                <Space>
+                  <PlusOutlined />
+                  Add Rule
+                  <DownOutlined style={{ fontSize: '10px' }} />
+                </Space>
+              </Button>
+            </Dropdown>
+            <div>
+              <Search
+                placeholder="Search anything..."
+                allowClear
+                size="small"
+                style={{ width: 300 }}
+                value={searchText}
+                onChange={(e) => handleSearchChange(e.target.value)}
+              />
+              {(searchText || Object.keys(filteredInfo).length > 0 || sortedInfo.columnKey) && (
+                <div style={{ textAlign: 'right', marginTop: 2 }}>
+                  <Button
+                    onClick={clearAll}
+                    type="link"
+                    size="small"
+                    style={{ fontSize: '11px', padding: 0, height: 'auto' }}
+                  >
+                    Clear filters and sorting
+                  </Button>
+                </div>
+              )}
+            </div>
+          </Space>
+        </div>
       </div>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, paddingBottom: '8px' }}>
@@ -745,18 +911,24 @@ const HeaderTable: React.FC = () => {
           dataSource={filteredData}
           columns={columns}
           pagination={{
-            pageSize: 10,
+            current: currentPage,
+            pageSize: PAGE_SIZE,
             size: 'small',
             showSizeChanger: false,
             showTotal: (total, range) => `${range[0]}-${range[1]} of ${total}`,
             style: { marginBottom: 0, marginTop: 4 },
+            onChange: (page) => setCurrentPage(page),
           }}
           size="small"
           scroll={{ x: 920, y: 290 }}
           onChange={handleChange}
-          rowClassName={(record: TableRecord) =>
-            record.isEnabled && record.placeholderType ? 'row-not-injecting' : ''
-          }
+          rowClassName={(record: TableRecord, index: number) => {
+            const classes: string[] = [];
+            if (record.isEnabled && record.placeholderType) classes.push('row-not-injecting');
+            if (index === focusedRowIndex) classes.push('keyboard-focused-row');
+            if (index === pendingDeleteIndex) classes.push('keyboard-pending-delete-row');
+            return classes.join(' ');
+          }}
           locale={{
             emptyText: (
               <Empty
@@ -779,6 +951,10 @@ const HeaderTable: React.FC = () => {
           }}
           className="header-rules-table"
           style={{ width: '100%', flex: 1 }}
+        />
+        <DeleteConfirmOverlay
+          pendingDeleteIndex={pendingDeleteIndex}
+          itemName={filteredData[pendingDeleteIndex]?.headerName ?? ''}
         />
       </div>
     </div>

@@ -5,6 +5,7 @@ import {
   CloseCircleOutlined,
   CompressOutlined,
   InfoCircleOutlined,
+  KeyOutlined,
   MenuOutlined,
   QuestionCircleOutlined,
   WarningOutlined,
@@ -21,6 +22,7 @@ const { Title, Text } = Typography;
 
 interface HeaderProps {
   onOpenSetupGuide: () => void;
+  onShowShortcuts: () => void;
 }
 
 type ThemeMode = 'light' | 'dark' | 'auto';
@@ -70,7 +72,7 @@ const LOG_LEVEL_OPTIONS: Array<{ value: LogLevel; label: React.ReactNode }> = [
   },
 ];
 
-const Header: React.FC<HeaderProps> = ({ onOpenSetupGuide }) => {
+const Header: React.FC<HeaderProps> = ({ onOpenSetupGuide, onShowShortcuts }) => {
   const { isConnected, isStatusLoaded } = useHeader();
   const { themeMode, setThemeMode, isCompactMode, toggleCompactMode } = useTheme();
   const [logLevel, setLogLevel] = useState<LogLevel>(logger.getLevel());
@@ -181,6 +183,17 @@ const Header: React.FC<HeaderProps> = ({ onOpenSetupGuide }) => {
       icon: <QuestionCircleOutlined />,
       label: 'Setup Guide',
       onClick: onOpenSetupGuide,
+    },
+    {
+      key: 'shortcuts',
+      icon: <KeyOutlined />,
+      label: (
+        <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+          <span>Keyboard Shortcuts</span>
+          <span style={{ fontSize: '11px', opacity: 0.5, fontFamily: 'monospace' }}>?</span>
+        </Space>
+      ),
+      onClick: onShowShortcuts,
     },
     { type: 'divider' as const },
     {

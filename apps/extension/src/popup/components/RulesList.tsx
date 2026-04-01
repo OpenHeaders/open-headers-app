@@ -1,32 +1,77 @@
 import { AppstoreTwoTone, TagsTwoTone, ThunderboltTwoTone } from '@ant-design/icons';
 import { Tabs } from 'antd';
 import type React from 'react';
-import { useEffect, useState } from 'react';
-import { getBrowserAPI } from '@/types/browser';
 import ActiveRules from './ActiveRules';
 import HeaderTable from './HeaderTable';
 import TagManager from './TagManager';
 
-const RulesList: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string | null>(null);
+interface PageInfo {
+  visibleRowCount: number;
+  visibleRowIds: readonly (string | number)[];
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+  onNextPage?: () => void;
+  onPrevPage?: () => void;
+}
 
-  useEffect(() => {
-    const browserAPI = getBrowserAPI();
-    browserAPI.storage.local.get(['activeRulesTab'], (result: Record<string, unknown>) => {
-      setActiveTab((result.activeRulesTab as string) || 'all-rules');
-    });
-  }, []);
+interface RulesListProps {
+  activeTab: string | null;
+  onTabChange: (key: string) => void;
+  focusedRowIndex: number;
+  pendingDeleteIndex: number;
+  onPageInfoChange: (info: PageInfo) => void;
+  onRowActionsChange: (actions: {
+    onToggleRow?: (index: number) => void;
+    onExpandRow?: (index: number) => void;
+    onCollapseRow?: (index: number) => void;
+    onEditRow?: (index: number) => void;
+    onCopyRow?: (index: number) => void;
+    onDeleteRow?: (index: number) => void;
+    onAddRule?: () => void;
+  }) => void;
+}
 
-  const handleTabChange = (key: string) => {
-    setActiveTab(key);
-    const browserAPI = getBrowserAPI();
-    browserAPI.storage.local.set({ activeRulesTab: key });
-  };
-
+const RulesList: React.FC<RulesListProps> = ({
+  activeTab,
+  onTabChange,
+  focusedRowIndex,
+  pendingDeleteIndex,
+  onPageInfoChange,
+  onRowActionsChange,
+}) => {
   const items = [
-    { key: 'active-rules', label: 'Active', children: <ActiveRules />, icon: <ThunderboltTwoTone /> },
-    { key: 'all-rules', label: 'Rules', children: <HeaderTable />, icon: <AppstoreTwoTone /> },
-    { key: 'tag-manager', label: 'Tags', children: <TagManager />, icon: <TagsTwoTone /> },
+    {
+      key: 'active-rules',
+      label: 'Active',
+      children: (
+        <ActiveRules
+          focusedRowIndex={activeTab === 'active-rules' ? focusedRowIndex : -1}
+          pendingDeleteIndex={activeTab === 'active-rules' ? pendingDeleteIndex : -1}
+          onPageInfoChange={activeTab === 'active-rules' ? onPageInfoChange : undefined}
+          onRowActionsChange={activeTab === 'active-rules' ? onRowActionsChange : undefined}
+        />
+      ),
+      icon: <ThunderboltTwoTone />,
+    },
+    {
+      key: 'all-rules',
+      label: 'Rules',
+      children: (
+        <HeaderTable
+          focusedRowIndex={activeTab === 'all-rules' ? focusedRowIndex : -1}
+          pendingDeleteIndex={activeTab === 'all-rules' ? pendingDeleteIndex : -1}
+          onPageInfoChange={activeTab === 'all-rules' ? onPageInfoChange : undefined}
+          onRowActionsChange={activeTab === 'all-rules' ? onRowActionsChange : undefined}
+        />
+      ),
+      icon: <AppstoreTwoTone />,
+    },
+    {
+      key: 'tag-manager',
+      label: 'Tags',
+      children: <TagManager />,
+      icon: <TagsTwoTone />,
+    },
   ];
 
   if (activeTab === null) return null;
@@ -34,7 +79,7 @@ const RulesList: React.FC = () => {
   return (
     <Tabs
       activeKey={activeTab}
-      onChange={handleTabChange}
+      onChange={onTabChange}
       items={items}
       type="card"
       size="middle"

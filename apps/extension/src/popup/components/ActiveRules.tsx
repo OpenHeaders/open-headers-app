@@ -7,11 +7,27 @@ import {
   FileTextOutlined,
 } from '@ant-design/icons';
 import { getAppLauncher } from '@utils/app-launcher';
-import { Alert, App, Badge, Button, Empty, Input, Popconfirm, Space, Spin, Switch, Table, Tag, Tooltip, Typography } from 'antd';
+import {
+  Alert,
+  App,
+  Badge,
+  Button,
+  Empty,
+  Input,
+  Popconfirm,
+  Space,
+  Spin,
+  Switch,
+  Table,
+  Tag,
+  Tooltip,
+  Typography,
+} from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import DeleteConfirmOverlay from './DeleteConfirmOverlay';
 
 declare const browser: typeof chrome | undefined;
 
@@ -34,12 +50,30 @@ function formatTimestampShort(timestamp: number): React.ReactNode {
   const m = String(d.getMinutes()).padStart(2, '0');
   const s = String(d.getSeconds()).padStart(2, '0');
   const ms = String(d.getMilliseconds()).padStart(3, '0');
-  return <>{h}:{m}:{s}<span style={{ fontSize: '9px', opacity: 0.6 }}>.{ms}</span></>;
+  return (
+    <>
+      {h}:{m}:{s}
+      <span style={{ fontSize: '9px', opacity: 0.6 }}>.{ms}</span>
+    </>
+  );
 }
 
 function formatTimestampFull(timestamp: number): React.ReactNode {
   const d = new Date(timestamp);
-  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const months = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
   const day = d.getDate();
   const month = months[d.getMonth()];
   const year = d.getFullYear();
@@ -47,7 +81,12 @@ function formatTimestampFull(timestamp: number): React.ReactNode {
   const m = String(d.getMinutes()).padStart(2, '0');
   const s = String(d.getSeconds()).padStart(2, '0');
   const ms = String(d.getMilliseconds()).padStart(3, '0');
-  return <>{day} {month} {year} {h}:{m}:{s}<span style={{ fontSize: '9px', opacity: 0.6 }}>.{ms}</span></>;
+  return (
+    <>
+      {day} {month} {year} {h}:{m}:{s}
+      <span style={{ fontSize: '9px', opacity: 0.6 }}>.{ms}</span>
+    </>
+  );
 }
 
 interface ActiveRule {
@@ -74,7 +113,18 @@ interface TableRecord extends ActiveRule {
   key: string | number;
 }
 
-const TAG_COLORS = ['blue', 'volcano', 'green', 'purple', 'orange', 'cyan', 'magenta', 'gold', 'geekblue', 'red'] as const;
+const TAG_COLORS = [
+  'blue',
+  'volcano',
+  'green',
+  'purple',
+  'orange',
+  'cyan',
+  'magenta',
+  'gold',
+  'geekblue',
+  'red',
+] as const;
 
 function getTagColor(tag: string): string {
   let hash = 5381;
@@ -114,7 +164,37 @@ function renderHighlightedUrl(url: string, pattern: string): React.ReactNode {
   );
 }
 
-const ActiveRules: React.FC = () => {
+const PAGE_SIZE = 10;
+
+interface PageInfo {
+  visibleRowCount: number;
+  visibleRowIds: readonly (string | number)[];
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+  onNextPage?: () => void;
+  onPrevPage?: () => void;
+}
+
+interface ActiveRulesProps {
+  focusedRowIndex?: number;
+  pendingDeleteIndex?: number;
+  onPageInfoChange?: (info: PageInfo) => void;
+  onRowActionsChange?: (actions: {
+    onToggleRow?: (index: number) => void;
+    onExpandRow?: (index: number) => void;
+    onCollapseRow?: (index: number) => void;
+    onEditRow?: (index: number) => void;
+    onCopyRow?: (index: number) => void;
+    onDeleteRow?: (index: number) => void;
+  }) => void;
+}
+
+const ActiveRules: React.FC<ActiveRulesProps> = ({
+  focusedRowIndex = -1,
+  pendingDeleteIndex = -1,
+  onPageInfoChange,
+  onRowActionsChange,
+}) => {
   const { message } = App.useApp();
   const appLauncher = getAppLauncher();
   const [currentTab, setCurrentTab] = useState<CurrentTabInfo | null>(null);
@@ -124,6 +204,7 @@ const ActiveRules: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [filteredInfo, setFilteredInfo] = useState<Record<string, FilterValue | null>>({});
   const [sortedInfo, setSortedInfo] = useState<SorterResult<TableRecord>>({});
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const fetchActiveRules = async () => {
@@ -179,6 +260,9 @@ const ActiveRules: React.FC = () => {
     };
   }, []);
 
+  const [manualExpandedKeys, setManualExpandedKeys] = useState<(string | number)[]>([]);
+  const dataSourceRef = useRef<TableRecord[]>([]);
+
   const filteredRules = searchText
     ? activeRules.filter((r) => {
         const q = searchText.toLowerCase();
@@ -196,6 +280,127 @@ const ActiveRules: React.FC = () => {
     ...rule,
     key: (rule.id || index) as string | number,
   }));
+
+  // Keep ref in sync for keyboard callbacks
+  dataSourceRef.current = dataSource;
+
+  // Report page info to keyboard navigation
+  const totalPages = Math.ceil(dataSource.length / PAGE_SIZE);
+  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const pageSlice = dataSource.slice(pageStart, pageStart + PAGE_SIZE);
+  const visibleRowCount = pageSlice.length;
+  // Memoize to prevent infinite re-render loops — new array reference every render
+  // would trigger onPageInfoChange effect → parent setState → child re-render → repeat
+  const visibleRowIdsKey = pageSlice.map((r) => r.key).join(',');
+  // biome-ignore lint/correctness/useExhaustiveDependencies: visibleRowIdsKey is a stable string representation
+  const visibleRowIds = useMemo(() => pageSlice.map((r) => r.key), [visibleRowIdsKey]);
+
+  const goToNextPage = useCallback(() => {
+    setCurrentPage((p) => Math.min(p + 1, totalPages));
+  }, [totalPages]);
+
+  const goToPrevPage = useCallback(() => {
+    setCurrentPage((p) => Math.max(p - 1, 1));
+  }, []);
+
+  useEffect(() => {
+    if (!onPageInfoChange) return;
+    onPageInfoChange({
+      visibleRowCount,
+      visibleRowIds,
+      hasNextPage: currentPage < totalPages,
+      hasPrevPage: currentPage > 1,
+      onNextPage: goToNextPage,
+      onPrevPage: goToPrevPage,
+    });
+  }, [onPageInfoChange, visibleRowCount, visibleRowIds, currentPage, totalPages, goToNextPage, goToPrevPage]);
+
+  // Register row actions for keyboard navigation
+  const handleToggleRow = useCallback((index: number) => {
+    const record = dataSourceRef.current[index];
+    if (!record) return;
+    const isEnabled = record.isEnabled !== false;
+    setActiveRules((prev) => prev.map((r) => (r.id === record.id ? { ...r, isEnabled: !isEnabled } : r)));
+    const bApi = typeof browser !== 'undefined' ? browser : chrome;
+    bApi.runtime.sendMessage({ type: 'toggleRule', ruleId: record.id, enabled: !isEnabled }, (response: unknown) => {
+      const resp = response as { success?: boolean } | undefined;
+      if (resp?.success) {
+        bApi.runtime.sendMessage({ type: 'rulesUpdated' });
+      } else {
+        setActiveRules((prev) => prev.map((r) => (r.id === record.id ? { ...r, isEnabled } : r)));
+      }
+    });
+  }, []);
+
+  const handleExpandRow = useCallback((index: number) => {
+    const record = dataSourceRef.current[index];
+    if (!record) return;
+    const key = record.key;
+    setManualExpandedKeys((prev) => (prev.includes(key) ? prev : [...prev, key]));
+  }, []);
+
+  const handleCollapseRow = useCallback((index: number) => {
+    const record = dataSourceRef.current[index];
+    if (!record) return;
+    const key = record.key;
+    setManualExpandedKeys((prev) => prev.filter((k) => k !== key));
+  }, []);
+
+  const handleEditRow = useCallback(
+    (index: number) => {
+      const record = dataSourceRef.current[index];
+      if (!record) return;
+      void appLauncher.launchOrFocus({ tab: 'rules', subTab: 'headers', action: 'edit', itemId: record.id });
+      message.info('Opening edit dialog in OpenHeaders app');
+    },
+    [appLauncher, message],
+  );
+
+  const handleCopyRow = useCallback((index: number) => {
+    const record = dataSourceRef.current[index];
+    if (!record?.headerValue) return;
+    void navigator.clipboard.writeText(record.headerValue);
+    setCopiedRowId(record.key);
+    setTimeout(() => setCopiedRowId(null), 1000);
+  }, []);
+
+  const handleDeleteRow = useCallback(
+    (index: number) => {
+      const record = dataSourceRef.current[index];
+      if (!record) return;
+      setActiveRules((prev) => prev.filter((r) => r.id !== record.id));
+      const bApi = typeof browser !== 'undefined' ? browser : chrome;
+      bApi.runtime.sendMessage({ type: 'deleteRule', ruleId: record.id }, (response: unknown) => {
+        const resp = response as { success?: boolean } | undefined;
+        if (resp?.success) {
+          void message.success('Rule deleted');
+        } else {
+          void message.error('Failed to delete rule');
+        }
+      });
+    },
+    [message],
+  );
+
+  useEffect(() => {
+    if (!onRowActionsChange) return;
+    onRowActionsChange({
+      onToggleRow: handleToggleRow,
+      onExpandRow: handleExpandRow,
+      onCollapseRow: handleCollapseRow,
+      onEditRow: handleEditRow,
+      onCopyRow: handleCopyRow,
+      onDeleteRow: handleDeleteRow,
+    });
+  }, [
+    onRowActionsChange,
+    handleToggleRow,
+    handleExpandRow,
+    handleCollapseRow,
+    handleEditRow,
+    handleCopyRow,
+    handleDeleteRow,
+  ]);
 
   const handleTableChange = (
     _pagination: unknown,
@@ -251,8 +456,8 @@ const ActiveRules: React.FC = () => {
             <Text style={{ fontSize: '13px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {displayValue}
             </Text>
-            {fullValue && (
-              copiedRowId === rowKey ? (
+            {fullValue &&
+              (copiedRowId === rowKey ? (
                 <CheckOutlined
                   className="value-copy-icon"
                   style={{ fontSize: '12px', color: '#52c41a', flexShrink: 0, opacity: 1 }}
@@ -268,8 +473,7 @@ const ActiveRules: React.FC = () => {
                     setTimeout(() => setCopiedRowId(null), 1000);
                   }}
                 />
-              )
-            )}
+              ))}
           </div>
         );
       },
@@ -281,12 +485,20 @@ const ActiveRules: React.FC = () => {
       width: 160,
       sorter: (a, b) => (a.domains || []).join(',').localeCompare((b.domains || []).join(',')),
       sortOrder: sortedInfo.columnKey === 'domains' ? sortedInfo.order : null,
-      filters: [...new Set(dataSource.flatMap((item) => item.domains || []))].map((domain) => ({ text: domain, value: domain })),
+      filters: [...new Set(dataSource.flatMap((item) => item.domains || []))].map((domain) => ({
+        text: domain,
+        value: domain,
+      })),
       filteredValue: filteredInfo.domains || null,
       filterSearch: true,
       onFilter: (value, record) => (record.domains || []).includes(value as string),
       render: (domains: string[]) => {
-        if (!domains || domains.length === 0) return <Tag variant="outlined" color="default">All domains</Tag>;
+        if (!domains || domains.length === 0)
+          return (
+            <Tag variant="outlined" color="default">
+              All domains
+            </Tag>
+          );
         const first = domains[0].length > 14 ? `${domains[0].substring(0, 14)}...` : domains[0];
         const overflowCount = domains.length - 1;
         const tooltip = (
@@ -302,9 +514,13 @@ const ActiveRules: React.FC = () => {
         return (
           <Tooltip title={tooltip} styles={{ root: { maxWidth: 500 } }}>
             <Space size={2}>
-              <Tag variant="outlined" style={{ fontSize: '12px', cursor: 'default', margin: 0 }}>{first}</Tag>
+              <Tag variant="outlined" style={{ fontSize: '12px', cursor: 'default', margin: 0 }}>
+                {first}
+              </Tag>
               {overflowCount > 0 && (
-                <Tag variant="outlined" style={{ fontSize: '12px', cursor: 'default', margin: 0 }}>+{overflowCount}</Tag>
+                <Tag variant="outlined" style={{ fontSize: '12px', cursor: 'default', margin: 0 }}>
+                  +{overflowCount}
+                </Tag>
               )}
             </Space>
           </Tooltip>
@@ -324,7 +540,8 @@ const ActiveRules: React.FC = () => {
       sortOrder: sortedInfo.columnKey === 'tags' ? sortedInfo.order : null,
       filters: [
         ...new Set([
-          'Page', 'Resource',
+          'Page',
+          'Resource',
           ...dataSource.map((item) => (item.isResponse ? 'Response' : 'Request')),
           ...dataSource.filter((item) => item.tag).map((item) => item.tag as string),
         ]),
@@ -382,7 +599,15 @@ const ActiveRules: React.FC = () => {
                 title={
                   <div style={{ fontSize: 12 }}>
                     {allTags.map((t, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: i < allTags.length - 1 ? 4 : 0 }}>
+                      <div
+                        key={i}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          marginBottom: i < allTags.length - 1 ? 4 : 0,
+                        }}
+                      >
                         <span style={{ opacity: 0.6 }}>{i + 1}. </span>
                         <Tag color={t.color} variant="outlined" style={{ margin: 0, fontSize: '11px' }}>
                           {t.label}
@@ -393,7 +618,9 @@ const ActiveRules: React.FC = () => {
                 }
                 styles={{ root: { maxWidth: 400 } }}
               >
-                <Tag variant="outlined" style={{ ...tagStyle, cursor: 'help' }}>+{overflowCount}</Tag>
+                <Tag variant="outlined" style={{ ...tagStyle, cursor: 'help' }}>
+                  +{overflowCount}
+                </Tag>
               </Tooltip>
             )}
           </Space>
@@ -416,9 +643,7 @@ const ActiveRules: React.FC = () => {
             checked={isEnabled}
             onChange={() => {
               // Optimistic update — immediately reflect in UI
-              setActiveRules((prev) =>
-                prev.map((r) => (r.id === record.id ? { ...r, isEnabled: !isEnabled } : r)),
-              );
+              setActiveRules((prev) => prev.map((r) => (r.id === record.id ? { ...r, isEnabled: !isEnabled } : r)));
               const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
               browserAPI.runtime.sendMessage(
                 { type: 'toggleRule', ruleId: record.id, enabled: !isEnabled },
@@ -429,9 +654,7 @@ const ActiveRules: React.FC = () => {
                     browserAPI.runtime.sendMessage({ type: 'rulesUpdated' });
                   } else {
                     // Revert on failure
-                    setActiveRules((prev) =>
-                      prev.map((r) => (r.id === record.id ? { ...r, isEnabled } : r)),
-                    );
+                    setActiveRules((prev) => prev.map((r) => (r.id === record.id ? { ...r, isEnabled } : r)));
                     void message.error('Failed to toggle rule');
                   }
                 },
@@ -465,31 +688,22 @@ const ActiveRules: React.FC = () => {
             title="Delete rule"
             description={`Delete "${record.headerName}"?`}
             onConfirm={() => {
-              // Optimistic removal
               setActiveRules((prev) => prev.filter((r) => r.id !== record.id));
               const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
-              browserAPI.runtime.sendMessage(
-                { type: 'deleteRule', ruleId: record.id },
-                (response: unknown) => {
-                  const resp = response as { success?: boolean } | undefined;
-                  if (resp?.success) {
-                    void message.success('Rule deleted');
-                  } else {
-                    void message.error('Failed to delete rule');
-                  }
-                },
-              );
+              browserAPI.runtime.sendMessage({ type: 'deleteRule', ruleId: record.id }, (response: unknown) => {
+                const resp = response as { success?: boolean } | undefined;
+                if (resp?.success) {
+                  void message.success('Rule deleted');
+                } else {
+                  void message.error('Failed to delete rule');
+                }
+              });
             }}
             okText="Delete"
             okType="danger"
             cancelText="Cancel"
           >
-            <Button
-              type="text"
-              danger
-              icon={<DeleteOutlined />}
-              size="small"
-            />
+            <Button type="text" danger icon={<DeleteOutlined />} size="small" />
           </Popconfirm>
         </Space>
       ),
@@ -575,16 +789,22 @@ const ActiveRules: React.FC = () => {
               onChange={(e) => setSearchText(e.target.value)}
             />
             <div style={{ textAlign: 'right', marginTop: 2, height: 16 }}>
-              {searchText && (() => {
-                const matchedRequestCount = filteredRules.reduce(
-                  (sum, r) => sum + (r.matchedUrls || []).filter((m) => m.url.toLowerCase().includes(searchText.toLowerCase())).length, 0,
-                );
-                return (
-                  <Text type="secondary" style={{ fontSize: '11px' }}>
-                    {filteredRules.length} rule{filteredRules.length !== 1 ? 's' : ''}, {matchedRequestCount} request{matchedRequestCount !== 1 ? 's' : ''} matched
-                  </Text>
-                );
-              })()}
+              {searchText &&
+                (() => {
+                  const matchedRequestCount = filteredRules.reduce(
+                    (sum, r) =>
+                      sum +
+                      (r.matchedUrls || []).filter((m) => m.url.toLowerCase().includes(searchText.toLowerCase()))
+                        .length,
+                    0,
+                  );
+                  return (
+                    <Text type="secondary" style={{ fontSize: '11px' }}>
+                      {filteredRules.length} rule{filteredRules.length !== 1 ? 's' : ''}, {matchedRequestCount} request
+                      {matchedRequestCount !== 1 ? 's' : ''} matched
+                    </Text>
+                  );
+                })()}
             </div>
           </div>
         </div>
@@ -595,17 +815,29 @@ const ActiveRules: React.FC = () => {
           columns={columns}
           onChange={handleTableChange}
           pagination={{
-            pageSize: 10,
+            current: currentPage,
+            pageSize: PAGE_SIZE,
             size: 'small',
             showSizeChanger: false,
             showTotal: (total, range) => `${range[0]}-${range[1]} of ${total}`,
             style: { marginBottom: 0, marginTop: 4 },
+            onChange: (page) => setCurrentPage(page),
           }}
           size="small"
           scroll={{ x: 770, y: 290 }}
+          rowClassName={(_record: TableRecord, index: number) => {
+            const classes: string[] = [];
+            if (index === focusedRowIndex) classes.push('keyboard-focused-row');
+            if (index === pendingDeleteIndex) classes.push('keyboard-pending-delete-row');
+            return classes.join(' ');
+          }}
           expandable={{
             columnWidth: 32,
-            ...(searchText && autoExpandedKeys.length > 0 ? { expandedRowKeys: autoExpandedKeys } : {}),
+            expandedRowKeys: [
+              ...manualExpandedKeys,
+              ...(searchText && autoExpandedKeys.length > 0 ? autoExpandedKeys : []),
+            ],
+            onExpandedRowsChange: (keys) => setManualExpandedKeys(keys.map((k) => k as string | number)),
             expandedRowRender: (record: TableRecord) => {
               const allMatches = record.matchedUrls || [];
               // Filter matched URLs when searching
@@ -615,7 +847,9 @@ const ActiveRules: React.FC = () => {
               if (matches.length === 0) {
                 return (
                   <Text type="secondary" style={{ fontSize: '12px', fontStyle: 'italic' }}>
-                    {searchText ? 'No matched requests for this search' : 'No matched requests observed yet — reload the page to capture'}
+                    {searchText
+                      ? 'No matched requests for this search'
+                      : 'No matched requests observed yet — reload the page to capture'}
                   </Text>
                 );
               }
@@ -625,7 +859,7 @@ const ActiveRules: React.FC = () => {
               const matchedData: MatchedRequestRecord[] = reversed.map((m, i) => ({
                 ...m,
                 key: `${record.id}-match-${i}`,
-                type: m.url === currentTab?.url ? 'direct' as const : 'resource' as const,
+                type: m.url === currentTab?.url ? ('direct' as const) : ('resource' as const),
               }));
 
               const matchedColumns: ColumnsType<MatchedRequestRecord> = [
@@ -652,49 +886,72 @@ const ActiveRules: React.FC = () => {
                   width: 380,
                   sorter: (a, b) => a.url.localeCompare(b.url),
                   render: (url: string, matchRecord: MatchedRequestRecord) => {
-                    const display = url.length > 50 ? `${url.substring(0, 30)}...${url.substring(url.length - 15)}` : url;
+                    const display =
+                      url.length > 50 ? `${url.substring(0, 30)}...${url.substring(url.length - 15)}` : url;
                     return (
-                        <div
-                          className="value-cell"
-                          style={{ display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', overflow: 'hidden' }}
-                        >
-                          <Tooltip
-                            title={
-                              <div style={{ fontSize: 12, fontFamily: 'monospace' }}>
-                                <div style={{ marginBottom: 6 }}>
-                                  {renderHighlightedUrl(matchRecord.url, matchRecord.pattern)}
-                                </div>
-                                <div style={{ borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                  <span style={{ opacity: 0.5, fontSize: 11 }}>matched by</span>
-                                  <span style={{ color: '#69b1ff', fontSize: 11 }}>{matchRecord.pattern}</span>
-                                </div>
+                      <div
+                        className="value-cell"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <Tooltip
+                          title={
+                            <div style={{ fontSize: 12, fontFamily: 'monospace' }}>
+                              <div style={{ marginBottom: 6 }}>
+                                {renderHighlightedUrl(matchRecord.url, matchRecord.pattern)}
                               </div>
-                            }
-                            styles={{ root: { maxWidth: 500 } }}
+                              <div
+                                style={{
+                                  borderTop: '1px solid rgba(255,255,255,0.15)',
+                                  paddingTop: 4,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                }}
+                              >
+                                <span style={{ opacity: 0.5, fontSize: 11 }}>matched by</span>
+                                <span style={{ color: '#69b1ff', fontSize: 11 }}>{matchRecord.pattern}</span>
+                              </div>
+                            </div>
+                          }
+                          styles={{ root: { maxWidth: 500 } }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: '12px',
+                              fontFamily: 'monospace',
+                              cursor: 'default',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
                           >
-                            <Text style={{ fontSize: '12px', fontFamily: 'monospace', cursor: 'default', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {display}
-                            </Text>
-                          </Tooltip>
-                          <span style={{ flex: 1 }} />
-                          {copiedRowId === matchRecord.key ? (
-                            <CheckOutlined
-                              className="value-copy-icon"
-                              style={{ fontSize: '11px', color: '#52c41a', flexShrink: 0, opacity: 1 }}
-                            />
-                          ) : (
-                            <CopyTwoTone
-                              className="value-copy-icon"
-                              style={{ fontSize: '11px', cursor: 'pointer', flexShrink: 0, opacity: 0 }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                void navigator.clipboard.writeText(url);
-                                setCopiedRowId(matchRecord.key);
-                                setTimeout(() => setCopiedRowId(null), 1000);
-                              }}
-                            />
-                          )}
-                        </div>
+                            {display}
+                          </Text>
+                        </Tooltip>
+                        <span style={{ flex: 1 }} />
+                        {copiedRowId === matchRecord.key ? (
+                          <CheckOutlined
+                            className="value-copy-icon"
+                            style={{ fontSize: '11px', color: '#52c41a', flexShrink: 0, opacity: 1 }}
+                          />
+                        ) : (
+                          <CopyTwoTone
+                            className="value-copy-icon"
+                            style={{ fontSize: '11px', cursor: 'pointer', flexShrink: 0, opacity: 0 }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void navigator.clipboard.writeText(url);
+                              setCopiedRowId(matchRecord.key);
+                              setTimeout(() => setCopiedRowId(null), 1000);
+                            }}
+                          />
+                        )}
+                      </div>
                     );
                   },
                 },
@@ -720,7 +977,9 @@ const ActiveRules: React.FC = () => {
                   render: (pattern: string) => (
                     <Tooltip title={pattern}>
                       <Tag variant="outlined" style={{ margin: 0, fontSize: '11px' }}>
-                        {pattern.length > 18 ? `${pattern.substring(0, 10)}...${pattern.substring(pattern.length - 5)}` : pattern}
+                        {pattern.length > 18
+                          ? `${pattern.substring(0, 10)}...${pattern.substring(pattern.length - 5)}`
+                          : pattern}
                       </Tag>
                     </Tooltip>
                   ),
@@ -765,6 +1024,10 @@ const ActiveRules: React.FC = () => {
             ),
           }}
           className="header-rules-table"
+        />
+        <DeleteConfirmOverlay
+          pendingDeleteIndex={pendingDeleteIndex}
+          itemName={dataSource[pendingDeleteIndex]?.headerName ?? ''}
         />
       </div>
     </div>

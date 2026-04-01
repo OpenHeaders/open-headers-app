@@ -27,6 +27,8 @@ const ConnectionInfo: React.FC = () => {
     setLastConnectionState(isConnected);
   }, [isConnected, lastConnectionState]);
 
+  const isVisible = isStatusLoaded && !isConnected && !dismissed;
+
   const handleOpenWelcomePage = async (): Promise<void> => {
     const response = await sendMessage({ type: 'forceOpenWelcomePage' });
     if (!response.error) {
@@ -34,12 +36,25 @@ const ConnectionInfo: React.FC = () => {
     }
   };
 
-  const handleDismiss = (): void => {
+  const handleDismiss: React.MouseEventHandler<HTMLButtonElement> = () => {
     setDismissed(true);
     storage.local.set({ connectionAlertDismissed: true });
   };
 
-  if (!isStatusLoaded || isConnected || dismissed) {
+  // Close on Escape key
+  useEffect(() => {
+    if (!isVisible) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setDismissed(true);
+        storage.local.set({ connectionAlertDismissed: true });
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isVisible]);
+
+  if (!isVisible) {
     return null;
   }
 
@@ -73,7 +88,7 @@ const ConnectionInfo: React.FC = () => {
         }
         type="info"
         showIcon
-        closable={{ onClose: handleDismiss }}
+        closable={{ closeIcon: true, onClose: handleDismiss, 'aria-label': 'close' }}
         style={{ boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)', borderRadius: 8 }}
       />
     </div>
