@@ -70,8 +70,9 @@ async function updateBadgeForCurrentTab(): Promise<void> {
         return;
       }
 
-      const activeRules: ActiveRule[] = await getActiveRulesForTab(currentTab?.id, currentUrl);
-      await updateExtensionBadge(isConnected, activeRules, isPaused, recordingService, reconnectAttempts);
+      const allMatchingRules: ActiveRule[] = await getActiveRulesForTab(currentTab?.id, currentUrl);
+      const enabledRules = allMatchingRules.filter((r) => r.isEnabled !== false);
+      await updateExtensionBadge(isConnected, enabledRules, isPaused, recordingService, reconnectAttempts);
     });
   });
 }

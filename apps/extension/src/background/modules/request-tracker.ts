@@ -104,7 +104,9 @@ export async function checkIfUrlMatchesAnyRule(url: string): Promise<boolean> {
 }
 
 /**
- * Get all active rules for a specific tab (direct and indirect matches)
+ * Get all matching rules for a specific tab (direct and indirect matches).
+ * Returns both enabled and disabled rules so the Active tab can show
+ * everything that matches this domain and let the user toggle them.
  */
 export async function getActiveRulesForTab(tabId: number | undefined, tabUrl: string): Promise<ActiveRule[]> {
   if (!tabUrl || !isTrackableUrl(tabUrl)) {
@@ -131,9 +133,6 @@ export async function getActiveRulesForTab(tabId: number | undefined, tabUrl: st
 
       for (const id in savedData) {
         const entry: HeaderEntry = savedData[id];
-
-        // Skip disabled rules
-        if (entry.isEnabled === false) continue;
 
         const domains: string[] = entry.domains || [];
         let matchType: 'direct' | 'indirect' | null = null;

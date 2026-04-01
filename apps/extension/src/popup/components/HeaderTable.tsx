@@ -1,6 +1,8 @@
 import {
   ApiOutlined,
   CodeOutlined,
+  CheckOutlined,
+  CopyTwoTone,
   DeleteOutlined,
   DownOutlined,
   EditOutlined,
@@ -61,6 +63,7 @@ const HeaderTable: React.FC = () => {
 
   const { headerEntries, dynamicSources, isConnected, uiState, updateUiState } = useHeader();
 
+  const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState(uiState?.tableState?.searchText || '');
   const [filteredInfo, setFilteredInfo] = useState<Record<string, FilterValue | null>>(
     (uiState?.tableState?.filteredInfo as Record<string, FilterValue | null>) || {},
@@ -267,15 +270,40 @@ const HeaderTable: React.FC = () => {
       sorter: (a, b) => (a.actualValue || '').localeCompare(b.actualValue || ''),
       sortOrder: sortedInfo.columnKey === 'actualValue' ? sortedInfo.order : null,
       render: (text: string, record: TableRecord) => {
-        let displayValue = text || '';
-        if (displayValue.length > 20) {
-          displayValue = `${displayValue.substring(0, 10)}...${displayValue.substring(displayValue.length - 5)}`;
+        const fullValue = text || '';
+        let displayValue = fullValue;
+        if (displayValue.length > 16) {
+          displayValue = `${displayValue.substring(0, 9)}...${displayValue.substring(displayValue.length - 4)}`;
         }
 
         return (
-          <Text style={{ display: 'block', fontSize: '13px', opacity: record.isEnabled ? 1 : 0.5 }}>
-            {displayValue}
-          </Text>
+          <div
+            className="value-cell"
+            style={{ display: 'flex', alignItems: 'center', gap: 4, opacity: record.isEnabled ? 1 : 0.5, whiteSpace: 'nowrap', overflow: 'hidden' }}
+          >
+            <Text style={{ fontSize: '13px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {displayValue}
+            </Text>
+            {fullValue && (
+              copiedRowId === record.id ? (
+                <CheckOutlined
+                  className="value-copy-icon"
+                  style={{ fontSize: '12px', color: '#52c41a', flexShrink: 0, opacity: 1 }}
+                />
+              ) : (
+                <CopyTwoTone
+                  className="value-copy-icon"
+                  style={{ fontSize: '12px', cursor: 'pointer', flexShrink: 0, opacity: 0 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void navigator.clipboard.writeText(fullValue);
+                    setCopiedRowId(record.id);
+                    setTimeout(() => setCopiedRowId(null), 1000);
+                  }}
+                />
+              )
+            )}
+          </div>
         );
       },
     },
@@ -283,7 +311,7 @@ const HeaderTable: React.FC = () => {
       title: 'Domains',
       dataIndex: 'domains',
       key: 'domains',
-      width: 140,
+      width: 160,
       sorter: (a, b) => a.domains.join(',').localeCompare(b.domains.join(',')),
       filters: [...new Set(dataSource.flatMap((item) => item.domains))].map((domain) => ({
         text: domain,
@@ -295,23 +323,26 @@ const HeaderTable: React.FC = () => {
       sortOrder: sortedInfo.columnKey === 'domains' ? sortedInfo.order : null,
       render: (domains: string[]) => {
         if (domains.length === 0) return null;
-        const first = domains[0].length > 18 ? `${domains[0].substring(0, 18)}...` : domains[0];
-        const label = domains.length === 1 ? first : `${first} +${domains.length - 1}`;
-        return (
-          <Tooltip
-            title={
-              <div style={{ fontFamily: 'monospace', fontSize: 12 }}>
-                {domains.map((d, i) => (
-                  <div key={i}>
-                    <span style={{ opacity: 0.6 }}>{i + 1}. </span>
-                    {d}
-                  </div>
-                ))}
+        const first = domains[0].length > 14 ? `${domains[0].substring(0, 14)}...` : domains[0];
+        const overflowCount = domains.length - 1;
+        const tooltip = (
+          <div style={{ fontFamily: 'monospace', fontSize: 12 }}>
+            {domains.map((d, i) => (
+              <div key={i}>
+                <span style={{ opacity: 0.6 }}>{i + 1}. </span>
+                {d}
               </div>
-            }
-            styles={{ root: { maxWidth: 500 } }}
-          >
-            <Tag style={{ fontSize: '12px', cursor: 'default' }}>{label}</Tag>
+            ))}
+          </div>
+        );
+        return (
+          <Tooltip title={tooltip} styles={{ root: { maxWidth: 500 } }}>
+            <Space size={2}>
+              <Tag variant="outlined" style={{ fontSize: '12px', cursor: 'default', margin: 0 }}>{first}</Tag>
+              {overflowCount > 0 && (
+                <Tag variant="outlined" style={{ fontSize: '12px', cursor: 'default', margin: 0 }}>+{overflowCount}</Tag>
+              )}
+            </Space>
           </Tooltip>
         );
       },
@@ -319,7 +350,7 @@ const HeaderTable: React.FC = () => {
     {
       title: 'Tags',
       key: 'tags',
-      width: 150,
+      width: 130,
       align: 'center',
       sorter: (a, b) => {
         const tagA = `${a.isResponse ? 'Response' : 'Request'}${a.tag ? `-${a.tag}` : ''}`;
@@ -370,48 +401,72 @@ const HeaderTable: React.FC = () => {
       },
       sortOrder: sortedInfo.columnKey === 'tags' ? sortedInfo.order : null,
       render: (_: unknown, record: TableRecord) => {
-        const tagStyle = { margin: '0 0 2px 0', fontSize: '11px' };
-        const tags: React.ReactNode[] = [];
-        if (record.tag) {
-          tags.push(
-            <Tag key="custom-tag" color={getTagColor(record.tag)} style={tagStyle}>
-              {record.tag}
-            </Tag>,
-          );
-        }
-        tags.push(
-          <Tooltip key="type" title={record.isResponse ? 'Response' : 'Request'}>
-            <Tag style={tagStyle}>{record.isResponse ? 'Res' : 'Req'}</Tag>
-          </Tooltip>,
-        );
-        if (record.placeholderType) {
-          const tip = getPlaceholderTooltip(record.placeholderType, record.sourceId);
-          const placeholderLabel = record.placeholderType === 'source_not_found' ? 'Missing' : 'Empty';
-          const placeholderColor = record.placeholderType === 'source_not_found' ? 'error' : 'warning';
-          tags.push(
-            <Tooltip key="placeholder" title={tip} styles={{ root: { maxWidth: 300 } }}>
-              <Tag color={placeholderColor} style={{ ...tagStyle, cursor: 'help' }}>
-                {placeholderLabel}
-              </Tag>
-            </Tooltip>,
-          );
-        }
+        const tagStyle = { margin: 0, fontSize: '11px' };
+
+        // Build tag descriptors ordered by display priority:
+        // 1. Status (Cached, Missing, Empty) — most important
+        // 2. Custom tag (user-assigned, e.g. DEV)
+        // 3. Req/Res — always present, least important
+        const allTags: { label: string; color?: string; tooltip?: string }[] = [];
         if (!record.placeholderType && record.isCachedValue && record.isEnabled) {
-          tags.push(
-            <Tooltip
-              key="cached"
-              title="Using cached value — app disconnected, source may be outdated"
-              styles={{ root: { maxWidth: 300 } }}
-            >
-              <Tag color="warning" style={{ ...tagStyle, cursor: 'help' }}>
-                Cached
-              </Tag>
-            </Tooltip>,
-          );
+          allTags.push({
+            label: 'Cached',
+            color: 'warning',
+            tooltip: 'Using cached value — app disconnected, source may be outdated',
+          });
         }
+        if (record.placeholderType) {
+          allTags.push({
+            label: record.placeholderType === 'source_not_found' ? 'Missing' : 'Empty',
+            color: record.placeholderType === 'source_not_found' ? 'error' : 'warning',
+            tooltip: getPlaceholderTooltip(record.placeholderType, record.sourceId),
+          });
+        }
+        if (record.tag) {
+          allTags.push({ label: record.tag, color: getTagColor(record.tag) });
+        }
+        allTags.push({ label: record.isResponse ? 'Res' : 'Req', tooltip: record.isResponse ? 'Response' : 'Request' });
+
+        // Show first 1 inline if status tag (Cached/Missing/Empty) is present, otherwise first 2
+        const hasStatusTag = allTags.length > 0 && (allTags[0].label === 'Cached' || allTags[0].label === 'Missing' || allTags[0].label === 'Empty');
+        const maxVisible = hasStatusTag ? 1 : 2;
+        const visible = allTags.slice(0, maxVisible);
+        const overflowCount = allTags.length - maxVisible;
+
         return (
-          <Space size={2} wrap>
-            {tags}
+          <Space size={2}>
+            {visible.map((t, i) =>
+              t.tooltip ? (
+                <Tooltip key={i} title={t.tooltip}>
+                  <Tag color={t.color} variant="outlined" style={{ ...tagStyle, cursor: 'help' }}>
+                    {t.label}
+                  </Tag>
+                </Tooltip>
+              ) : (
+                <Tag key={i} color={t.color} variant="outlined" style={tagStyle}>
+                  {t.label}
+                </Tag>
+              ),
+            )}
+            {overflowCount > 0 && (
+              <Tooltip
+                title={
+                  <div style={{ fontSize: 12 }}>
+                    {allTags.map((t, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: i < allTags.length - 1 ? 4 : 0 }}>
+                        <span style={{ opacity: 0.6 }}>{i + 1}. </span>
+                        <Tag color={t.color} variant="outlined" style={{ margin: 0, fontSize: '11px' }}>
+                          {t.label}
+                        </Tag>
+                      </div>
+                    ))}
+                  </div>
+                }
+                styles={{ root: { maxWidth: 400 } }}
+              >
+                <Tag variant="outlined" style={{ ...tagStyle, cursor: 'help' }}>+{overflowCount}</Tag>
+              </Tooltip>
+            )}
           </Space>
         );
       },
@@ -509,15 +564,13 @@ const HeaderTable: React.FC = () => {
             cancelText="Cancel"
             disabled={!isConnected}
           >
-            <Tooltip title={!isConnected ? 'App not connected' : 'Delete rule'}>
-              <Button
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-                size="small"
-                disabled={!isConnected}
-              />
-            </Tooltip>
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              size="small"
+              disabled={!isConnected}
+            />
           </Popconfirm>
         </Space>
       ),
@@ -642,6 +695,7 @@ const HeaderTable: React.FC = () => {
 
   return (
     <div className="header-rules-section">
+      <div className="table-toolbar">
       <div className="header-rules-title">
         <Space align="center" size={8}>
           <Text style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Header Rules</Text>
@@ -685,6 +739,7 @@ const HeaderTable: React.FC = () => {
             )}
           </div>
         </Space>
+      </div>
       </div>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, paddingBottom: '8px' }}>

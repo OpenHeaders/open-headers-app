@@ -1,12 +1,15 @@
 import {
-  CheckCircleOutlined,
-  CloseCircleOutlined,
+  CheckOutlined,
+  CopyTwoTone,
+  DeleteOutlined,
+  EditOutlined,
   ExclamationCircleOutlined,
   FileTextOutlined,
   GlobalOutlined,
   LinkOutlined,
 } from '@ant-design/icons';
-import { Alert, Divider, Empty, Space, Spin, Table, Tag, Tooltip, Typography } from 'antd';
+import { getAppLauncher } from '@utils/app-launcher';
+import { Alert, App, Button, Divider, Empty, Popconfirm, Space, Spin, Switch, Table, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type React from 'react';
 import { useEffect, useState } from 'react';
@@ -38,10 +41,23 @@ interface TableRecord extends ActiveRule {
   key: string | number;
 }
 
+const TAG_COLORS = ['blue', 'volcano', 'green', 'purple', 'orange', 'cyan', 'magenta', 'gold', 'geekblue', 'red'] as const;
+
+function getTagColor(tag: string): string {
+  let hash = 5381;
+  for (let i = 0; i < tag.length; i++) {
+    hash = ((hash * 33) ^ tag.charCodeAt(i)) >>> 0;
+  }
+  return TAG_COLORS[hash % TAG_COLORS.length];
+}
+
 const ActiveRules: React.FC = () => {
+  const { message } = App.useApp();
+  const appLauncher = getAppLauncher();
   const [currentTab, setCurrentTab] = useState<CurrentTabInfo | null>(null);
   const [activeRules, setActiveRules] = useState<ActiveRule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [copiedRowId, setCopiedRowId] = useState<string | number | null>(null);
 
   useEffect(() => {
     const fetchActiveRules = async () => {
@@ -89,96 +105,249 @@ const ActiveRules: React.FC = () => {
 
   const columns: ColumnsType<TableRecord> = [
     {
-      title: 'Header',
+      title: 'Header Name',
       dataIndex: 'headerName',
       key: 'headerName',
-      width: 180,
-      render: (text: string, record: TableRecord) => {
-        let displayValue = record.headerValue || '[Dynamic]';
-        if (displayValue !== '[Dynamic]' && displayValue.length > 20)
-          displayValue = `${displayValue.substring(0, 10)}...${displayValue.substring(displayValue.length - 5)}`;
-        return (
-          <Space orientation="vertical" size={0}>
-            <Text strong style={{ fontSize: '13px' }}>
-              {text}
-            </Text>
-            <Text type="secondary" style={{ fontSize: '11px' }}>
-              {displayValue}
-            </Text>
-          </Space>
-        );
-      },
-    },
-    {
-      title: 'Type',
-      key: 'type',
-      width: 100,
-      align: 'center',
-      render: (_: unknown, record: TableRecord) => (
-        <Tag color={record.isResponse ? 'blue' : 'green'}>{record.isResponse ? 'Response' : 'Request'}</Tag>
+      width: 160,
+      render: (text: string) => (
+        <Text strong style={{ fontSize: '13px' }}>
+          {text}
+        </Text>
       ),
     },
     {
-      title: 'Tags',
-      dataIndex: 'tag',
-      key: 'tag',
-      width: 120,
-      render: (tag: string) => (tag ? <Tag color="purple">{tag}</Tag> : null),
+      title: 'Value',
+      dataIndex: 'headerValue',
+      key: 'headerValue',
+      width: 150,
+      render: (text: string, record: TableRecord) => {
+        const fullValue = text || '';
+        let displayValue = fullValue || '[Dynamic]';
+        if (displayValue !== '[Dynamic]' && displayValue.length > 16) {
+          displayValue = `${displayValue.substring(0, 9)}...${displayValue.substring(displayValue.length - 4)}`;
+        }
+        const rowKey = record.key;
+        return (
+          <div
+            className="value-cell"
+            style={{ display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', overflow: 'hidden' }}
+          >
+            <Text style={{ fontSize: '13px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {displayValue}
+            </Text>
+            {fullValue && (
+              copiedRowId === rowKey ? (
+                <CheckOutlined
+                  className="value-copy-icon"
+                  style={{ fontSize: '12px', color: '#52c41a', flexShrink: 0, opacity: 1 }}
+                />
+              ) : (
+                <CopyTwoTone
+                  className="value-copy-icon"
+                  style={{ fontSize: '12px', cursor: 'pointer', flexShrink: 0, opacity: 0 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void navigator.clipboard.writeText(fullValue);
+                    setCopiedRowId(rowKey);
+                    setTimeout(() => setCopiedRowId(null), 1000);
+                  }}
+                />
+              )
+            )}
+          </div>
+        );
+      },
     },
     {
       title: 'Domains',
       dataIndex: 'domains',
       key: 'domains',
-      width: 150,
+      width: 160,
       render: (domains: string[], record: TableRecord) => {
-        if (!domains || domains.length === 0) return <Tag color="default">All domains</Tag>;
+        if (!domains || domains.length === 0) return <Tag variant="outlined" color="default">All domains</Tag>;
         const matchIcon =
           record.matchType === 'indirect' ? (
             <Tooltip title="Applied to resources loaded by this page">
               <LinkOutlined style={{ fontSize: '10px', marginRight: '4px', color: '#1890ff' }} />
             </Tooltip>
           ) : null;
-        const first = domains[0].length > 18 ? `${domains[0].substring(0, 18)}...` : domains[0];
-        const label = domains.length === 1 ? first : `${first} +${domains.length - 1}`;
+        const first = domains[0].length > 14 ? `${domains[0].substring(0, 14)}...` : domains[0];
+        const overflowCount = domains.length - 1;
+        const tooltip = (
+          <div style={{ fontFamily: 'monospace', fontSize: 12 }}>
+            {domains.map((d, i) => (
+              <div key={i}>
+                <span style={{ opacity: 0.6 }}>{i + 1}. </span>
+                {d}
+              </div>
+            ))}
+          </div>
+        );
         return (
           <Space size={1}>
             {matchIcon}
-            <Tooltip
-              title={
-                <div style={{ fontFamily: 'monospace', fontSize: 12 }}>
-                  {domains.map((d, i) => (
-                    <div key={i}>
-                      <span style={{ opacity: 0.6 }}>{i + 1}. </span>
-                      {d}
-                    </div>
-                  ))}
-                </div>
-              }
-              styles={{ root: { maxWidth: 500 } }}
-            >
-              <Tag style={{ fontSize: '12px', cursor: 'default' }}>{label}</Tag>
+            <Tooltip title={tooltip} styles={{ root: { maxWidth: 500 } }}>
+              <Space size={2}>
+                <Tag variant="outlined" style={{ fontSize: '12px', cursor: 'default', margin: 0 }}>{first}</Tag>
+                {overflowCount > 0 && (
+                  <Tag variant="outlined" style={{ fontSize: '12px', cursor: 'default', margin: 0 }}>+{overflowCount}</Tag>
+                )}
+              </Space>
             </Tooltip>
           </Space>
         );
       },
     },
     {
-      title: 'Status',
-      key: 'status',
-      width: 80,
+      title: 'Tags',
+      key: 'tags',
+      width: 130,
       align: 'center',
       render: (_: unknown, record: TableRecord) => {
-        const isActive = record.isEnabled !== false;
+        const tagStyle = { margin: 0, fontSize: '11px' };
+
+        // Build tag descriptors ordered by display priority:
+        // 1. Custom tag (user-assigned, e.g. DEV)
+        // 2. Req/Res — always present, least important
+        const allTags: { label: string; color?: string; tooltip?: string }[] = [];
+        if (record.tag) {
+          allTags.push({ label: record.tag, color: getTagColor(record.tag) });
+        }
+        allTags.push({ label: record.isResponse ? 'Res' : 'Req', tooltip: record.isResponse ? 'Response' : 'Request' });
+
+        const maxVisible = 2;
+        const visible = allTags.slice(0, maxVisible);
+        const overflowCount = allTags.length - maxVisible;
+
         return (
-          <Tooltip title={isActive ? 'Rule is active' : 'Rule is disabled'}>
-            {isActive ? (
-              <CheckCircleOutlined style={{ color: '#52c41a', fontSize: '16px' }} />
-            ) : (
-              <CloseCircleOutlined style={{ color: '#d9d9d9', fontSize: '16px' }} />
+          <Space size={2}>
+            {visible.map((t, i) =>
+              t.tooltip ? (
+                <Tooltip key={i} title={t.tooltip}>
+                  <Tag color={t.color} variant="outlined" style={{ ...tagStyle, cursor: 'help' }}>
+                    {t.label}
+                  </Tag>
+                </Tooltip>
+              ) : (
+                <Tag key={i} color={t.color} variant="outlined" style={tagStyle}>
+                  {t.label}
+                </Tag>
+              ),
             )}
-          </Tooltip>
+            {overflowCount > 0 && (
+              <Tooltip
+                title={
+                  <div style={{ fontSize: 12 }}>
+                    {allTags.map((t, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: i < allTags.length - 1 ? 4 : 0 }}>
+                        <span style={{ opacity: 0.6 }}>{i + 1}. </span>
+                        <Tag color={t.color} variant="outlined" style={{ margin: 0, fontSize: '11px' }}>
+                          {t.label}
+                        </Tag>
+                      </div>
+                    ))}
+                  </div>
+                }
+                styles={{ root: { maxWidth: 400 } }}
+              >
+                <Tag variant="outlined" style={{ ...tagStyle, cursor: 'help' }}>+{overflowCount}</Tag>
+              </Tooltip>
+            )}
+          </Space>
         );
       },
+    },
+    {
+      title: 'Status',
+      dataIndex: 'isEnabled',
+      key: 'isEnabled',
+      width: 80,
+      align: 'center',
+      fixed: 'right',
+      render: (enabled: unknown, record: TableRecord) => {
+        const isEnabled = enabled !== false;
+        return (
+          <Switch
+            checked={isEnabled}
+            onChange={() => {
+              // Optimistic update — immediately reflect in UI
+              setActiveRules((prev) =>
+                prev.map((r) => (r.id === record.id ? { ...r, isEnabled: !isEnabled } : r)),
+              );
+              const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+              browserAPI.runtime.sendMessage(
+                { type: 'toggleRule', ruleId: record.id, enabled: !isEnabled },
+                (response: unknown) => {
+                  const resp = response as { success?: boolean } | undefined;
+                  if (resp?.success) {
+                    // Trigger immediate badge refresh
+                    browserAPI.runtime.sendMessage({ type: 'rulesUpdated' });
+                  } else {
+                    // Revert on failure
+                    setActiveRules((prev) =>
+                      prev.map((r) => (r.id === record.id ? { ...r, isEnabled } : r)),
+                    );
+                    message.error('Failed to toggle rule');
+                  }
+                },
+              );
+            }}
+            size="small"
+          />
+        );
+      },
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      width: 90,
+      align: 'center',
+      fixed: 'right',
+      render: (_: unknown, record: TableRecord) => (
+        <Space size={2}>
+          <Tooltip title="Edit in desktop app">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              size="small"
+              onClick={async () => {
+                await appLauncher.launchOrFocus({ tab: 'rules', subTab: 'headers', action: 'edit', itemId: record.id });
+                message.info('Opening edit dialog in OpenHeaders app');
+              }}
+            />
+          </Tooltip>
+          <Popconfirm
+            title="Delete rule"
+            description={`Delete "${record.headerName}"?`}
+            onConfirm={() => {
+              // Optimistic removal
+              setActiveRules((prev) => prev.filter((r) => r.id !== record.id));
+              const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+              browserAPI.runtime.sendMessage(
+                { type: 'deleteRule', ruleId: record.id },
+                (response: unknown) => {
+                  const resp = response as { success?: boolean } | undefined;
+                  if (resp?.success) {
+                    message.success('Rule deleted');
+                  } else {
+                    message.error('Failed to delete rule');
+                  }
+                },
+              );
+            }}
+            okText="Delete"
+            okType="danger"
+            cancelText="Cancel"
+          >
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              size="small"
+            />
+          </Popconfirm>
+        </Space>
+      ),
     },
   ];
 
@@ -211,42 +380,36 @@ const ActiveRules: React.FC = () => {
       </div>
     );
 
+  const enabledCount = activeRules.filter((r) => r.isEnabled !== false).length;
   const directMatches = activeRules.filter((r) => r.matchType === 'direct').length;
   const indirectMatches = activeRules.filter((r) => r.matchType === 'indirect').length;
 
   return (
-    <div className="active-rules-section" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div
-        style={{
-          padding: '8px 16px',
-          borderBottom: '1px solid var(--border-color)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '12px',
-        }}
-      >
-        <GlobalOutlined style={{ fontSize: '14px', color: 'var(--text-secondary)' }} />
-        <Tooltip title={currentTab.domain.length > 30 ? currentTab.domain : undefined}>
-          <Text strong style={{ fontSize: '13px' }}>
-            {currentTab.domain.length > 30
-              ? `${currentTab.domain.substring(0, 20)}...${currentTab.domain.substring(currentTab.domain.length - 7)}`
-              : currentTab.domain}
+    <div className="header-rules-section" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div className="table-toolbar">
+        <div className="header-rules-title" style={{ justifyContent: 'center', gap: '12px' }}>
+          <GlobalOutlined style={{ fontSize: '14px', color: 'var(--text-secondary)' }} />
+          <Tooltip title={currentTab.domain.length > 30 ? currentTab.domain : undefined}>
+            <Text strong style={{ fontSize: '13px' }}>
+              {currentTab.domain.length > 30
+                ? `${currentTab.domain.substring(0, 20)}...${currentTab.domain.substring(currentTab.domain.length - 7)}`
+                : currentTab.domain}
+            </Text>
+          </Tooltip>
+          <Divider orientation="vertical" style={{ margin: '0 4px', height: '14px' }} />
+          <Text type="secondary" style={{ fontSize: '12px' }}>
+            {enabledCount} of {activeRules.length} active
+            {indirectMatches > 0 && ` (${directMatches} direct, ${indirectMatches} via resources)`}
           </Text>
-        </Tooltip>
-        <Divider orientation="vertical" style={{ margin: '0 4px', height: '14px' }} />
-        <Text type="secondary" style={{ fontSize: '12px' }}>
-          {activeRules.length} rule{activeRules.length !== 1 ? 's' : ''} active
-          {indirectMatches > 0 && ` (${directMatches} direct, ${indirectMatches} via resources)`}
-        </Text>
+        </div>
       </div>
-      <div style={{ flex: 1, overflow: 'auto', padding: '12px 16px' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, paddingBottom: '8px' }}>
         <Table
           dataSource={activeRules.map((rule, index) => ({ ...rule, key: rule.id || index }))}
           columns={columns}
           pagination={false}
           size="small"
-          scroll={{ y: 320 }}
+          scroll={{ x: 920 }}
           locale={{
             emptyText: (
               <Empty
@@ -263,7 +426,7 @@ const ActiveRules: React.FC = () => {
               />
             ),
           }}
-          className="active-rules-table"
+          className="header-rules-table"
         />
       </div>
     </div>

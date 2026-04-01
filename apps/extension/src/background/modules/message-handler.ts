@@ -315,7 +315,9 @@ export function handleGeneralMessage(
       }
       return true;
     } else if (message.type === 'toggleRule') {
-      // Handle toggle rule directly via WebSocket without focusing app
+      // Handle toggle rule directly via WebSocket without focusing app.
+      // Badge updates automatically when the desktop app syncs the change back
+      // via rules-update → storage change → debouncedUpdateBadge.
       const wsConnected = isWebSocketConnected();
       if (wsConnected) {
         const sent = sendViaWebSocket({
