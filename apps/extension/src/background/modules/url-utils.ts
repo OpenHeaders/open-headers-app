@@ -1,5 +1,14 @@
 /**
- * URL Utilities - Common URL handling functions
+ * URL Utilities — single owner of all URL pattern logic.
+ *
+ * Two responsibilities:
+ * 1. formatUrlPattern() — converts a domain pattern into the canonical MV3
+ *    declarativeNetRequest urlFilter string. Used by header-manager.ts.
+ * 2. doesUrlMatchPattern() — replicates urlFilter matching semantics in-memory
+ *    via compiled RegExp. Used by request-tracker.ts (badge, Active tab).
+ *
+ * Both functions share the same normalization path so they always agree
+ * on whether a URL matches a pattern.
  */
 
 // ── Pre-compiled pattern cache ─────────────────────────────────────
@@ -34,47 +43,93 @@ export function precompileAllPatterns(domains: string[]): void {
 }
 
 /**
- * Internal: compile a pattern string into a RegExp and cache it
+ * Convert a user-entered domain pattern into a MV3 declarativeNetRequest
+ * urlFilter string. This is the single normalization function — both
+ * declarativeNetRequest rules and the in-memory regex matcher use it.
+ *
+ * Supported inputs:
+ *   "example.com"                → "*://example.com/*"
+ *   "*.example.com"              → "*://*.example.com/*"
+ *   "example.com/api"            → "*://example.com/api"
+ *   "example.com/api/*"          → "*://example.com/api/*"
+ *   "localhost:3000"             → "*://localhost:3000/*"
+ *   "192.168.1.1:8080"          → "*://192.168.1.1:8080/*"
+ *   "https://example.com/*"     → "https://example.com/*"
+ *   "*"                         → "*"
+ */
+export function formatUrlPattern(domain: string): string {
+  let urlFilter = domain.trim();
+
+  if (urlFilter === '*') return '*';
+
+  // If pattern already has a protocol, just ensure it has a path
+  if (urlFilter.includes('://')) {
+    const protocolEnd = urlFilter.indexOf('://') + 3;
+    const afterProtocol = urlFilter.substring(protocolEnd);
+    if (!afterProtocol.includes('/')) {
+      urlFilter = `${urlFilter}/*`;
+    }
+    return urlFilter;
+  }
+
+  // Add wildcard protocol
+  urlFilter = `*://${urlFilter}`;
+
+  // Ensure pattern has a path — bare hostnames get /*
+  const protocolEnd = urlFilter.indexOf('://') + 3;
+  const afterProtocol = urlFilter.substring(protocolEnd);
+  if (!afterProtocol.includes('/')) {
+    urlFilter = `${urlFilter}/*`;
+  }
+
+  return urlFilter;
+}
+
+/**
+ * Internal: compile a pattern into a RegExp that replicates MV3 urlFilter
+ * matching semantics.
+ *
+ * Key difference from exact regex: urlFilter does NOT anchor at the end.
+ * "*://example.com/api" matches "https://example.com/api/v2/users"
+ * because Chrome treats urlFilter as a prefix/substring match.
  */
 function compileAndCachePattern(pattern: string): void {
-  let urlFilter = pattern.trim().toLowerCase();
+  const trimmed = pattern.trim().toLowerCase();
 
   // Wildcard matches everything
-  if (urlFilter === '*') {
+  if (trimmed === '*') {
     compiledPatternCache.set(pattern, null); // null = match-all sentinel
     return;
   }
+
+  // Normalize through the same function used for declarativeNetRequest
+  let urlFilter = formatUrlPattern(trimmed);
 
   // Handle IDN in patterns
   try {
     // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional — detecting non-ASCII for IDN normalization
     if (/[^\x00-\x7F]/.test(urlFilter)) {
-      const patternUrl = new URL(urlFilter.includes('://') ? urlFilter : `http://${urlFilter}`);
-      urlFilter = patternUrl.hostname.toLowerCase();
+      const patternUrl = new URL(urlFilter.replace('*://', 'http://'));
+      urlFilter = formatUrlPattern(patternUrl.hostname.toLowerCase());
     }
   } catch (_e) {
     // Pattern is not a valid URL, continue with original
   }
 
-  // If pattern doesn't have protocol, add wildcard
-  if (!urlFilter.includes('://')) {
-    urlFilter = `*://${urlFilter}`;
-  }
-
-  // Ensure pattern has a path
-  if (!urlFilter.includes('/', urlFilter.indexOf('://') + 3)) {
-    urlFilter = `${urlFilter}/*`;
-  }
-
   // Normalize default ports
   urlFilter = urlFilter.replace(/:80\//, '/').replace(/:443\//, '/');
 
-  // Convert to regex pattern
+  // Convert urlFilter to regex:
+  // 1. Escape special regex chars (except *)
+  // 2. Replace * with .*
+  // 3. Anchor at start only (^) — no end anchor ($)
+  //    This replicates urlFilter semantics where the pattern
+  //    matches if the URL starts with the expanded pattern.
   const regexPattern = urlFilter
-    .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape special chars except *
-    .replace(/\*/g, '.*'); // Replace * with .*
+    .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*/g, '.*');
 
-  const regex = new RegExp(`^${regexPattern}$`, 'i');
+  const regex = new RegExp(`^${regexPattern}`, 'i');
   compiledPatternCache.set(pattern, regex);
 }
 
@@ -152,7 +207,8 @@ export function isTrackableUrl(url: string): boolean {
 }
 
 /**
- * Enhanced URL pattern matching using pre-compiled regex cache
+ * URL pattern matching using pre-compiled regex cache.
+ * Replicates MV3 declarativeNetRequest urlFilter semantics.
  */
 export function doesUrlMatchPattern(url: string, pattern: string): boolean {
   try {

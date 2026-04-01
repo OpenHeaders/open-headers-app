@@ -1,7 +1,7 @@
 import type { SavedDataMap, Source } from '@openheaders/core';
 import { normalizeHeaderName } from '@utils/utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { formatUrlPattern } from '@/background/header-manager';
+import { formatUrlPattern } from '@/background/modules/url-utils';
 import { debounce, generateSavedDataHash, generateSourcesHash } from '@/background/modules/utils';
 
 // ---------------------------------------------------------------------------

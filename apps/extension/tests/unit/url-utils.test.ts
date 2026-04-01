@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   clearPatternCache,
   doesUrlMatchPattern,
+  formatUrlPattern,
   isTrackableUrl,
   normalizeUrlForTracking,
   precompileAllPatterns,
@@ -234,6 +235,77 @@ describe('doesUrlMatchPattern', () => {
 
   it('returns false for completely invalid input without crashing', () => {
     expect(doesUrlMatchPattern('', 'api.openheaders.io')).toBe(false);
+  });
+
+  // Path patterns without trailing wildcard — must match subpaths (urlFilter semantics)
+  it('path pattern without trailing wildcard matches subpaths', () => {
+    expect(doesUrlMatchPattern('https://github.githubassets.com/assets/37160-72dc5a515abc7d3b.js', 'github.githubassets.com/assets')).toBe(true);
+  });
+
+  it('path pattern without trailing wildcard matches exact path', () => {
+    expect(doesUrlMatchPattern('https://github.githubassets.com/assets', 'github.githubassets.com/assets')).toBe(true);
+  });
+
+  it('path pattern does not match different path', () => {
+    expect(doesUrlMatchPattern('https://github.githubassets.com/images/logo.png', 'github.githubassets.com/assets')).toBe(false);
+  });
+
+  it('path pattern with trailing wildcard matches subpaths', () => {
+    expect(doesUrlMatchPattern('https://api.openheaders.io/v2/config/deep', 'api.openheaders.io/v2/*')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+//  formatUrlPattern (canonical MV3 urlFilter normalization)
+// ---------------------------------------------------------------------------
+
+describe('formatUrlPattern', () => {
+  it('adds wildcard protocol and path to bare domain', () => {
+    expect(formatUrlPattern('example.com')).toBe('*://example.com/*');
+  });
+
+  it('adds path to domain with explicit protocol', () => {
+    expect(formatUrlPattern('https://example.com')).toBe('https://example.com/*');
+  });
+
+  it('preserves explicit path with protocol', () => {
+    expect(formatUrlPattern('https://example.com/api')).toBe('https://example.com/api');
+  });
+
+  it('adds wildcard protocol to wildcard subdomain', () => {
+    expect(formatUrlPattern('*.example.com')).toBe('*://*.example.com/*');
+  });
+
+  it('handles localhost', () => {
+    expect(formatUrlPattern('localhost')).toBe('*://localhost/*');
+  });
+
+  it('handles localhost with port', () => {
+    expect(formatUrlPattern('localhost:3000')).toBe('*://localhost:3000/*');
+  });
+
+  it('handles IP address', () => {
+    expect(formatUrlPattern('192.168.1.1')).toBe('*://192.168.1.1/*');
+  });
+
+  it('handles IP address with port', () => {
+    expect(formatUrlPattern('192.168.1.1:8080')).toBe('*://192.168.1.1:8080/*');
+  });
+
+  it('handles domain with path (no trailing wildcard)', () => {
+    expect(formatUrlPattern('github.githubassets.com/assets')).toBe('*://github.githubassets.com/assets');
+  });
+
+  it('preserves trailing wildcard', () => {
+    expect(formatUrlPattern('example.com/api/*')).toBe('*://example.com/api/*');
+  });
+
+  it('returns * for wildcard input', () => {
+    expect(formatUrlPattern('*')).toBe('*');
+  });
+
+  it('trims whitespace', () => {
+    expect(formatUrlPattern('  example.com  ')).toBe('*://example.com/*');
   });
 });
 

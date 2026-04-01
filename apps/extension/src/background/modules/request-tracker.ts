@@ -113,18 +113,11 @@ export async function getActiveRulesForTab(tabId: number | undefined, tabUrl: st
     return [];
   }
 
-  // Get tracked domains for this tab (indirect matches)
-  const trackedDomains: string[] = [];
+  // Get tracked resource URLs for this tab (indirect matches)
+  const trackedResourceUrls: string[] = [];
   if (tabId && tabsWithActiveRules.has(tabId)) {
     const trackedUrls = tabsWithActiveRules.get(tabId)!;
-    trackedUrls.forEach((url) => {
-      try {
-        const trackedUrlObj = new URL(url);
-        trackedDomains.push(trackedUrlObj.hostname);
-      } catch (_e) {
-        // Invalid URL, skip
-      }
-    });
+    trackedResourceUrls.push(...trackedUrls);
   }
 
   return new Promise<ActiveRule[]>((resolve) => {
@@ -149,13 +142,11 @@ export async function getActiveRulesForTab(tabId: number | undefined, tabUrl: st
             }
           }
 
-          // If no direct match, check for indirect match (resource domains)
-          if (!matchType && trackedDomains.length > 0) {
+          // If no direct match, check for indirect match (resource URLs loaded by this page)
+          if (!matchType && trackedResourceUrls.length > 0) {
             for (const domain of domains) {
-              for (const trackedDomain of trackedDomains) {
-                // Create a temporary URL for pattern matching
-                const tempUrl = `https://${trackedDomain}/`;
-                if (doesUrlMatchPattern(tempUrl, domain)) {
+              for (const resourceUrl of trackedResourceUrls) {
+                if (doesUrlMatchPattern(resourceUrl, domain)) {
                   matchType = 'indirect';
                   break;
                 }
@@ -195,29 +186,29 @@ export async function revalidateTrackedRequests(): Promise<void> {
   try {
     await new Promise<void>((resolve) => {
       ensureCache(async (savedData: SavedDataMap) => {
-        const enabledRules: [string, HeaderEntry][] = Object.entries(savedData).filter(
-          ([_, entry]) => entry.isEnabled !== false,
-        );
+        const allRules: [string, HeaderEntry][] = Object.entries(savedData);
 
-        // If no enabled rules, clear all tracking
-        if (enabledRules.length === 0) {
+        // If no rules at all, clear all tracking
+        if (allRules.length === 0) {
           tabsWithActiveRules.clear();
           resolve();
           return;
         }
 
-        // For each tracked tab, re-evaluate if its requests still match any enabled rules
+        // For each tracked tab, re-evaluate if its requests still match any rule
+        // (enabled or disabled — tracking represents observed resource domains,
+        // not rule enable state, so disabled rules keep their tracked URLs)
         for (const [tabId, trackedUrls] of tabsWithActiveRules.entries()) {
           const validUrls = new Set<string>();
 
           // Limit the number of URLs we check to prevent performance issues
           const urlsToCheck = Array.from(trackedUrls).slice(-MAX_TRACKED_URLS_PER_TAB);
 
-          // Check each tracked URL against current enabled rules
+          // Check each tracked URL against all rules
           for (const url of urlsToCheck) {
             let stillMatches = false;
 
-            for (const [_id, entry] of enabledRules) {
+            for (const [_id, entry] of allRules) {
               const domains: string[] = entry.domains || [];
               for (const domain of domains) {
                 if (doesUrlMatchPattern(url, domain)) {

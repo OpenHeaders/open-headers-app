@@ -34,7 +34,8 @@ vi.mock('@/utils/logger', () => ({
 }));
 
 import { declarativeNetRequest } from '@utils/browser-api';
-import { formatUrlPattern, setRulesPaused, updateNetworkRules } from '@/background/header-manager';
+import { setRulesPaused, updateNetworkRules } from '@/background/header-manager';
+import { formatUrlPattern } from '@/background/modules/url-utils';
 
 const mockGetDynamicRules = declarativeNetRequest!.getDynamicRules as ReturnType<typeof vi.fn>;
 const mockUpdateDynamicRules = declarativeNetRequest!.updateDynamicRules as ReturnType<typeof vi.fn>;

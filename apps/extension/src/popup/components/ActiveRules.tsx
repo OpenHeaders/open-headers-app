@@ -6,7 +6,6 @@ import {
   ExclamationCircleOutlined,
   FileTextOutlined,
   GlobalOutlined,
-  LinkOutlined,
 } from '@ant-design/icons';
 import { getAppLauncher } from '@utils/app-launcher';
 import { Alert, App, Button, Divider, Empty, Popconfirm, Space, Spin, Switch, Table, Tag, Tooltip, Typography } from 'antd';
@@ -163,14 +162,8 @@ const ActiveRules: React.FC = () => {
       dataIndex: 'domains',
       key: 'domains',
       width: 160,
-      render: (domains: string[], record: TableRecord) => {
+      render: (domains: string[]) => {
         if (!domains || domains.length === 0) return <Tag variant="outlined" color="default">All domains</Tag>;
-        const matchIcon =
-          record.matchType === 'indirect' ? (
-            <Tooltip title="Applied to resources loaded by this page">
-              <LinkOutlined style={{ fontSize: '10px', marginRight: '4px', color: '#1890ff' }} />
-            </Tooltip>
-          ) : null;
         const first = domains[0].length > 14 ? `${domains[0].substring(0, 14)}...` : domains[0];
         const overflowCount = domains.length - 1;
         const tooltip = (
@@ -184,17 +177,14 @@ const ActiveRules: React.FC = () => {
           </div>
         );
         return (
-          <Space size={1}>
-            {matchIcon}
-            <Tooltip title={tooltip} styles={{ root: { maxWidth: 500 } }}>
-              <Space size={2}>
-                <Tag variant="outlined" style={{ fontSize: '12px', cursor: 'default', margin: 0 }}>{first}</Tag>
-                {overflowCount > 0 && (
-                  <Tag variant="outlined" style={{ fontSize: '12px', cursor: 'default', margin: 0 }}>+{overflowCount}</Tag>
-                )}
-              </Space>
-            </Tooltip>
-          </Space>
+          <Tooltip title={tooltip} styles={{ root: { maxWidth: 500 } }}>
+            <Space size={2}>
+              <Tag variant="outlined" style={{ fontSize: '12px', cursor: 'default', margin: 0 }}>{first}</Tag>
+              {overflowCount > 0 && (
+                <Tag variant="outlined" style={{ fontSize: '12px', cursor: 'default', margin: 0 }}>+{overflowCount}</Tag>
+              )}
+            </Space>
+          </Tooltip>
         );
       },
     },
@@ -207,15 +197,20 @@ const ActiveRules: React.FC = () => {
         const tagStyle = { margin: 0, fontSize: '11px' };
 
         // Build tag descriptors ordered by display priority:
-        // 1. Custom tag (user-assigned, e.g. DEV)
-        // 2. Req/Res — always present, least important
+        // 1. Match type (Resource) — only for indirect matches
+        // 2. Custom tag (user-assigned, e.g. DEV)
+        // 3. Req/Res — always present, least important
         const allTags: { label: string; color?: string; tooltip?: string }[] = [];
+        if (record.matchType === 'indirect') {
+          allTags.push({ label: 'Resource', color: 'processing', tooltip: 'Applied to resources loaded by this page, not the page itself' });
+        }
         if (record.tag) {
           allTags.push({ label: record.tag, color: getTagColor(record.tag) });
         }
         allTags.push({ label: record.isResponse ? 'Res' : 'Req', tooltip: record.isResponse ? 'Response' : 'Request' });
 
-        const maxVisible = 2;
+        const hasStatusTag = allTags.length > 0 && allTags[0].label === 'Resource';
+        const maxVisible = hasStatusTag ? 1 : 2;
         const visible = allTags.slice(0, maxVisible);
         const overflowCount = allTags.length - maxVisible;
 
@@ -409,7 +404,7 @@ const ActiveRules: React.FC = () => {
           columns={columns}
           pagination={false}
           size="small"
-          scroll={{ x: 920 }}
+          scroll={{ x: 770 }}
           locale={{
             emptyText: (
               <Empty

@@ -16,6 +16,7 @@ import { sendMessageWithCallback } from '@utils/messaging';
 import { getChunkedData } from '@utils/storage-chunking.js';
 import { normalizeHeaderName } from '@utils/utils.js';
 import type { EntryResult, HeaderDnrRule, PlaceholderInfo, ResolvedEntry } from '@/types/header';
+import { formatUrlPattern } from './modules/url-utils';
 import { isValidHeaderValue, sanitizeHeaderValue } from './rule-validator';
 
 // Cached pause state — updated by setRulesPaused() from storage.onChanged listener
@@ -297,44 +298,3 @@ function createResponseHeaderDnrRules(entry: ResolvedEntry, startId: number): He
   return rules;
 }
 
-export function formatUrlPattern(domain: string): string {
-  let urlFilter = domain.trim();
-
-  if (urlFilter.includes('://')) {
-    const protocolEnd = urlFilter.indexOf('://') + 3;
-    const afterProtocol = urlFilter.substring(protocolEnd);
-    if (!afterProtocol.includes('/')) {
-      urlFilter = `${urlFilter}/*`;
-    }
-    return urlFilter;
-  }
-
-  const ipRegex = /^(\d{1,3}\.){3}\d{1,3}(:\d+)?$/;
-  if (ipRegex.test(urlFilter)) {
-    return `*://${urlFilter}/*`;
-  }
-
-  if (urlFilter.includes('[') && urlFilter.includes(']')) {
-    return `*://${urlFilter}/*`;
-  }
-
-  if (urlFilter === 'localhost' || urlFilter.startsWith('localhost:')) {
-    return `*://${urlFilter}/*`;
-  }
-
-  if (urlFilter.startsWith('*.')) {
-    return `*://${urlFilter}/*`;
-  } else if (urlFilter.startsWith('*') && !urlFilter.startsWith('*://')) {
-    return `*://${urlFilter}/*`;
-  } else {
-    urlFilter = `*://${urlFilter}`;
-  }
-
-  const protocolEnd = urlFilter.indexOf('://');
-  const afterProtocol = protocolEnd >= 0 ? urlFilter.substring(protocolEnd + 3) : urlFilter;
-  if (!afterProtocol.includes('/')) {
-    urlFilter = `${urlFilter}/*`;
-  }
-
-  return urlFilter;
-}
