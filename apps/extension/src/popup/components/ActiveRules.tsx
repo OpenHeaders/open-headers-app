@@ -17,6 +17,11 @@ declare const browser: typeof chrome | undefined;
 
 const { Text } = Typography;
 
+interface MatchedRequest {
+  url: string;
+  pattern: string;
+}
+
 interface ActiveRule {
   id?: string;
   headerName: string;
@@ -26,6 +31,7 @@ interface ActiveRule {
   domains?: string[];
   tag?: string;
   matchType?: string;
+  matchedUrls?: MatchedRequest[];
   [key: string]: unknown;
 }
 
@@ -405,6 +411,46 @@ const ActiveRules: React.FC = () => {
           pagination={false}
           size="small"
           scroll={{ x: 770 }}
+          expandable={{
+            expandedRowRender: (record: TableRecord) => {
+              const urls = record.matchedUrls || [];
+              if (urls.length === 0) {
+                return (
+                  <Text type="secondary" style={{ fontSize: '12px', fontStyle: 'italic' }}>
+                    No matched requests observed yet — reload the page to capture
+                  </Text>
+                );
+              }
+              return (
+                <div style={{ fontSize: 12, fontFamily: 'monospace', maxHeight: 150, overflowY: 'auto', paddingRight: 12 }}>
+                  {urls.map((match, i) => (
+                    <Tooltip
+                      key={i}
+                      title={
+                        <div style={{ fontSize: 12 }}>
+                          <div style={{ marginBottom: 4 }}>
+                            <span style={{ opacity: 0.6 }}>URL: </span>
+                            <span style={{ wordBreak: 'break-all' }}>{match.url}</span>
+                          </div>
+                          <div>
+                            <span style={{ opacity: 0.6 }}>Matched by: </span>
+                            <Tag variant="outlined" color="blue" style={{ margin: 0, fontSize: '11px' }}>{match.pattern}</Tag>
+                          </div>
+                        </div>
+                      }
+                      styles={{ root: { maxWidth: 500 } }}
+                    >
+                      <div style={{ padding: '2px 0', cursor: 'default', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <span style={{ opacity: 0.4 }}>{i + 1}. </span>
+                        {match.url}
+                      </div>
+                    </Tooltip>
+                  ))}
+                </div>
+              );
+            },
+            rowExpandable: () => true,
+          }}
           locale={{
             emptyText: (
               <Empty

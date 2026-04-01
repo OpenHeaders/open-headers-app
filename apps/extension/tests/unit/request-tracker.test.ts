@@ -64,7 +64,7 @@ describe('getActiveRulesForTab', () => {
     expect(result).toEqual([]);
   });
 
-  it('returns matching enabled rules', async () => {
+  it('returns matching enabled rules with matchedUrls', async () => {
     seedCache(makeSavedData({
       'rule-1': { headerName: 'X-Debug', domains: ['*.openheaders.io'], isEnabled: true },
     }));
@@ -74,6 +74,7 @@ describe('getActiveRulesForTab', () => {
     expect(result[0].headerName).toBe('X-Debug');
     expect(result[0].isEnabled).toBe(true);
     expect(result[0].matchType).toBe('direct');
+    expect(result[0].matchedUrls).toEqual([{ url: 'https://api.openheaders.io/v2', pattern: '*.openheaders.io' }]);
   });
 
   it('returns disabled matching rules (Option B — show all matching)', async () => {
@@ -102,7 +103,7 @@ describe('getActiveRulesForTab', () => {
     expect(result[0].headerName).toBe('X-Debug');
   });
 
-  it('returns rules with no domains as direct matches (applies everywhere)', async () => {
+  it('returns rules with no domains as direct matches with tab URL in matchedUrls', async () => {
     seedCache(makeSavedData({
       'rule-1': { headerName: 'X-Global', domains: [] },
     }));
@@ -110,6 +111,7 @@ describe('getActiveRulesForTab', () => {
     const result = await getActiveRulesForTab(1, 'https://any-site.com/page');
     expect(result).toHaveLength(1);
     expect(result[0].matchType).toBe('direct');
+    expect(result[0].matchedUrls).toEqual([{ url: 'https://any-site.com/page', pattern: '*' }]);
   });
 
   it('preserves rule id and key in results', async () => {

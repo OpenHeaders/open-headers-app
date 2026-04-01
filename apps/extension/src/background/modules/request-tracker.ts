@@ -5,7 +5,7 @@
 import type { HeaderEntry, SavedDataMap } from '@openheaders/core';
 import { storage, tabs } from '@utils/browser-api.js';
 import { getChunkedData } from '@utils/storage-chunking.js';
-import type { ActiveRule } from '@/types/browser';
+import type { ActiveRule, MatchedRequest } from '@/types/browser';
 import {
   clearPatternCache,
   doesUrlMatchPattern,
@@ -128,28 +128,36 @@ export async function getActiveRulesForTab(tabId: number | undefined, tabUrl: st
         const domains: string[] = entry.domains || [];
         let matchType: 'direct' | 'indirect' | null = null;
 
+        // Collect matched URLs with the pattern that matched them
+        const matchedUrls: MatchedRequest[] = [];
+
         // Check if rule applies to all domains
         if (domains.length === 0) {
           matchType = 'direct'; // Rules without domains apply everywhere
+          matchedUrls.push({ url: tabUrl, pattern: '*' });
+          for (const resourceUrl of trackedResourceUrls) {
+            matchedUrls.push({ url: resourceUrl, pattern: '*' });
+          }
         } else {
           // Check for direct match (main page domain)
           for (const domain of domains) {
             if (doesUrlMatchPattern(tabUrl, domain)) {
               matchType = 'direct';
+              matchedUrls.push({ url: tabUrl, pattern: domain });
               break;
             }
           }
 
-          // If no direct match, check for indirect match (resource URLs loaded by this page)
-          if (!matchType && trackedResourceUrls.length > 0) {
-            for (const domain of domains) {
-              for (const resourceUrl of trackedResourceUrls) {
+          // Check resource URLs — collect ALL matching ones regardless of direct match
+          if (trackedResourceUrls.length > 0) {
+            for (const resourceUrl of trackedResourceUrls) {
+              for (const domain of domains) {
                 if (doesUrlMatchPattern(resourceUrl, domain)) {
-                  matchType = 'indirect';
+                  matchedUrls.push({ url: resourceUrl, pattern: domain });
+                  if (!matchType) matchType = 'indirect';
                   break;
                 }
               }
-              if (matchType) break;
             }
           }
         }
@@ -157,9 +165,10 @@ export async function getActiveRulesForTab(tabId: number | undefined, tabUrl: st
         if (matchType) {
           activeRules.push({
             ...entry,
-            id: id, // Ensure ID is set properly
-            key: id, // Add key for React table
+            id: id,
+            key: id,
             matchType,
+            matchedUrls,
           });
         }
       }

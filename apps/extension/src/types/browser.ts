@@ -32,10 +32,16 @@ export interface PendingRequest {
 }
 
 /** Active rule entry returned by getActiveRulesForTab */
+export interface MatchedRequest {
+  url: string;
+  pattern: string;
+}
+
 export interface ActiveRule {
   id: string;
   key: string;
   matchType: 'direct' | 'indirect';
+  matchedUrls: MatchedRequest[];
   [key: string]: unknown;
 }
 
