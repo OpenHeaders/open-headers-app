@@ -6,6 +6,7 @@ import {
   ExclamationCircleOutlined,
   FileTextOutlined,
 } from '@ant-design/icons';
+import { useHeader } from '@hooks/useHeader';
 import { getAppLauncher } from '@utils/app-launcher';
 import {
   Alert,
@@ -26,7 +27,12 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import type React from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRowActionRegistration } from '@/hooks/useRowActionRegistration';
+import { useTablePagination } from '@/hooks/useTablePagination';
+import { useKeyboardNav } from '@context/KeyboardNavContext';
+import { type PageInfo, type RowActions, getTagColor } from '../utils/table-shared';
+import { type TagDescriptor, renderDomainTags, renderTagOverflow, renderValueWithCopy, truncateValue } from './columns/sharedColumnRenderers';
 import DeleteConfirmOverlay from './DeleteConfirmOverlay';
 
 declare const browser: typeof chrome | undefined;
@@ -113,26 +119,6 @@ interface TableRecord extends ActiveRule {
   key: string | number;
 }
 
-const TAG_COLORS = [
-  'blue',
-  'volcano',
-  'green',
-  'purple',
-  'orange',
-  'cyan',
-  'magenta',
-  'gold',
-  'geekblue',
-  'red',
-] as const;
-
-function getTagColor(tag: string): string {
-  let hash = 5381;
-  for (let i = 0; i < tag.length; i++) {
-    hash = ((hash * 33) ^ tag.charCodeAt(i)) >>> 0;
-  }
-  return TAG_COLORS[hash % TAG_COLORS.length];
-}
 
 /**
  * Renders a URL with the portion matching the pattern highlighted.
@@ -164,29 +150,11 @@ function renderHighlightedUrl(url: string, pattern: string): React.ReactNode {
   );
 }
 
-const PAGE_SIZE = 10;
-
-interface PageInfo {
-  visibleRowCount: number;
-  visibleRowIds: readonly (string | number)[];
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
-  onNextPage?: () => void;
-  onPrevPage?: () => void;
-}
-
 interface ActiveRulesProps {
   focusedRowIndex?: number;
   pendingDeleteIndex?: number;
   onPageInfoChange?: (info: PageInfo) => void;
-  onRowActionsChange?: (actions: {
-    onToggleRow?: (index: number) => void;
-    onExpandRow?: (index: number) => void;
-    onCollapseRow?: (index: number) => void;
-    onEditRow?: (index: number) => void;
-    onCopyRow?: (index: number) => void;
-    onDeleteRow?: (index: number) => void;
-  }) => void;
+  onRowActionsChange?: (actions: RowActions) => void;
 }
 
 const ActiveRules: React.FC<ActiveRulesProps> = ({
@@ -196,7 +164,9 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
   onRowActionsChange,
 }) => {
   const { message } = App.useApp();
+  const { isConnected } = useHeader();
   const appLauncher = getAppLauncher();
+  const { expandedRowKey, setNestedRowCount, toggleExpandedRow } = useKeyboardNav();
   const [currentTab, setCurrentTab] = useState<CurrentTabInfo | null>(null);
   const [activeRules, setActiveRules] = useState<ActiveRule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -204,7 +174,6 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
   const [searchText, setSearchText] = useState('');
   const [filteredInfo, setFilteredInfo] = useState<Record<string, FilterValue | null>>({});
   const [sortedInfo, setSortedInfo] = useState<SorterResult<TableRecord>>({});
-  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const fetchActiveRules = async () => {
@@ -260,23 +229,35 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
     };
   }, []);
 
-  const [manualExpandedKeys, setManualExpandedKeys] = useState<(string | number)[]>([]);
   const dataSourceRef = useRef<TableRecord[]>([]);
 
+  // Track how each rule matches the search: by rule properties, by URL, or both
+  const urlMatchCountMap = new Map<string, number>();
   const filteredRules = searchText
     ? activeRules.filter((r) => {
         const q = searchText.toLowerCase();
-        return (
+        const matchesByRule =
           r.headerName.toLowerCase().includes(q) ||
           (r.headerValue || '').toLowerCase().includes(q) ||
-          (r.domains || []).some((d) => d.toLowerCase().includes(q)) ||
-          (r.tag || '').toLowerCase().includes(q) ||
-          (r.matchedUrls || []).some((m) => m.url.toLowerCase().includes(q))
-        );
+          (r.tag || '').toLowerCase().includes(q);
+        const matchingUrlCount = (r.matchedUrls || []).filter((m) => m.url.toLowerCase().includes(q)).length;
+        if (matchingUrlCount > 0 && r.id) urlMatchCountMap.set(r.id, matchingUrlCount);
+        return matchesByRule || matchingUrlCount > 0;
       })
     : activeRules;
 
-  const dataSource: TableRecord[] = filteredRules.map((rule, index) => ({
+  // Sort: rules with URL matches first (most relevant), then by name
+  const sortedFilteredRules = searchText
+    ? [...filteredRules].sort((a, b) => {
+        const aUrlMatches = urlMatchCountMap.get(a.id || '') || 0;
+        const bUrlMatches = urlMatchCountMap.get(b.id || '') || 0;
+        if (aUrlMatches > 0 && bUrlMatches === 0) return -1;
+        if (aUrlMatches === 0 && bUrlMatches > 0) return 1;
+        return 0;
+      })
+    : filteredRules;
+
+  const dataSource: TableRecord[] = sortedFilteredRules.map((rule, index) => ({
     ...rule,
     key: (rule.id || index) as string | number,
   }));
@@ -284,36 +265,10 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
   // Keep ref in sync for keyboard callbacks
   dataSourceRef.current = dataSource;
 
-  // Report page info to keyboard navigation
-  const totalPages = Math.ceil(dataSource.length / PAGE_SIZE);
-  const pageStart = (currentPage - 1) * PAGE_SIZE;
-  const pageSlice = dataSource.slice(pageStart, pageStart + PAGE_SIZE);
-  const visibleRowCount = pageSlice.length;
-  // Memoize to prevent infinite re-render loops — new array reference every render
-  // would trigger onPageInfoChange effect → parent setState → child re-render → repeat
-  const visibleRowIdsKey = pageSlice.map((r) => r.key).join(',');
-  // biome-ignore lint/correctness/useExhaustiveDependencies: visibleRowIdsKey is a stable string representation
-  const visibleRowIds = useMemo(() => pageSlice.map((r) => r.key), [visibleRowIdsKey]);
-
-  const goToNextPage = useCallback(() => {
-    setCurrentPage((p) => Math.min(p + 1, totalPages));
-  }, [totalPages]);
-
-  const goToPrevPage = useCallback(() => {
-    setCurrentPage((p) => Math.max(p - 1, 1));
-  }, []);
-
-  useEffect(() => {
-    if (!onPageInfoChange) return;
-    onPageInfoChange({
-      visibleRowCount,
-      visibleRowIds,
-      hasNextPage: currentPage < totalPages,
-      hasPrevPage: currentPage > 1,
-      onNextPage: goToNextPage,
-      onPrevPage: goToPrevPage,
-    });
-  }, [onPageInfoChange, visibleRowCount, visibleRowIds, currentPage, totalPages, goToNextPage, goToPrevPage]);
+  const { paginationConfig } = useTablePagination({
+    dataSource,
+    onPageInfoChange,
+  });
 
   // Register row actions for keyboard navigation
   const handleToggleRow = useCallback((index: number) => {
@@ -332,26 +287,12 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
     });
   }, []);
 
-  const handleExpandRow = useCallback((index: number) => {
-    const record = dataSourceRef.current[index];
-    if (!record) return;
-    const key = record.key;
-    setManualExpandedKeys((prev) => (prev.includes(key) ? prev : [...prev, key]));
-  }, []);
-
-  const handleCollapseRow = useCallback((index: number) => {
-    const record = dataSourceRef.current[index];
-    if (!record) return;
-    const key = record.key;
-    setManualExpandedKeys((prev) => prev.filter((k) => k !== key));
-  }, []);
-
   const handleEditRow = useCallback(
     (index: number) => {
       const record = dataSourceRef.current[index];
       if (!record) return;
       void appLauncher.launchOrFocus({ tab: 'rules', subTab: 'headers', action: 'edit', itemId: record.id });
-      message.info('Opening edit dialog in OpenHeaders app');
+      void message.info('Opening edit dialog in OpenHeaders app');
     },
     [appLauncher, message],
   );
@@ -382,25 +323,12 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
     [message],
   );
 
-  useEffect(() => {
-    if (!onRowActionsChange) return;
-    onRowActionsChange({
-      onToggleRow: handleToggleRow,
-      onExpandRow: handleExpandRow,
-      onCollapseRow: handleCollapseRow,
-      onEditRow: handleEditRow,
-      onCopyRow: handleCopyRow,
-      onDeleteRow: handleDeleteRow,
-    });
-  }, [
-    onRowActionsChange,
-    handleToggleRow,
-    handleExpandRow,
-    handleCollapseRow,
-    handleEditRow,
-    handleCopyRow,
-    handleDeleteRow,
-  ]);
+  useRowActionRegistration(onRowActionsChange, {
+    onToggleRow: handleToggleRow,
+    onEditRow: handleEditRow,
+    onCopyRow: handleCopyRow,
+    onDeleteRow: handleDeleteRow,
+  });
 
   const handleTableChange = (
     _pagination: unknown,
@@ -424,7 +352,7 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
       filterSearch: true,
       onFilter: (value, record) => record.headerName === value,
       render: (text: string) => {
-        const display = text.length > 16 ? `${text.substring(0, 9)}...${text.substring(text.length - 4)}` : text;
+        const display = truncateValue(text);
         return (
           <Tooltip title={text.length > 16 ? text : undefined}>
             <Text strong style={{ fontSize: '13px' }}>
@@ -443,39 +371,8 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
       sortOrder: sortedInfo.columnKey === 'headerValue' ? sortedInfo.order : null,
       render: (text: string, record: TableRecord) => {
         const fullValue = text || '';
-        let displayValue = fullValue || '[Dynamic]';
-        if (displayValue !== '[Dynamic]' && displayValue.length > 16) {
-          displayValue = `${displayValue.substring(0, 9)}...${displayValue.substring(displayValue.length - 4)}`;
-        }
-        const rowKey = record.key;
-        return (
-          <div
-            className="value-cell"
-            style={{ display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', overflow: 'hidden' }}
-          >
-            <Text style={{ fontSize: '13px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {displayValue}
-            </Text>
-            {fullValue &&
-              (copiedRowId === rowKey ? (
-                <CheckOutlined
-                  className="value-copy-icon"
-                  style={{ fontSize: '12px', color: '#52c41a', flexShrink: 0, opacity: 1 }}
-                />
-              ) : (
-                <CopyTwoTone
-                  className="value-copy-icon"
-                  style={{ fontSize: '12px', cursor: 'pointer', flexShrink: 0, opacity: 0 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void navigator.clipboard.writeText(fullValue);
-                    setCopiedRowId(rowKey);
-                    setTimeout(() => setCopiedRowId(null), 1000);
-                  }}
-                />
-              ))}
-          </div>
-        );
+        const displayValue = fullValue ? truncateValue(fullValue) : '[Dynamic]';
+        return renderValueWithCopy({ fullValue, displayValue, rowKey: record.key, copiedRowId, setCopiedRowId });
       },
     },
     {
@@ -492,40 +389,7 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
       filteredValue: filteredInfo.domains || null,
       filterSearch: true,
       onFilter: (value, record) => (record.domains || []).includes(value as string),
-      render: (domains: string[]) => {
-        if (!domains || domains.length === 0)
-          return (
-            <Tag variant="outlined" color="default">
-              All domains
-            </Tag>
-          );
-        const first = domains[0].length > 14 ? `${domains[0].substring(0, 14)}...` : domains[0];
-        const overflowCount = domains.length - 1;
-        const tooltip = (
-          <div style={{ fontFamily: 'monospace', fontSize: 12 }}>
-            {domains.map((d, i) => (
-              <div key={i}>
-                <span style={{ opacity: 0.6 }}>{i + 1}. </span>
-                {d}
-              </div>
-            ))}
-          </div>
-        );
-        return (
-          <Tooltip title={tooltip} styles={{ root: { maxWidth: 500 } }}>
-            <Space size={2}>
-              <Tag variant="outlined" style={{ fontSize: '12px', cursor: 'default', margin: 0 }}>
-                {first}
-              </Tag>
-              {overflowCount > 0 && (
-                <Tag variant="outlined" style={{ fontSize: '12px', cursor: 'default', margin: 0 }}>
-                  +{overflowCount}
-                </Tag>
-              )}
-            </Space>
-          </Tooltip>
-        );
-      },
+      render: (domains: string[]) => renderDomainTags(domains),
     },
     {
       title: 'Tags',
@@ -549,82 +413,35 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
       filteredValue: filteredInfo.tags || null,
       filterSearch: true,
       onFilter: (value, record) => {
+        const urls = record.matchedUrls || [];
+        const hasDirectMatch = urls.some((m) => m.url === currentTab?.url) || record.matchType === 'direct';
+        const hasIndirectMatch = urls.some((m) => m.url !== currentTab?.url) || record.matchType === 'indirect';
         const tags = [
-          record.matchType === 'indirect' ? 'Resource' : 'Page',
+          ...(hasDirectMatch ? ['Page'] : []),
+          ...(hasIndirectMatch ? ['Resource'] : []),
           record.isResponse ? 'Response' : 'Request',
           ...(record.tag ? [record.tag] : []),
         ];
         return tags.includes(value as string);
       },
       render: (_: unknown, record: TableRecord) => {
-        const tagStyle = { margin: 0, fontSize: '11px' };
-
-        // Build tag descriptors ordered by display priority:
-        // 1. Match type (Page or Resource)
-        // 2. Custom tag (user-assigned, e.g. DEV)
-        // 3. Req/Res — always present, least important
-        const allTags: { label: string; color?: string; tooltip?: string }[] = [];
-        if (record.matchType === 'indirect') {
-          allTags.push({ label: 'Resource', tooltip: 'Applied to resources loaded by this page, not the page itself' });
-        } else {
+        const allTags: TagDescriptor[] = [];
+        // Derive Page/Resource from actual matched URLs, not just matchType
+        const urls = record.matchedUrls || [];
+        const hasDirectMatch = urls.some((m) => m.url === currentTab?.url) || record.matchType === 'direct';
+        const hasIndirectMatch = urls.some((m) => m.url !== currentTab?.url) || record.matchType === 'indirect';
+        if (hasDirectMatch) {
           allTags.push({ label: 'Page', tooltip: 'Matches this page directly' });
+        }
+        if (hasIndirectMatch) {
+          allTags.push({ label: 'Resource', tooltip: 'Applied to resources loaded by this page' });
         }
         if (record.tag) {
           allTags.push({ label: record.tag, color: getTagColor(record.tag) });
         }
         allTags.push({ label: record.isResponse ? 'Res' : 'Req', tooltip: record.isResponse ? 'Response' : 'Request' });
-
-        const hasStatusTag = allTags.length > 0 && (allTags[0].label === 'Resource' || allTags[0].label === 'Page');
-        const maxVisible = hasStatusTag ? 1 : 2;
-        const visible = allTags.slice(0, maxVisible);
-        const overflowCount = allTags.length - maxVisible;
-
-        return (
-          <Space size={2}>
-            {visible.map((t, i) =>
-              t.tooltip ? (
-                <Tooltip key={i} title={t.tooltip}>
-                  <Tag color={t.color} variant="outlined" style={{ ...tagStyle, cursor: 'help' }}>
-                    {t.label}
-                  </Tag>
-                </Tooltip>
-              ) : (
-                <Tag key={i} color={t.color} variant="outlined" style={tagStyle}>
-                  {t.label}
-                </Tag>
-              ),
-            )}
-            {overflowCount > 0 && (
-              <Tooltip
-                title={
-                  <div style={{ fontSize: 12 }}>
-                    {allTags.map((t, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 4,
-                          marginBottom: i < allTags.length - 1 ? 4 : 0,
-                        }}
-                      >
-                        <span style={{ opacity: 0.6 }}>{i + 1}. </span>
-                        <Tag color={t.color} variant="outlined" style={{ margin: 0, fontSize: '11px' }}>
-                          {t.label}
-                        </Tag>
-                      </div>
-                    ))}
-                  </div>
-                }
-                styles={{ root: { maxWidth: 400 } }}
-              >
-                <Tag variant="outlined" style={{ ...tagStyle, cursor: 'help' }}>
-                  +{overflowCount}
-                </Tag>
-              </Tooltip>
-            )}
-          </Space>
-        );
+        const hasStatusTag = allTags[0]?.label === 'Page' || allTags[0]?.label === 'Resource';
+        return renderTagOverflow(allTags, hasStatusTag ? 1 : 2);
       },
     },
     {
@@ -639,29 +456,29 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
       render: (enabled: unknown, record: TableRecord) => {
         const isEnabled = enabled !== false;
         return (
-          <Switch
-            checked={isEnabled}
-            onChange={() => {
-              // Optimistic update — immediately reflect in UI
-              setActiveRules((prev) => prev.map((r) => (r.id === record.id ? { ...r, isEnabled: !isEnabled } : r)));
-              const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
-              browserAPI.runtime.sendMessage(
-                { type: 'toggleRule', ruleId: record.id, enabled: !isEnabled },
-                (response: unknown) => {
-                  const resp = response as { success?: boolean } | undefined;
-                  if (resp?.success) {
-                    // Trigger immediate badge refresh
-                    browserAPI.runtime.sendMessage({ type: 'rulesUpdated' });
-                  } else {
-                    // Revert on failure
-                    setActiveRules((prev) => prev.map((r) => (r.id === record.id ? { ...r, isEnabled } : r)));
-                    void message.error('Failed to toggle rule');
-                  }
-                },
-              );
-            }}
-            size="small"
-          />
+          <Tooltip title={isConnected ? 'Enable/disable rule' : 'App not connected'}>
+            <Switch
+              checked={isEnabled}
+              disabled={!isConnected}
+              onChange={() => {
+                setActiveRules((prev) => prev.map((r) => (r.id === record.id ? { ...r, isEnabled: !isEnabled } : r)));
+                const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+                browserAPI.runtime.sendMessage(
+                  { type: 'toggleRule', ruleId: record.id, enabled: !isEnabled },
+                  (response: unknown) => {
+                    const resp = response as { success?: boolean } | undefined;
+                    if (resp?.success) {
+                      browserAPI.runtime.sendMessage({ type: 'rulesUpdated' });
+                    } else {
+                      setActiveRules((prev) => prev.map((r) => (r.id === record.id ? { ...r, isEnabled } : r)));
+                      void message.error('Failed to toggle rule');
+                    }
+                  },
+                );
+              }}
+              size="small"
+            />
+          </Tooltip>
         );
       },
     },
@@ -672,40 +489,42 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
       align: 'center',
       fixed: 'right',
       render: (_: unknown, record: TableRecord) => (
-        <Space size={2}>
-          <Tooltip title="Edit in desktop app">
+        <Tooltip title={!isConnected ? 'App not connected' : 'Edit or delete rule'}>
+          <Space size={2}>
             <Button
               type="text"
               icon={<EditOutlined />}
               size="small"
+              disabled={!isConnected}
               onClick={async () => {
                 await appLauncher.launchOrFocus({ tab: 'rules', subTab: 'headers', action: 'edit', itemId: record.id });
-                message.info('Opening edit dialog in OpenHeaders app');
+                void message.info('Opening edit dialog in OpenHeaders app');
               }}
             />
-          </Tooltip>
-          <Popconfirm
-            title="Delete rule"
-            description={`Delete "${record.headerName}"?`}
-            onConfirm={() => {
-              setActiveRules((prev) => prev.filter((r) => r.id !== record.id));
-              const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
-              browserAPI.runtime.sendMessage({ type: 'deleteRule', ruleId: record.id }, (response: unknown) => {
-                const resp = response as { success?: boolean } | undefined;
-                if (resp?.success) {
-                  void message.success('Rule deleted');
-                } else {
-                  void message.error('Failed to delete rule');
-                }
-              });
-            }}
-            okText="Delete"
-            okType="danger"
-            cancelText="Cancel"
-          >
-            <Button type="text" danger icon={<DeleteOutlined />} size="small" />
-          </Popconfirm>
-        </Space>
+            <Popconfirm
+              title="Delete rule"
+              description={`Delete "${record.headerName}"?`}
+              onConfirm={() => {
+                setActiveRules((prev) => prev.filter((r) => r.id !== record.id));
+                const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+                browserAPI.runtime.sendMessage({ type: 'deleteRule', ruleId: record.id }, (response: unknown) => {
+                  const resp = response as { success?: boolean } | undefined;
+                  if (resp?.success) {
+                    void message.success('Rule deleted');
+                  } else {
+                    void message.error('Failed to delete rule');
+                  }
+                });
+              }}
+              okText="Delete"
+              okType="danger"
+              cancelText="Cancel"
+              disabled={!isConnected}
+            >
+              <Button type="text" danger icon={<DeleteOutlined />} size="small" disabled={!isConnected} />
+            </Popconfirm>
+          </Space>
+        </Tooltip>
       ),
     },
   ];
@@ -740,16 +559,6 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
     );
 
   const enabledCount = activeRules.filter((r) => r.isEnabled !== false).length;
-  const directMatches = activeRules.filter((r) => r.matchType === 'direct').length;
-  const indirectMatches = activeRules.filter((r) => r.matchType === 'indirect').length;
-
-  // Auto-expand rules that match the search via their matched URLs
-  const autoExpandedKeys = searchText
-    ? filteredRules
-        .filter((r) => (r.matchedUrls || []).some((m) => m.url.toLowerCase().includes(searchText.toLowerCase())))
-        .map((r) => r.id || '')
-        .filter(Boolean)
-    : [];
 
   return (
     <div className="header-rules-section" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -765,21 +574,33 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
                 </Text>
               </Tooltip>
               <Text type="secondary" style={{ fontSize: '12px' }}>
-                {enabledCount} of {activeRules.length} active
+                {enabledCount} of {activeRules.length} enabled
               </Text>
-              <Tooltip title="Monitoring requests and updating matched rules in real-time">
-                <Badge status="processing" />
-              </Tooltip>
             </Space>
-            {indirectMatches > 0 && (
-              <div>
-                <Text type="secondary" style={{ fontSize: '11px' }}>
-                  {directMatches} direct, {indirectMatches} via resources
-                </Text>
-              </div>
-            )}
+            <div>
+            <Text type="secondary" style={{ fontSize: '11px' }}>
+              {(() => {
+                const totalRequests = activeRules.reduce((sum, r) => sum + (r.matchedUrls || []).length, 0);
+                if (!searchText) {
+                  return `${activeRules.length} rule${activeRules.length !== 1 ? 's' : ''}, ${totalRequests} request${totalRequests !== 1 ? 's' : ''}`;
+                }
+                const filteredRequests = urlMatchCountMap.size > 0
+                  ? Array.from(urlMatchCountMap.values()).reduce((sum, c) => sum + c, 0)
+                  : 0;
+                return filteredRequests > 0
+                  ? `${sortedFilteredRules.length} rule${sortedFilteredRules.length !== 1 ? 's' : ''}, ${filteredRequests} request${filteredRequests !== 1 ? 's' : ''} matched`
+                  : `${sortedFilteredRules.length} rule${sortedFilteredRules.length !== 1 ? 's' : ''} matched`;
+              })()}
+            </Text>
+            </div>
           </div>
-          <div>
+          <Space align="start">
+            <Space align="center" size={6} style={{ height: 24 }}>
+              <Badge status="processing" />
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                Live — monitoring requests
+              </Text>
+            </Space>
             <Input.Search
               placeholder="Search anything..."
               allowClear
@@ -787,26 +608,14 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
               style={{ width: 300 }}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape' && searchText) {
+                  e.stopPropagation();
+                  setSearchText('');
+                }
+              }}
             />
-            <div style={{ textAlign: 'right', marginTop: 2, height: 16 }}>
-              {searchText &&
-                (() => {
-                  const matchedRequestCount = filteredRules.reduce(
-                    (sum, r) =>
-                      sum +
-                      (r.matchedUrls || []).filter((m) => m.url.toLowerCase().includes(searchText.toLowerCase()))
-                        .length,
-                    0,
-                  );
-                  return (
-                    <Text type="secondary" style={{ fontSize: '11px' }}>
-                      {filteredRules.length} rule{filteredRules.length !== 1 ? 's' : ''}, {matchedRequestCount} request
-                      {matchedRequestCount !== 1 ? 's' : ''} matched
-                    </Text>
-                  );
-                })()}
-            </div>
-          </div>
+          </Space>
         </div>
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, paddingBottom: '8px' }}>
@@ -814,15 +623,7 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
           dataSource={dataSource}
           columns={columns}
           onChange={handleTableChange}
-          pagination={{
-            current: currentPage,
-            pageSize: PAGE_SIZE,
-            size: 'small',
-            showSizeChanger: false,
-            showTotal: (total, range) => `${range[0]}-${range[1]} of ${total}`,
-            style: { marginBottom: 0, marginTop: 4 },
-            onChange: (page) => setCurrentPage(page),
-          }}
+          pagination={paginationConfig}
           size="small"
           scroll={{ x: 770, y: 290 }}
           rowClassName={(_record: TableRecord, index: number) => {
@@ -832,24 +633,69 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
             return classes.join(' ');
           }}
           expandable={{
-            columnWidth: 32,
-            expandedRowKeys: [
-              ...manualExpandedKeys,
-              ...(searchText && autoExpandedKeys.length > 0 ? autoExpandedKeys : []),
-            ],
-            onExpandedRowsChange: (keys) => setManualExpandedKeys(keys.map((k) => k as string | number)),
+            columnWidth: 40,
+            expandRowByClick: true,
+            expandedRowKeys: expandedRowKey !== null ? [expandedRowKey] : [],
+            expandIcon: ({ record, onExpand }) => {
+              const totalRequests = (record.matchedUrls || []).length;
+              const searchUrlMatches = searchText && record.id ? (urlMatchCountMap.get(record.id) || 0) : 0;
+              const badgeCount = searchText ? searchUrlMatches : totalRequests;
+              const bgColor = searchUrlMatches > 0 ? '#1677ff' : '#8c8c8c';
+              const badgeTooltip = searchUrlMatches > 0
+                ? `${searchUrlMatches} of ${totalRequests} request${totalRequests !== 1 ? 's' : ''} match "${searchText}" — click to expand`
+                : badgeCount > 0
+                  ? `${badgeCount} matched request${badgeCount !== 1 ? 's' : ''} — click to expand`
+                  : 'No matched requests yet — click to expand';
+              return (
+                <Tooltip title={badgeTooltip}>
+                <span
+                  style={{
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minWidth: 20,
+                    height: 18,
+                    padding: '0 5px',
+                    borderRadius: 5,
+                    backgroundColor: badgeCount > 0 ? bgColor : '#d9d9d9',
+                    color: '#fff',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    lineHeight: 1,
+                  }}
+                  onClick={(e) => onExpand(record, e)}
+                >
+                  {badgeCount}
+                </span>
+                </Tooltip>
+              );
+            },
+            onExpand: (_expanded: boolean, record: TableRecord) => {
+              const fullIndex = dataSource.findIndex((r) => r.key === record.key);
+              const pageStart = (paginationConfig.current - 1) * paginationConfig.pageSize;
+              const pageRelativeIndex = fullIndex - pageStart;
+              toggleExpandedRow(record.key, pageRelativeIndex >= 0 ? pageRelativeIndex : undefined);
+              (document.activeElement as HTMLElement)?.blur();
+            },
             expandedRowRender: (record: TableRecord) => {
               const allMatches = record.matchedUrls || [];
-              // Filter matched URLs when searching
-              const matches = searchText
+              // If this rule has URL matches for the search, filter to those URLs.
+              // If the rule matched only by properties (name/value/domain/tag), show all URLs.
+              const hasUrlMatches = searchText && record.id ? urlMatchCountMap.has(record.id) : false;
+              const matches = hasUrlMatches
                 ? allMatches.filter((m) => m.url.toLowerCase().includes(searchText.toLowerCase()))
                 : allMatches;
+
+              // Report nested row count to keyboard nav when this is the keyboard-expanded row
+              if (record.key === expandedRowKey) {
+                queueMicrotask(() => setNestedRowCount(matches.length));
+              }
+
               if (matches.length === 0) {
                 return (
                   <Text type="secondary" style={{ fontSize: '12px', fontStyle: 'italic' }}>
-                    {searchText
-                      ? 'No matched requests for this search'
-                      : 'No matched requests observed yet — reload the page to capture'}
+                    No matched requests yet — reload the page to capture
                   </Text>
                 );
               }
@@ -990,7 +836,9 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                     <Text type="secondary" style={{ fontSize: '11px' }}>
-                      {matches.length} request{matches.length !== 1 ? 's' : ''} matched
+                      {hasUrlMatches
+                        ? `${matches.length} of ${allMatches.length} request${allMatches.length !== 1 ? 's' : ''} matching "${searchText}"`
+                        : `${matches.length} request${matches.length !== 1 ? 's' : ''} matched`}
                     </Text>
                     <Badge status="processing" />
                   </div>
@@ -1013,9 +861,9 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
                 image={<FileTextOutlined style={{ fontSize: 24, color: 'var(--text-tertiary)' }} />}
                 description={
                   <Space orientation="vertical" size={4}>
-                    <Text type="secondary">No rules active on this page</Text>
+                    <Text type="secondary">No rules match this page</Text>
                     <Text type="secondary" style={{ fontSize: '11px' }}>
-                      Rules may be disabled or configured for other domains
+                      No rules are configured for this domain
                     </Text>
                   </Space>
                 }

@@ -190,7 +190,7 @@ const Header: React.FC<HeaderProps> = ({ onOpenSetupGuide, onShowShortcuts }) =>
       label: (
         <Space style={{ width: '100%', justifyContent: 'space-between' }}>
           <span>Keyboard Shortcuts</span>
-          <span style={{ fontSize: '11px', opacity: 0.5, fontFamily: 'monospace' }}>?</span>
+          <span className="kbd-key" style={{ fontSize: '10px', minWidth: 18 }}>?</span>
         </Space>
       ),
       onClick: onShowShortcuts,

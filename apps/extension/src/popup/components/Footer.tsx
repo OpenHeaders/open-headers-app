@@ -10,6 +10,7 @@ import {
   TrademarkCircleTwoTone,
   VideoCameraTwoTone,
 } from '@ant-design/icons';
+import { useKeyboardNav } from '@context/KeyboardNavContext';
 import { useHeader } from '@hooks/useHeader';
 import { getAppLauncher } from '@utils/app-launcher';
 import { runtime } from '@utils/browser-api';
@@ -24,18 +25,15 @@ const { Text } = Typography;
 
 const formatHotkeyForDisplay = (hotkey: string): string => {
   if (!hotkey) return 'Not set';
-  const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+  const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
   return hotkey
     .replace('CommandOrControl', isMac ? 'Cmd' : 'Ctrl')
     .replace('Command', 'Cmd')
     .replace('Control', 'Ctrl');
 };
 
-interface FooterProps {
-  onActionsReady?: (actions: { onToggleRecording?: () => void; onToggleRulesPause?: () => void }) => void;
-}
-
-const Footer: React.FC<FooterProps> = ({ onActionsReady }) => {
+const Footer: React.FC = () => {
+  const { setFooterActions } = useKeyboardNav();
   const version = __APP_VERSION__;
   const { token } = theme.useToken();
   const [useWidget, setUseWidget] = useState(true);
@@ -208,12 +206,11 @@ const Footer: React.FC<FooterProps> = ({ onActionsReady }) => {
   }, []);
 
   useEffect(() => {
-    if (!onActionsReady) return;
-    onActionsReady({
+    setFooterActions({
       onToggleRecording: handleToggleRecordingForKeyboard,
       onToggleRulesPause: handleTogglePauseForKeyboard,
     });
-  }, [onActionsReady, handleToggleRecordingForKeyboard, handleTogglePauseForKeyboard]);
+  }, [setFooterActions, handleToggleRecordingForKeyboard, handleTogglePauseForKeyboard]);
 
   const optionsMenuItems = [
     {

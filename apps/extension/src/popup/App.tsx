@@ -1,7 +1,7 @@
 import ErrorBoundary from '@components/ErrorBoundary';
 import { HeaderProvider } from '@context/HeaderContext';
+import { KeyboardNavProvider, useKeyboardNav } from '@context/KeyboardNavContext';
 import { useTheme } from '@context/ThemeContext';
-import { useKeyboardNavigation } from '@hooks/useKeyboardNavigation';
 import { runtime } from '@utils/browser-api';
 import { sendMessage } from '@utils/messaging';
 import { Layout } from 'antd';
@@ -18,52 +18,49 @@ const { Content } = Layout;
 
 const THEME_CYCLE = ['light', 'dark', 'auto'] as const;
 
+const AppInner: React.FC = () => {
+  const { isDarkMode } = useTheme();
+  const { containerRef, isShortcutsOverlayVisible, setIsShortcutsOverlayVisible } = useKeyboardNav();
+
+  const handleOpenSetupGuide = async (): Promise<void> => {
+    const response = await sendMessage({ type: 'forceOpenWelcomePage' });
+    if (!response.error) {
+      window.close();
+    }
+  };
+
+  return (
+    <div ref={containerRef} tabIndex={-1} style={{ outline: 'none', height: '100%' }}>
+      <Layout className="app-container" data-theme={isDarkMode ? 'dark' : 'light'}>
+        <Header
+          onOpenSetupGuide={handleOpenSetupGuide}
+          onShowShortcuts={() => setIsShortcutsOverlayVisible(true)}
+        />
+        <Content className="content">
+          <ConnectionInfo />
+          <div className="entries-list">
+            <RulesList />
+          </div>
+        </Content>
+        <Footer />
+      </Layout>
+      <KeyboardShortcutsOverlay
+        visible={isShortcutsOverlayVisible}
+        onClose={() => setIsShortcutsOverlayVisible(false)}
+      />
+    </div>
+  );
+};
+
 const AppContent: React.FC = () => {
-  const { isDarkMode, themeMode, setThemeMode, toggleCompactMode } = useTheme();
+  const { themeMode, setThemeMode, toggleCompactMode } = useTheme();
   const [activeTab, setActiveTab] = useState<string | null>(null);
-
-  // Pagination + row info — set by the active tab component via RulesList
-  const [pageInfo, setPageInfo] = useState<{
-    visibleRowCount: number;
-    visibleRowIds: readonly (string | number)[];
-    hasNextPage: boolean;
-    hasPrevPage: boolean;
-    onNextPage?: () => void;
-    onPrevPage?: () => void;
-  }>({ visibleRowCount: 0, visibleRowIds: [], hasNextPage: false, hasPrevPage: false });
-
-  // Row action callbacks — set by the active tab component via RulesList
-  const [rowActions, setRowActions] = useState<{
-    onToggleRow?: (index: number) => void;
-    onExpandRow?: (index: number) => void;
-    onCollapseRow?: (index: number) => void;
-    onEditRow?: (index: number) => void;
-    onCopyRow?: (index: number) => void;
-    onDeleteRow?: (index: number) => void;
-    onAddRule?: () => void;
-  }>({});
-
-  // Footer action refs — set by Footer component
-  const [footerActions, setFooterActions] = useState<{
-    onToggleRecording?: () => void;
-    onToggleRulesPause?: () => void;
-  }>({});
 
   const cycleTheme = useCallback(() => {
     const currentIndex = THEME_CYCLE.indexOf(themeMode as (typeof THEME_CYCLE)[number]);
     const nextIndex = (currentIndex + 1) % THEME_CYCLE.length;
     setThemeMode(THEME_CYCLE[nextIndex]);
   }, [themeMode, setThemeMode]);
-
-  const keyboard = useKeyboardNavigation({
-    activeTab,
-    onTabChange: setActiveTab,
-    ...pageInfo,
-    ...rowActions,
-    ...footerActions,
-    onCycleTheme: cycleTheme,
-    onToggleCompactMode: toggleCompactMode,
-  });
 
   // Load persisted tab on mount
   useEffect(() => {
@@ -136,42 +133,17 @@ const AppContent: React.FC = () => {
     };
   }, []);
 
-  const handleOpenSetupGuide = async (): Promise<void> => {
-    const response = await sendMessage({ type: 'forceOpenWelcomePage' });
-    if (!response.error) {
-      window.close();
-    }
-  };
-
   return (
     <ErrorBoundary>
       <HeaderProvider>
-        <div ref={keyboard.containerRef} tabIndex={-1} style={{ outline: 'none', height: '100%' }}>
-          <Layout className="app-container" data-theme={isDarkMode ? 'dark' : 'light'}>
-            <Header
-              onOpenSetupGuide={handleOpenSetupGuide}
-              onShowShortcuts={() => keyboard.setIsShortcutsOverlayVisible(true)}
-            />
-            <Content className="content">
-              <ConnectionInfo />
-              <div className="entries-list">
-                <RulesList
-                  activeTab={activeTab}
-                  onTabChange={handleTabChange}
-                  focusedRowIndex={keyboard.focusedRowIndex}
-                  pendingDeleteIndex={keyboard.pendingDeleteIndex}
-                  onPageInfoChange={setPageInfo}
-                  onRowActionsChange={setRowActions}
-                />
-              </div>
-            </Content>
-            <Footer onActionsReady={setFooterActions} />
-          </Layout>
-          <KeyboardShortcutsOverlay
-            visible={keyboard.isShortcutsOverlayVisible}
-            onClose={() => keyboard.setIsShortcutsOverlayVisible(false)}
-          />
-        </div>
+        <KeyboardNavProvider
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          onCycleTheme={cycleTheme}
+          onToggleCompactMode={toggleCompactMode}
+        >
+          <AppInner />
+        </KeyboardNavProvider>
       </HeaderProvider>
     </ErrorBoundary>
   );

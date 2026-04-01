@@ -1,67 +1,37 @@
 import { AppstoreTwoTone, TagsTwoTone, ThunderboltTwoTone } from '@ant-design/icons';
+import { useKeyboardNav } from '@context/KeyboardNavContext';
 import { Tabs } from 'antd';
 import type React from 'react';
 import ActiveRules from './ActiveRules';
 import HeaderTable from './HeaderTable';
 import TagManager from './TagManager';
 
-interface PageInfo {
-  visibleRowCount: number;
-  visibleRowIds: readonly (string | number)[];
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
-  onNextPage?: () => void;
-  onPrevPage?: () => void;
-}
+const RulesList: React.FC = () => {
+  const { activeTab, onTabChange, focusedRowIndex, pendingDeleteIndex, setPageInfo, setRowActions } = useKeyboardNav();
 
-interface RulesListProps {
-  activeTab: string | null;
-  onTabChange: (key: string) => void;
-  focusedRowIndex: number;
-  pendingDeleteIndex: number;
-  onPageInfoChange: (info: PageInfo) => void;
-  onRowActionsChange: (actions: {
-    onToggleRow?: (index: number) => void;
-    onExpandRow?: (index: number) => void;
-    onCollapseRow?: (index: number) => void;
-    onEditRow?: (index: number) => void;
-    onCopyRow?: (index: number) => void;
-    onDeleteRow?: (index: number) => void;
-    onAddRule?: () => void;
-  }) => void;
-}
-
-const RulesList: React.FC<RulesListProps> = ({
-  activeTab,
-  onTabChange,
-  focusedRowIndex,
-  pendingDeleteIndex,
-  onPageInfoChange,
-  onRowActionsChange,
-}) => {
   const items = [
     {
       key: 'active-rules',
-      label: 'Active',
+      label: 'This Page',
       children: (
         <ActiveRules
           focusedRowIndex={activeTab === 'active-rules' ? focusedRowIndex : -1}
           pendingDeleteIndex={activeTab === 'active-rules' ? pendingDeleteIndex : -1}
-          onPageInfoChange={activeTab === 'active-rules' ? onPageInfoChange : undefined}
-          onRowActionsChange={activeTab === 'active-rules' ? onRowActionsChange : undefined}
+          onPageInfoChange={activeTab === 'active-rules' ? setPageInfo : undefined}
+          onRowActionsChange={activeTab === 'active-rules' ? setRowActions : undefined}
         />
       ),
       icon: <ThunderboltTwoTone />,
     },
     {
       key: 'all-rules',
-      label: 'Rules',
+      label: 'All Rules',
       children: (
         <HeaderTable
           focusedRowIndex={activeTab === 'all-rules' ? focusedRowIndex : -1}
           pendingDeleteIndex={activeTab === 'all-rules' ? pendingDeleteIndex : -1}
-          onPageInfoChange={activeTab === 'all-rules' ? onPageInfoChange : undefined}
-          onRowActionsChange={activeTab === 'all-rules' ? onRowActionsChange : undefined}
+          onPageInfoChange={activeTab === 'all-rules' ? setPageInfo : undefined}
+          onRowActionsChange={activeTab === 'all-rules' ? setRowActions : undefined}
         />
       ),
       icon: <AppstoreTwoTone />,

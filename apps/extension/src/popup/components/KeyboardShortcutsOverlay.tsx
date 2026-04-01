@@ -1,6 +1,7 @@
 import { Typography } from 'antd';
 import type React from 'react';
 import { useEffect, useRef } from 'react';
+import { isFirefox } from '@utils/browser-api';
 
 const { Text } = Typography;
 
@@ -11,20 +12,22 @@ interface KeyboardShortcutsOverlayProps {
 
 interface ShortcutEntry {
   keys: string[];
+  combo?: boolean;
   description: string;
 }
 
 interface ShortcutGroup {
   title: string;
   shortcuts: ShortcutEntry[];
+  hint?: { label: string; onClick: () => void };
 }
 
 const LEFT_COLUMN: ShortcutGroup[] = [
   {
     title: 'Navigation',
     shortcuts: [
-      { keys: ['1'], description: 'Switch to Active tab' },
-      { keys: ['2'], description: 'Switch to Rules tab' },
+      { keys: ['1'], description: 'Switch to This Page tab' },
+      { keys: ['2'], description: 'Switch to All Rules tab' },
       { keys: ['3'], description: 'Switch to Tags tab' },
       { keys: ['/'], description: 'Focus search' },
       { keys: ['['], description: 'Previous page' },
@@ -45,6 +48,8 @@ const LEFT_COLUMN: ShortcutGroup[] = [
   },
 ];
 
+const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
+
 const RIGHT_COLUMN: ShortcutGroup[] = [
   {
     title: 'Table rows',
@@ -58,6 +63,22 @@ const RIGHT_COLUMN: ShortcutGroup[] = [
       { keys: ['c'], description: 'Copy value' },
       { keys: ['dd'], description: 'Delete rule (press twice)' },
     ],
+  },
+  {
+    title: 'Browser',
+    shortcuts: [
+      { keys: isMac ? ['\u2318', '\u21E7', '.'] : ['Ctrl', 'Shift', '.'], combo: true, description: 'Open extension popup' },
+    ],
+    hint: {
+      label: 'Customize browser shortcut \u2197',
+      onClick: () => {
+        if (isFirefox) {
+          void chrome.tabs.create({ url: 'about:addons' });
+        } else {
+          void chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
+        }
+      },
+    },
   },
 ];
 
@@ -77,7 +98,7 @@ const ShortcutColumn: React.FC<{ groups: ShortcutGroup[] }> = ({ groups }) => (
                 <span key={key}>
                   {i > 0 && (
                     <Text type="secondary" style={{ fontSize: '10px', margin: '0 2px' }}>
-                      /
+                      {shortcut.combo ? '+' : '/'}
                     </Text>
                   )}
                   <Kbd>{key}</Kbd>
@@ -87,6 +108,11 @@ const ShortcutColumn: React.FC<{ groups: ShortcutGroup[] }> = ({ groups }) => (
             <Text style={{ fontSize: '12px' }}>{shortcut.description}</Text>
           </div>
         ))}
+        {group.hint && (
+          <span className="keyboard-shortcuts-customize-link" onClick={group.hint.onClick}>
+            {group.hint.label}
+          </span>
+        )}
       </div>
     ))}
   </div>

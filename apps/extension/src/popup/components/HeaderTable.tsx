@@ -1,8 +1,6 @@
 import {
   ApiOutlined,
-  CheckOutlined,
   CodeOutlined,
-  CopyTwoTone,
   DeleteOutlined,
   DownOutlined,
   EditOutlined,
@@ -18,11 +16,15 @@ import {
 import type { DynamicSource, HeaderEntry } from '@context/HeaderContext';
 import { useHeader } from '@hooks/useHeader';
 import { getAppLauncher } from '@utils/app-launcher';
-import { App, Button, Dropdown, Empty, Input, Popconfirm, Space, Switch, Table, Tag, Tooltip, Typography } from 'antd';
+import { App, Button, Dropdown, Empty, Input, Popconfirm, Space, Switch, Table, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import type React from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRowActionRegistration } from '@/hooks/useRowActionRegistration';
+import { useTablePagination } from '@/hooks/useTablePagination';
+import { type PageInfo, type RowActions, getTagColor } from '../utils/table-shared';
+import { type TagDescriptor, renderDomainTags, renderTagOverflow, renderValueWithCopy, truncateValue } from './columns/sharedColumnRenderers';
 import DeleteConfirmOverlay from './DeleteConfirmOverlay';
 
 const { Search } = Input;
@@ -58,30 +60,11 @@ interface DynamicValueInfo {
   isCachedValue: boolean;
 }
 
-const PAGE_SIZE = 10;
-
-interface PageInfo {
-  visibleRowCount: number;
-  visibleRowIds: readonly (string | number)[];
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
-  onNextPage?: () => void;
-  onPrevPage?: () => void;
-}
-
 interface HeaderTableProps {
   focusedRowIndex?: number;
   pendingDeleteIndex?: number;
   onPageInfoChange?: (info: PageInfo) => void;
-  onRowActionsChange?: (actions: {
-    onToggleRow?: (index: number) => void;
-    onExpandRow?: (index: number) => void;
-    onCollapseRow?: (index: number) => void;
-    onEditRow?: (index: number) => void;
-    onCopyRow?: (index: number) => void;
-    onDeleteRow?: (index: number) => void;
-    onAddRule?: () => void;
-  }) => void;
+  onRowActionsChange?: (actions: RowActions) => void;
 }
 
 const HeaderTable: React.FC<HeaderTableProps> = ({
@@ -95,12 +78,11 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
 
   const { headerEntries, dynamicSources, isConnected, uiState, updateUiState } = useHeader();
 
-  const [copiedRowId, setCopiedRowId] = useState<string | null>(null);
+  const [copiedRowId, setCopiedRowId] = useState<string | number | null>(null);
   const [searchText, setSearchText] = useState(uiState?.tableState?.searchText || '');
   const [filteredInfo, setFilteredInfo] = useState<Record<string, FilterValue | null>>(
     (uiState?.tableState?.filteredInfo as Record<string, FilterValue | null>) || {},
   );
-  const [currentPage, setCurrentPage] = useState(1);
   const [sortedInfo, setSortedInfo] = useState<SorterResult<TableRecord>>(
     (uiState?.tableState?.sortedInfo as SorterResult<TableRecord>) || {},
   );
@@ -197,34 +179,10 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
   const injectingCount = dataSource.filter((item) => item.isEnabled && !item.placeholderType).length;
   const totalCount = dataSource.length;
 
-  // Report page info to keyboard navigation
-  const totalPages = Math.ceil(filteredData.length / PAGE_SIZE);
-  const pageStart = (currentPage - 1) * PAGE_SIZE;
-  const pageSlice = filteredData.slice(pageStart, pageStart + PAGE_SIZE);
-  const visibleRowCount = pageSlice.length;
-  const visibleRowIdsKey = pageSlice.map((r) => r.key).join(',');
-  // biome-ignore lint/correctness/useExhaustiveDependencies: visibleRowIdsKey is a stable string representation
-  const visibleRowIds = useMemo(() => pageSlice.map((r) => r.key), [visibleRowIdsKey]);
-
-  const goToNextPage = useCallback(() => {
-    setCurrentPage((p) => Math.min(p + 1, totalPages));
-  }, [totalPages]);
-
-  const goToPrevPage = useCallback(() => {
-    setCurrentPage((p) => Math.max(p - 1, 1));
-  }, []);
-
-  useEffect(() => {
-    if (!onPageInfoChange) return;
-    onPageInfoChange({
-      visibleRowCount,
-      visibleRowIds,
-      hasNextPage: currentPage < totalPages,
-      hasPrevPage: currentPage > 1,
-      onNextPage: goToNextPage,
-      onPrevPage: goToPrevPage,
-    });
-  }, [onPageInfoChange, visibleRowCount, visibleRowIds, currentPage, totalPages, goToNextPage, goToPrevPage]);
+  const { paginationConfig } = useTablePagination({
+    dataSource: filteredData,
+    onPageInfoChange,
+  });
 
   // Register row actions for keyboard navigation
   const handleToggleRow = useCallback(
@@ -298,16 +256,13 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
     requestAnimationFrame(() => tryFocus(5));
   }, []);
 
-  useEffect(() => {
-    if (!onRowActionsChange) return;
-    onRowActionsChange({
-      onToggleRow: handleToggleRow,
-      onEditRow: handleEditRow,
-      onCopyRow: handleCopyRow,
-      onDeleteRow: handleDeleteRow,
-      onAddRule: handleAddRule,
-    });
-  }, [onRowActionsChange, handleToggleRow, handleEditRow, handleCopyRow, handleDeleteRow, handleAddRule]);
+  useRowActionRegistration(onRowActionsChange, {
+    onToggleRow: handleToggleRow,
+    onEditRow: handleEditRow,
+    onCopyRow: handleCopyRow,
+    onDeleteRow: handleDeleteRow,
+    onAddRule: handleAddRule,
+  });
 
   const handleChange = (
     _pagination: unknown,
@@ -347,27 +302,6 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
       });
     }
   };
-
-  const TAG_COLORS = [
-    'blue',
-    'volcano',
-    'green',
-    'purple',
-    'orange',
-    'cyan',
-    'magenta',
-    'gold',
-    'geekblue',
-    'red',
-  ] as const;
-
-  function getTagColor(tag: string): string {
-    let hash = 5381;
-    for (let i = 0; i < tag.length; i++) {
-      hash = ((hash * 33) ^ tag.charCodeAt(i)) >>> 0;
-    }
-    return TAG_COLORS[hash % TAG_COLORS.length];
-  }
 
   function getPlaceholderTooltip(type: PlaceholderType, sourceId?: string | number | null): string {
     switch (type) {
@@ -421,46 +355,14 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
       sortOrder: sortedInfo.columnKey === 'actualValue' ? sortedInfo.order : null,
       render: (text: string, record: TableRecord) => {
         const fullValue = text || '';
-        let displayValue = fullValue;
-        if (displayValue.length > 16) {
-          displayValue = `${displayValue.substring(0, 9)}...${displayValue.substring(displayValue.length - 4)}`;
-        }
-
-        return (
-          <div
-            className="value-cell"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-              opacity: record.isEnabled ? 1 : 0.5,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-            }}
-          >
-            <Text style={{ fontSize: '13px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {displayValue}
-            </Text>
-            {fullValue &&
-              (copiedRowId === record.id ? (
-                <CheckOutlined
-                  className="value-copy-icon"
-                  style={{ fontSize: '12px', color: '#52c41a', flexShrink: 0, opacity: 1 }}
-                />
-              ) : (
-                <CopyTwoTone
-                  className="value-copy-icon"
-                  style={{ fontSize: '12px', cursor: 'pointer', flexShrink: 0, opacity: 0 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void navigator.clipboard.writeText(fullValue);
-                    setCopiedRowId(record.id);
-                    setTimeout(() => setCopiedRowId(null), 1000);
-                  }}
-                />
-              ))}
-          </div>
-        );
+        return renderValueWithCopy({
+          fullValue,
+          displayValue: truncateValue(fullValue),
+          rowKey: record.id,
+          copiedRowId,
+          setCopiedRowId,
+          opacity: record.isEnabled ? 1 : 0.5,
+        });
       },
     },
     {
@@ -477,35 +379,7 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
       filterSearch: true,
       onFilter: (value, record) => record.domains.includes(value as string),
       sortOrder: sortedInfo.columnKey === 'domains' ? sortedInfo.order : null,
-      render: (domains: string[]) => {
-        if (domains.length === 0) return null;
-        const first = domains[0].length > 14 ? `${domains[0].substring(0, 14)}...` : domains[0];
-        const overflowCount = domains.length - 1;
-        const tooltip = (
-          <div style={{ fontFamily: 'monospace', fontSize: 12 }}>
-            {domains.map((d, i) => (
-              <div key={i}>
-                <span style={{ opacity: 0.6 }}>{i + 1}. </span>
-                {d}
-              </div>
-            ))}
-          </div>
-        );
-        return (
-          <Tooltip title={tooltip} styles={{ root: { maxWidth: 500 } }}>
-            <Space size={2}>
-              <Tag variant="outlined" style={{ fontSize: '12px', cursor: 'default', margin: 0 }}>
-                {first}
-              </Tag>
-              {overflowCount > 0 && (
-                <Tag variant="outlined" style={{ fontSize: '12px', cursor: 'default', margin: 0 }}>
-                  +{overflowCount}
-                </Tag>
-              )}
-            </Space>
-          </Tooltip>
-        );
-      },
+      render: (domains: string[]) => renderDomainTags(domains, false),
     },
     {
       title: 'Tags',
@@ -561,13 +435,7 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
       },
       sortOrder: sortedInfo.columnKey === 'tags' ? sortedInfo.order : null,
       render: (_: unknown, record: TableRecord) => {
-        const tagStyle = { margin: 0, fontSize: '11px' };
-
-        // Build tag descriptors ordered by display priority:
-        // 1. Status (Cached, Missing, Empty) — most important
-        // 2. Custom tag (user-assigned, e.g. DEV)
-        // 3. Req/Res — always present, least important
-        const allTags: { label: string; color?: string; tooltip?: string }[] = [];
+        const allTags: TagDescriptor[] = [];
         if (!record.placeholderType && record.isCachedValue && record.isEnabled) {
           allTags.push({
             label: 'Cached',
@@ -587,60 +455,9 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
         }
         allTags.push({ label: record.isResponse ? 'Res' : 'Req', tooltip: record.isResponse ? 'Response' : 'Request' });
 
-        // Show first 1 inline if status tag (Cached/Missing/Empty) is present, otherwise first 2
         const hasStatusTag =
-          allTags.length > 0 &&
-          (allTags[0].label === 'Cached' || allTags[0].label === 'Missing' || allTags[0].label === 'Empty');
-        const maxVisible = hasStatusTag ? 1 : 2;
-        const visible = allTags.slice(0, maxVisible);
-        const overflowCount = allTags.length - maxVisible;
-
-        return (
-          <Space size={2}>
-            {visible.map((t, i) =>
-              t.tooltip ? (
-                <Tooltip key={i} title={t.tooltip}>
-                  <Tag color={t.color} variant="outlined" style={{ ...tagStyle, cursor: 'help' }}>
-                    {t.label}
-                  </Tag>
-                </Tooltip>
-              ) : (
-                <Tag key={i} color={t.color} variant="outlined" style={tagStyle}>
-                  {t.label}
-                </Tag>
-              ),
-            )}
-            {overflowCount > 0 && (
-              <Tooltip
-                title={
-                  <div style={{ fontSize: 12 }}>
-                    {allTags.map((t, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 4,
-                          marginBottom: i < allTags.length - 1 ? 4 : 0,
-                        }}
-                      >
-                        <span style={{ opacity: 0.6 }}>{i + 1}. </span>
-                        <Tag color={t.color} variant="outlined" style={{ margin: 0, fontSize: '11px' }}>
-                          {t.label}
-                        </Tag>
-                      </div>
-                    ))}
-                  </div>
-                }
-                styles={{ root: { maxWidth: 400 } }}
-              >
-                <Tag variant="outlined" style={{ ...tagStyle, cursor: 'help' }}>
-                  +{overflowCount}
-                </Tag>
-              </Tooltip>
-            )}
-          </Space>
-        );
+          allTags[0]?.label === 'Cached' || allTags[0]?.label === 'Missing' || allTags[0]?.label === 'Empty';
+        return renderTagOverflow(allTags, hasStatusTag ? 1 : 2);
       },
     },
     {
@@ -698,45 +515,41 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
       align: 'center',
       fixed: 'right',
       render: (_: unknown, record: TableRecord) => (
-        <Space size={2}>
-          <Tooltip title={!isConnected ? 'App not connected' : 'Edit in desktop app'}>
+        <Tooltip title={!isConnected ? 'App not connected' : 'Edit or delete rule'}>
+          <Space size={2}>
             <Button
               type="text"
               icon={<EditOutlined />}
               size="small"
               disabled={!isConnected}
               onClick={async () => {
-                if (!isConnected) {
-                  message.warning('Please connect to the desktop app to edit rules');
-                  return;
-                }
                 await appLauncher.launchOrFocus({ tab: 'rules', subTab: 'headers', action: 'edit', itemId: record.id });
                 message.info('Opening edit dialog in OpenHeaders app');
               }}
             />
-          </Tooltip>
-          <Popconfirm
-            title="Delete rule"
-            description={`Delete "${record.headerName}"?`}
-            onConfirm={async () => {
-              const { runtime } = await import('../../utils/browser-api');
-              runtime.sendMessage({ type: 'deleteRule', ruleId: record.id }, (response: unknown) => {
-                const resp = response as { success?: boolean } | undefined;
-                if (resp?.success) {
-                  message.success('Rule deleted');
-                } else {
-                  message.error('Failed to delete rule');
-                }
-              });
-            }}
-            okText="Delete"
-            okType="danger"
-            cancelText="Cancel"
-            disabled={!isConnected}
-          >
-            <Button type="text" danger icon={<DeleteOutlined />} size="small" disabled={!isConnected} />
-          </Popconfirm>
-        </Space>
+            <Popconfirm
+              title="Delete rule"
+              description={`Delete "${record.headerName}"?`}
+              onConfirm={async () => {
+                const { runtime } = await import('../../utils/browser-api');
+                runtime.sendMessage({ type: 'deleteRule', ruleId: record.id }, (response: unknown) => {
+                  const resp = response as { success?: boolean } | undefined;
+                  if (resp?.success) {
+                    message.success('Rule deleted');
+                  } else {
+                    message.error('Failed to delete rule');
+                  }
+                });
+              }}
+              okText="Delete"
+              okType="danger"
+              cancelText="Cancel"
+              disabled={!isConnected}
+            >
+              <Button type="text" danger icon={<DeleteOutlined />} size="small" disabled={!isConnected} />
+            </Popconfirm>
+          </Space>
+        </Tooltip>
       ),
     },
   ];
@@ -865,7 +678,7 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
             <Text style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Header Rules</Text>
             {totalCount > 0 && (
               <Text type="secondary" style={{ fontSize: '12px' }}>
-                {injectingCount} of {totalCount} active
+                {injectingCount} of {totalCount} enabled
                 {injectingCount < enabledCount ? `, ${enabledCount - injectingCount} unresolved` : ''}
               </Text>
             )}
@@ -888,6 +701,12 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
                 style={{ width: 300 }}
                 value={searchText}
                 onChange={(e) => handleSearchChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape' && searchText) {
+                    e.stopPropagation();
+                    handleSearchChange('');
+                  }
+                }}
               />
               {(searchText || Object.keys(filteredInfo).length > 0 || sortedInfo.columnKey) && (
                 <div style={{ textAlign: 'right', marginTop: 2 }}>
@@ -910,15 +729,7 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
         <Table
           dataSource={filteredData}
           columns={columns}
-          pagination={{
-            current: currentPage,
-            pageSize: PAGE_SIZE,
-            size: 'small',
-            showSizeChanger: false,
-            showTotal: (total, range) => `${range[0]}-${range[1]} of ${total}`,
-            style: { marginBottom: 0, marginTop: 4 },
-            onChange: (page) => setCurrentPage(page),
-          }}
+          pagination={paginationConfig}
           size="small"
           scroll={{ x: 920, y: 290 }}
           onChange={handleChange}
