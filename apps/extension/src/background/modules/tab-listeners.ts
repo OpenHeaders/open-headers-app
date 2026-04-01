@@ -38,7 +38,7 @@ export function setupTabListeners(updateBadgeCallback: () => void, recordingServ
             let significantChange = true;
 
             // Check if any tracked URL is from the same origin and path
-            for (const trackedUrl of trackedUrls) {
+            for (const trackedUrl of trackedUrls.keys()) {
               try {
                 const oldUrl = new URL(trackedUrl);
                 // If same origin and same pathname, it's not a significant change
@@ -74,7 +74,7 @@ export function setupTabListeners(updateBadgeCallback: () => void, recordingServ
             const newOrigin = new URL(changeInfo.url).origin;
             let differentOrigin = true;
 
-            for (const trackedUrl of trackedUrls) {
+            for (const trackedUrl of trackedUrls.keys()) {
               try {
                 const trackedOrigin = new URL(trackedUrl).origin;
                 if (newOrigin === trackedOrigin) {
@@ -141,9 +141,9 @@ export function setupTabListeners(updateBadgeCallback: () => void, recordingServ
       checkIfUrlMatchesAnyRule(tab.url).then((matches) => {
         if (matches) {
           if (!tabsWithActiveRules.has(tab.id!)) {
-            tabsWithActiveRules.set(tab.id!, new Set());
+            tabsWithActiveRules.set(tab.id!, new Map());
           }
-          tabsWithActiveRules.get(tab.id!)!.add(normalizeUrlForTracking(tab.url!));
+          tabsWithActiveRules.get(tab.id!)!.set(normalizeUrlForTracking(tab.url!), Date.now());
           logger.info('TabListeners', `New tab ${tab.id} created with URL that matches rules`);
 
           if (tab.active) {
@@ -258,9 +258,9 @@ export function setupTabListeners(updateBadgeCallback: () => void, recordingServ
             if (matches) {
               // URL matches rules, ensure it's tracked
               if (!tabsWithActiveRules.has(details.tabId)) {
-                tabsWithActiveRules.set(details.tabId, new Set());
+                tabsWithActiveRules.set(details.tabId, new Map());
               }
-              tabsWithActiveRules.get(details.tabId)!.add(normalizeUrlForTracking(details.url));
+              tabsWithActiveRules.get(details.tabId)!.set(normalizeUrlForTracking(details.url), Date.now());
             }
 
             // Update badge

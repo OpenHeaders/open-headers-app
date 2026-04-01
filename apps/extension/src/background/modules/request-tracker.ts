@@ -5,6 +5,7 @@
 import type { HeaderEntry, SavedDataMap } from '@openheaders/core';
 import { storage, tabs } from '@utils/browser-api.js';
 import { getChunkedData } from '@utils/storage-chunking.js';
+import { sendMessageWithCallback } from '@utils/messaging';
 import type { ActiveRule, MatchedRequest } from '@/types/browser';
 import {
   clearPatternCache,
@@ -19,8 +20,10 @@ const MAX_TRACKED_URLS_PER_TAB = 50; // Limit tracked URLs to prevent memory lea
 const REVALIDATION_QUEUE = new Set<number>(); // Track pending revalidations
 let isRevalidating = false; // Prevent concurrent revalidations
 
-// Track which tabs are making requests to domains with rules
-export const tabsWithActiveRules: Map<number, Set<string>> = new Map();
+// Track which tabs are making requests to domains with rules.
+// Map<tabId, Map<normalizedUrl, timestamp>> — timestamp enables
+// the Active tab to show when each request was intercepted.
+export const tabsWithActiveRules: Map<number, Map<string, number>> = new Map();
 
 // ── In-memory savedData cache ──────────────────────────────────────
 let cachedSavedData: SavedDataMap | null = null;
@@ -111,11 +114,13 @@ export async function getActiveRulesForTab(tabId: number | undefined, tabUrl: st
     return [];
   }
 
-  // Get tracked resource URLs for this tab (indirect matches)
-  const trackedResourceUrls: string[] = [];
+  // Get tracked resource URLs with timestamps for this tab (indirect matches)
+  const trackedResources: Map<string, number> = new Map();
   if (tabId && tabsWithActiveRules.has(tabId)) {
-    const trackedUrls = tabsWithActiveRules.get(tabId)!;
-    trackedResourceUrls.push(...trackedUrls);
+    const tracked = tabsWithActiveRules.get(tabId)!;
+    for (const [url, ts] of tracked) {
+      trackedResources.set(url, ts);
+    }
   }
 
   return new Promise<ActiveRule[]>((resolve) => {
@@ -131,29 +136,31 @@ export async function getActiveRulesForTab(tabId: number | undefined, tabUrl: st
         // Collect matched URLs with the pattern that matched them
         const matchedUrls: MatchedRequest[] = [];
 
+        const now = Date.now();
+
         // Check if rule applies to all domains
         if (domains.length === 0) {
           matchType = 'direct'; // Rules without domains apply everywhere
-          matchedUrls.push({ url: tabUrl, pattern: '*' });
-          for (const resourceUrl of trackedResourceUrls) {
-            matchedUrls.push({ url: resourceUrl, pattern: '*' });
+          matchedUrls.push({ url: tabUrl, pattern: '*', timestamp: now });
+          for (const [resourceUrl, ts] of trackedResources) {
+            matchedUrls.push({ url: resourceUrl, pattern: '*', timestamp: ts });
           }
         } else {
           // Check for direct match (main page domain)
           for (const domain of domains) {
             if (doesUrlMatchPattern(tabUrl, domain)) {
               matchType = 'direct';
-              matchedUrls.push({ url: tabUrl, pattern: domain });
+              matchedUrls.push({ url: tabUrl, pattern: domain, timestamp: now });
               break;
             }
           }
 
           // Check resource URLs — collect ALL matching ones regardless of direct match
-          if (trackedResourceUrls.length > 0) {
-            for (const resourceUrl of trackedResourceUrls) {
+          if (trackedResources.size > 0) {
+            for (const [resourceUrl, ts] of trackedResources) {
               for (const domain of domains) {
                 if (doesUrlMatchPattern(resourceUrl, domain)) {
-                  matchedUrls.push({ url: resourceUrl, pattern: domain });
+                  matchedUrls.push({ url: resourceUrl, pattern: domain, timestamp: ts });
                   if (!matchType) matchType = 'indirect';
                   break;
                 }
@@ -206,13 +213,13 @@ export async function revalidateTrackedRequests(): Promise<void> {
         // (enabled or disabled — tracking represents observed resource domains,
         // not rule enable state, so disabled rules keep their tracked URLs)
         for (const [tabId, trackedUrls] of tabsWithActiveRules.entries()) {
-          const validUrls = new Set<string>();
+          const validUrls = new Map<string, number>();
 
           // Limit the number of URLs we check to prevent performance issues
-          const urlsToCheck = Array.from(trackedUrls).slice(-MAX_TRACKED_URLS_PER_TAB);
+          const urlsToCheck = Array.from(trackedUrls.entries()).slice(-MAX_TRACKED_URLS_PER_TAB);
 
           // Check each tracked URL against all rules
-          for (const url of urlsToCheck) {
+          for (const [url, ts] of urlsToCheck) {
             let stillMatches = false;
 
             for (const [_id, entry] of allRules) {
@@ -227,7 +234,7 @@ export async function revalidateTrackedRequests(): Promise<void> {
             }
 
             if (stillMatches) {
-              validUrls.add(url);
+              validUrls.set(url, ts);
             }
           }
 
@@ -264,9 +271,9 @@ export async function restoreTrackingState(updateBadgeCallback: () => void): Pro
         const matchesRule = await checkIfUrlMatchesAnyRule(tab.url);
         if (matchesRule) {
           if (!tabsWithActiveRules.has(tab.id)) {
-            tabsWithActiveRules.set(tab.id, new Set());
+            tabsWithActiveRules.set(tab.id, new Map());
           }
-          tabsWithActiveRules.get(tab.id)!.add(normalizeUrlForTracking(tab.url));
+          tabsWithActiveRules.get(tab.id)!.set(normalizeUrlForTracking(tab.url), Date.now());
         }
       }
     }
@@ -283,24 +290,29 @@ export async function restoreTrackingState(updateBadgeCallback: () => void): Pro
  */
 export function addTrackedUrl(tabId: number, url: string): void {
   if (!tabsWithActiveRules.has(tabId)) {
-    tabsWithActiveRules.set(tabId, new Set());
+    tabsWithActiveRules.set(tabId, new Map());
   }
 
   const trackedUrls = tabsWithActiveRules.get(tabId)!;
 
+  // Skip if already tracked (no-op, no notification needed)
+  if (trackedUrls.has(url)) return;
+
   // Limit the number of tracked URLs per tab to prevent memory leaks
   if (trackedUrls.size >= MAX_TRACKED_URLS_PER_TAB) {
-    // Remove oldest entries (convert to array, remove first items, convert back)
-    const urlArray = Array.from(trackedUrls);
-    const newUrls = new Set(urlArray.slice(-MAX_TRACKED_URLS_PER_TAB + 1));
-    tabsWithActiveRules.set(tabId, newUrls);
+    // Remove oldest entries by timestamp
+    const sorted = Array.from(trackedUrls.entries()).sort((a, b) => a[1] - b[1]);
+    const toKeep = sorted.slice(-MAX_TRACKED_URLS_PER_TAB + 1);
     trackedUrls.clear();
-    newUrls.forEach((u) => {
-      trackedUrls.add(u);
-    });
+    for (const [u, ts] of toKeep) {
+      trackedUrls.set(u, ts);
+    }
   }
 
-  trackedUrls.add(url);
+  trackedUrls.set(url, Date.now());
+
+  // Notify the popup (if open) that tracked URLs changed
+  sendMessageWithCallback({ type: 'trackedUrlsUpdated', tabId }, () => {});
 }
 
 /**

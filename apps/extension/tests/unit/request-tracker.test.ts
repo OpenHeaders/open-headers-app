@@ -12,6 +12,11 @@ vi.mock('@utils/browser-api.js', () => ({
   tabs: { query: vi.fn() },
 }));
 
+const mockSendMessage = vi.fn();
+vi.mock('@utils/messaging', () => ({
+  sendMessageWithCallback: (...args: unknown[]) => mockSendMessage(...args),
+}));
+
 vi.mock('@utils/logger', () => ({
   logger: {
     info: vi.fn(),
@@ -22,7 +27,7 @@ vi.mock('@utils/logger', () => ({
 }));
 
 import type { SavedDataMap } from '@openheaders/core';
-import { checkIfUrlMatchesAnyRule, getActiveRulesForTab, refreshSavedDataCache } from '@/background/modules/request-tracker';
+import { addTrackedUrl, checkIfUrlMatchesAnyRule, getActiveRulesForTab, refreshSavedDataCache, tabsWithActiveRules } from '@/background/modules/request-tracker';
 
 function makeSavedData(entries: Record<string, { headerName: string; domains: string[]; isEnabled?: boolean; isResponse?: boolean; tag?: string }>): SavedDataMap {
   const data: SavedDataMap = {};
@@ -52,6 +57,7 @@ function seedCache(data: SavedDataMap): void {
 describe('getActiveRulesForTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    tabsWithActiveRules.clear();
   });
 
   it('returns empty array for non-trackable URLs', async () => {
@@ -74,7 +80,10 @@ describe('getActiveRulesForTab', () => {
     expect(result[0].headerName).toBe('X-Debug');
     expect(result[0].isEnabled).toBe(true);
     expect(result[0].matchType).toBe('direct');
-    expect(result[0].matchedUrls).toEqual([{ url: 'https://api.openheaders.io/v2', pattern: '*.openheaders.io' }]);
+    expect(result[0].matchedUrls).toHaveLength(1);
+    expect(result[0].matchedUrls[0].url).toBe('https://api.openheaders.io/v2');
+    expect(result[0].matchedUrls[0].pattern).toBe('*.openheaders.io');
+    expect(result[0].matchedUrls[0].timestamp).toBeGreaterThan(0);
   });
 
   it('returns disabled matching rules (Option B — show all matching)', async () => {
@@ -111,7 +120,10 @@ describe('getActiveRulesForTab', () => {
     const result = await getActiveRulesForTab(1, 'https://any-site.com/page');
     expect(result).toHaveLength(1);
     expect(result[0].matchType).toBe('direct');
-    expect(result[0].matchedUrls).toEqual([{ url: 'https://any-site.com/page', pattern: '*' }]);
+    expect(result[0].matchedUrls).toHaveLength(1);
+    expect(result[0].matchedUrls[0].url).toBe('https://any-site.com/page');
+    expect(result[0].matchedUrls[0].pattern).toBe('*');
+    expect(result[0].matchedUrls[0].timestamp).toBeGreaterThan(0);
   });
 
   it('preserves rule id and key in results', async () => {
@@ -138,6 +150,7 @@ describe('getActiveRulesForTab', () => {
 describe('checkIfUrlMatchesAnyRule', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    tabsWithActiveRules.clear();
   });
 
   it('returns true when URL matches an enabled rule', async () => {
@@ -181,5 +194,100 @@ describe('checkIfUrlMatchesAnyRule', () => {
 
     const result = await checkIfUrlMatchesAnyRule('https://github.githubassets.com/assets/37160-72dc5a515abc7d3b.js');
     expect(result).toBe(true);
+  });
+});
+
+describe('addTrackedUrl', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    tabsWithActiveRules.clear();
+  });
+
+  it('adds a URL with a timestamp', () => {
+    const before = Date.now();
+    addTrackedUrl(1, 'https://api.openheaders.io/v2');
+    const after = Date.now();
+
+    const tracked = tabsWithActiveRules.get(1)!;
+    expect(tracked.has('https://api.openheaders.io/v2')).toBe(true);
+    const ts = tracked.get('https://api.openheaders.io/v2')!;
+    expect(ts).toBeGreaterThanOrEqual(before);
+    expect(ts).toBeLessThanOrEqual(after);
+  });
+
+  it('notifies popup when a new URL is tracked', () => {
+    addTrackedUrl(1, 'https://api.openheaders.io/v2');
+
+    expect(mockSendMessage).toHaveBeenCalledWith(
+      { type: 'trackedUrlsUpdated', tabId: 1 },
+      expect.any(Function),
+    );
+  });
+
+  it('does not notify for duplicate URLs', () => {
+    addTrackedUrl(1, 'https://api.openheaders.io/v2');
+    mockSendMessage.mockClear();
+
+    addTrackedUrl(1, 'https://api.openheaders.io/v2');
+    expect(mockSendMessage).not.toHaveBeenCalled();
+  });
+
+  it('creates tab entry if it does not exist', () => {
+    expect(tabsWithActiveRules.has(42)).toBe(false);
+    addTrackedUrl(42, 'https://openheaders.io');
+    expect(tabsWithActiveRules.has(42)).toBe(true);
+  });
+
+  it('evicts oldest entries when limit is reached', () => {
+    // Add 50 URLs (the max)
+    for (let i = 0; i < 50; i++) {
+      addTrackedUrl(1, `https://openheaders.io/page/${i}`);
+    }
+    expect(tabsWithActiveRules.get(1)!.size).toBe(50);
+
+    // Adding one more should evict the oldest
+    addTrackedUrl(1, 'https://openheaders.io/page/new');
+    expect(tabsWithActiveRules.get(1)!.size).toBe(50);
+    expect(tabsWithActiveRules.get(1)!.has('https://openheaders.io/page/new')).toBe(true);
+  });
+});
+
+describe('getActiveRulesForTab with tracked resource URLs', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    tabsWithActiveRules.clear();
+  });
+
+  it('returns indirect matches with timestamps from tracked URLs', async () => {
+    seedCache(makeSavedData({
+      'rule-1': { headerName: 'X-Debug', domains: ['*.cdn.openheaders.io'] },
+    }));
+
+    // Simulate a tracked resource URL
+    addTrackedUrl(1, 'https://assets.cdn.openheaders.io/bundle.js');
+
+    const result = await getActiveRulesForTab(1, 'https://openheaders.io');
+    expect(result).toHaveLength(1);
+    expect(result[0].matchType).toBe('indirect');
+    expect(result[0].matchedUrls).toHaveLength(1);
+    expect(result[0].matchedUrls[0].url).toBe('https://assets.cdn.openheaders.io/bundle.js');
+    expect(result[0].matchedUrls[0].timestamp).toBeGreaterThan(0);
+  });
+
+  it('returns both direct and indirect matchedUrls for a rule matching both', async () => {
+    seedCache(makeSavedData({
+      'rule-1': { headerName: 'X-Debug', domains: ['*.openheaders.io'] },
+    }));
+
+    addTrackedUrl(1, 'https://api.openheaders.io/data');
+
+    const result = await getActiveRulesForTab(1, 'https://app.openheaders.io/dashboard');
+    expect(result).toHaveLength(1);
+    expect(result[0].matchType).toBe('direct');
+    expect(result[0].matchedUrls).toHaveLength(2);
+    // Direct match (tab URL)
+    expect(result[0].matchedUrls[0].url).toBe('https://app.openheaders.io/dashboard');
+    // Indirect match (resource URL)
+    expect(result[0].matchedUrls[1].url).toBe('https://api.openheaders.io/data');
   });
 });

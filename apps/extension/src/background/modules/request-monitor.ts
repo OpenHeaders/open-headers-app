@@ -137,12 +137,12 @@ export function setupRequestMonitoring(updateBadgeCallback: () => void): void {
 
           if (pending.headersApplied && networkFailureErrors.includes(error)) {
             if (tabsWithActiveRules.has(pending.tabId)) {
-              const trackedUrls = tabsWithActiveRules.get(pending.tabId)!;
-              if (trackedUrls.has(pending.url)) {
-                trackedUrls.delete(pending.url);
+              const tracked = tabsWithActiveRules.get(pending.tabId)!;
+              if (tracked.has(pending.url)) {
+                tracked.delete(pending.url);
 
                 // If no more tracked URLs, remove the tab
-                if (trackedUrls.size === 0) {
+                if (tracked.size === 0) {
                   tabsWithActiveRules.delete(pending.tabId);
                 }
 
@@ -171,12 +171,12 @@ export function setupRequestMonitoring(updateBadgeCallback: () => void): void {
 
         if (pending?.headersApplied) {
           if (!tabsWithActiveRules.has(details.tabId)) {
-            tabsWithActiveRules.set(details.tabId, new Set());
+            tabsWithActiveRules.set(details.tabId, new Map());
           }
 
-          const trackedUrls = tabsWithActiveRules.get(details.tabId)!;
-          if (!trackedUrls.has(pending.url)) {
-            trackedUrls.add(pending.url);
+          const tracked = tabsWithActiveRules.get(details.tabId)!;
+          if (!tracked.has(pending.url)) {
+            tracked.set(pending.url, Date.now());
           }
         }
       },

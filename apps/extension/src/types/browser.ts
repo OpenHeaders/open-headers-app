@@ -35,6 +35,7 @@ export interface PendingRequest {
 export interface MatchedRequest {
   url: string;
   pattern: string;
+  timestamp: number;
 }
 
 export interface ActiveRule {

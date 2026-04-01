@@ -509,9 +509,7 @@ const HeaderTable: React.FC = () => {
               const { runtime } = await import('../../utils/browser-api');
               runtime.sendMessage({ type: 'toggleRule', ruleId: record.id, enabled: !enabled }, (response: unknown) => {
                 const resp = response as { success?: boolean } | undefined;
-                if (resp?.success) {
-                  message.success('Rule toggled');
-                } else {
+                if (!resp?.success) {
                   message.error('Failed to toggle rule');
                 }
               });
