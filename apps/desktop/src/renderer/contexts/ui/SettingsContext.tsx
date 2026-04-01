@@ -67,6 +67,21 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Subscribe to settings changes pushed from the main process.
+  // This handles mutations from ANY source (browser extension, tray, etc.)
+  // so the renderer always reflects the true state from SettingsCache.
+  useEffect(() => {
+    const cleanup = window.electronAPI.onSettingsChanged((updated) => {
+      if (!isMounted.current) return;
+      log.debug('Settings changed (push from main):', updated);
+      setSettings(updated);
+      if (updated.logLevel) {
+        setGlobalLogLevel(updated.logLevel);
+      }
+    });
+    return cleanup;
+  }, []);
+
   // Save settings — sends only the partial to main process (source of truth).
   // Main merges with its own state, persists, and returns the full merged result.
   const saveSettings = async (newSettings: Partial<Settings>): Promise<boolean> => {

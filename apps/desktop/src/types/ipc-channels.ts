@@ -238,6 +238,9 @@ export const IPC_PUSH = {
   WORKSPACE_DATA_UPDATED: 'workspace-data-updated',
   SYNC_STATUS_UPDATED: 'sync-status-updated',
 
+  // Settings (main → renderer, after any mutation from any source)
+  SETTINGS_CHANGED: 'settings-changed',
+
   // Workspace state (main → renderer)
   WORKSPACE_STATE_PATCH: 'workspace:state-patch',
   WORKSPACE_SWITCH_PROGRESS: 'workspace:switch-progress',

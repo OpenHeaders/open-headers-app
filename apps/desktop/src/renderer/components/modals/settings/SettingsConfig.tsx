@@ -259,9 +259,6 @@ export const getSettingsConfig = (
       type: 'hotkey',
       placeholder: 'e.g., CommandOrControl+Shift+E',
       value: formValues.recordingHotkey || 'CommandOrControl+Shift+E',
-      isActive: formValues.recordingHotkeyEnabled !== false,
-      disabled: formValues.recordingHotkeyEnabled === false,
-      tooltip: formValues.recordingHotkeyEnabled === false ? "Enable 'Recording Hotkey' to configure the shortcut" : '',
     },
     {
       // Video recording with macOS permission handling

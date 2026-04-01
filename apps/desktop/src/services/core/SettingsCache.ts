@@ -105,6 +105,10 @@ class SettingsCache {
 
   /**
    * Merge updates into the cache and persist to disk atomically.
+   * After persisting, pushes the full settings to all open renderer windows
+   * so the UI stays in sync regardless of who initiated the change
+   * (renderer, browser extension, tray, etc.).
+   * Gracefully no-ops when zero windows are open (background-only mode).
    * Returns the full merged settings.
    */
   async save(updates: Partial<AppSettings>): Promise<AppSettings> {
@@ -112,7 +116,25 @@ class SettingsCache {
     const settingsPath = this.getSettingsPath();
     await atomicWriter.writeJson(settingsPath, this.settings, { pretty: true });
     log.info('Settings saved to disk');
+    this._pushToRenderers(this.settings);
     return this.settings;
+  }
+
+  /**
+   * Push current settings to all open renderer windows.
+   * No-ops when no windows exist (app running in background-only mode).
+   */
+  private _pushToRenderers(settings: AppSettings): void {
+    try {
+      const { BrowserWindow } = electron;
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) {
+          win.webContents.send('settings-changed', settings);
+        }
+      }
+    } catch {
+      // Non-critical — app may be shutting down or no windows exist
+    }
   }
 }
 

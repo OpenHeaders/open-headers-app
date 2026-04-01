@@ -444,6 +444,7 @@ declare global {
     };
 
     // Event listeners (return cleanup function)
+    onSettingsChanged: (callback: (settings: AppSettings) => void) => () => void;
     onNavigateTo: (callback: (data: NavigationData) => void) => () => void;
     onShowApp: (callback: () => void) => () => void;
     onHideApp: (callback: () => void) => () => void;

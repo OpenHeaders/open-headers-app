@@ -258,8 +258,8 @@ const Footer: React.FC = () => {
                 Not set
               </Text>
             )}
-            <Tooltip title={!isConnected ? 'App not connected' : 'Edit hotkey in settings'}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              <Tooltip title={!isConnected ? 'App not connected' : 'Edit hotkey in settings'}>
                 <Button
                   type="text"
                   icon={<EditOutlined />}
@@ -268,14 +268,14 @@ const Footer: React.FC = () => {
                   onClick={handleEditHotkey}
                   style={{ padding: '0 4px', height: '20px', minWidth: 'auto' }}
                 />
-                <Switch
-                  size="small"
-                  checked={isConnected && recordingHotkeyEnabled}
-                  disabled={!isConnected}
-                  onChange={handleHotkeyToggle}
-                />
-              </span>
-            </Tooltip>
+              </Tooltip>
+              <Switch
+                size="small"
+                checked={isConnected && recordingHotkeyEnabled}
+                disabled={!isConnected}
+                onChange={handleHotkeyToggle}
+              />
+            </span>
           </div>
         </div>
       ),
