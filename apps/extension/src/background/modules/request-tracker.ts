@@ -81,14 +81,12 @@ export async function checkIfUrlMatchesAnyRule(url: string): Promise<boolean> {
 
   return new Promise<boolean>((resolve) => {
     ensureCache((savedData: SavedDataMap) => {
-      // Check if this URL matches any enabled rule
+      // Check if this URL matches any rule (enabled or disabled).
+      // Disabled rules still need tracking so the Active tab can show
+      // them as indirect matches with the toggle off.
       for (const id in savedData) {
         const entry: HeaderEntry = savedData[id];
 
-        // Skip disabled rules
-        if (entry.isEnabled === false) continue;
-
-        // Check each domain pattern
         const domains: string[] = entry.domains || [];
         for (const domain of domains) {
           if (doesUrlMatchPattern(normalizedUrl, domain)) {

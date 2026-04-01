@@ -22,7 +22,7 @@ vi.mock('@utils/logger', () => ({
 }));
 
 import type { SavedDataMap } from '@openheaders/core';
-import { getActiveRulesForTab, refreshSavedDataCache } from '@/background/modules/request-tracker';
+import { checkIfUrlMatchesAnyRule, getActiveRulesForTab, refreshSavedDataCache } from '@/background/modules/request-tracker';
 
 function makeSavedData(entries: Record<string, { headerName: string; domains: string[]; isEnabled?: boolean; isResponse?: boolean; tag?: string }>): SavedDataMap {
   const data: SavedDataMap = {};
@@ -130,5 +130,54 @@ describe('getActiveRulesForTab', () => {
     const result = await getActiveRulesForTab(1, 'https://api.openheaders.io/test');
     expect(result[0].tag).toBe('DEV');
     expect(result[0].isResponse).toBe(true);
+  });
+});
+
+describe('checkIfUrlMatchesAnyRule', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns true when URL matches an enabled rule', async () => {
+    seedCache(makeSavedData({
+      'rule-1': { headerName: 'X-Debug', domains: ['*.openheaders.io'], isEnabled: true },
+    }));
+
+    const result = await checkIfUrlMatchesAnyRule('https://api.openheaders.io/v2');
+    expect(result).toBe(true);
+  });
+
+  it('returns true when URL matches a disabled rule (tracks for Active tab)', async () => {
+    seedCache(makeSavedData({
+      'rule-1': { headerName: 'X-Debug', domains: ['*.openheaders.io'], isEnabled: false },
+    }));
+
+    const result = await checkIfUrlMatchesAnyRule('https://api.openheaders.io/v2');
+    expect(result).toBe(true);
+  });
+
+  it('returns false when URL matches no rules', async () => {
+    seedCache(makeSavedData({
+      'rule-1': { headerName: 'X-Debug', domains: ['*.example.com'] },
+    }));
+
+    const result = await checkIfUrlMatchesAnyRule('https://api.openheaders.io/v2');
+    expect(result).toBe(false);
+  });
+
+  it('returns false when no rules exist', async () => {
+    seedCache({});
+
+    const result = await checkIfUrlMatchesAnyRule('https://api.openheaders.io/v2');
+    expect(result).toBe(false);
+  });
+
+  it('matches path-based patterns against full URLs', async () => {
+    seedCache(makeSavedData({
+      'rule-1': { headerName: 'X-Debug', domains: ['github.githubassets.com/assets'] },
+    }));
+
+    const result = await checkIfUrlMatchesAnyRule('https://github.githubassets.com/assets/37160-72dc5a515abc7d3b.js');
+    expect(result).toBe(true);
   });
 });
