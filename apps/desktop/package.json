@@ -48,7 +48,8 @@
       "output": "dist"
     },
     "files": [
-      "dist-webpack/**/*"
+      "dist-webpack/**/*",
+      "!node_modules/@openheaders/core"
     ],
     "asar": true,
     "compression": "maximum",
