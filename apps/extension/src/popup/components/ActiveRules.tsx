@@ -166,7 +166,7 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
   const { message } = App.useApp();
   const { isConnected, disabledTagGroups } = useHeader();
   const appLauncher = getAppLauncher();
-  const { expandedRowKey, setNestedRowCount, toggleExpandedRow } = useKeyboardNav();
+  const { expandedRowKey, setNestedRowCount, toggleExpandedRow, setFocusedRowIndex } = useKeyboardNav();
   const [currentTab, setCurrentTab] = useState<CurrentTabInfo | null>(null);
   const [activeRules, setActiveRules] = useState<ActiveRule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -654,6 +654,9 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
           pagination={paginationConfig}
           size="small"
           scroll={{ x: 770, y: 290 }}
+          onRow={(_record: TableRecord, index) => ({
+            onClick: () => { if (index !== undefined) { setFocusedRowIndex(index); (document.activeElement as HTMLElement)?.blur(); } },
+          })}
           rowClassName={(record: TableRecord, index: number) => {
             const classes: string[] = [];
             if (disabledTagGroups.has(record.tag || '__no_tag__')) classes.push('row-group-paused');

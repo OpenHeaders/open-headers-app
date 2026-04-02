@@ -53,7 +53,7 @@ const TagManager: React.FC<TagManagerProps> = ({
 }) => {
   const { headerEntries, isConnected, disabledTagGroups, toggleTagGroup } = useHeader();
   const { message } = App.useApp();
-  const { expandedRowKey, setNestedRowCount, toggleExpandedRow } = useKeyboardNav();
+  const { expandedRowKey, setNestedRowCount, toggleExpandedRow, setFocusedRowIndex } = useKeyboardNav();
   const [searchText, setSearchText] = useState('');
 
   const groupedRules = useMemo((): TagGroupRecord[] => {
@@ -339,6 +339,9 @@ const TagManager: React.FC<TagManagerProps> = ({
           pagination={paginationConfig}
           size="small"
           scroll={{ x: 470, y: 290 }}
+          onRow={(_record: TagGroupRecord, index) => ({
+            onClick: () => { if (index !== undefined) { setFocusedRowIndex(index); (document.activeElement as HTMLElement)?.blur(); } },
+          })}
           rowClassName={(_record: TagGroupRecord, index: number) => {
             const classes: string[] = [];
             if (index === focusedRowIndex) classes.push('keyboard-focused-row');

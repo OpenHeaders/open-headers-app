@@ -12,6 +12,7 @@ export interface KeyboardNavContextValue {
   activeTab: string | null;
   onTabChange: (tab: string) => void;
   focusedRowIndex: number;
+  setFocusedRowIndex: (index: number | ((prev: number) => number)) => void;
   pendingDeleteIndex: number;
   expandedRowKey: string | number | null;
   nestedFocusIndex: number;
@@ -93,6 +94,14 @@ export const KeyboardNavProvider: React.FC<KeyboardNavProviderProps> = ({
 
   useKeyboardScrollAndHighlight(focus.focusedRowIndex, focus.nestedFocusIndex, expandedRowKey, containerRef);
 
+  // Reset expanded row and nested focus when switching tabs
+  // biome-ignore lint/correctness/useExhaustiveDependencies: activeTab is intentionally watched to reset expand state on tab switch
+  useEffect(() => {
+    setExpandedRowKey(null);
+    focus.setNestedFocusIndex(-1);
+    setNestedRowCount(0);
+  }, [activeTab]);
+
   // Auto-enter nested mode when a row is expanded and nested content becomes available
   useEffect(() => {
     if (expandedRowKey !== null && nestedRowCount > 0 && focus.nestedFocusIndex < 0) {
@@ -127,6 +136,7 @@ export const KeyboardNavProvider: React.FC<KeyboardNavProviderProps> = ({
     activeTab,
     onTabChange,
     focusedRowIndex: focus.focusedRowIndex,
+    setFocusedRowIndex: focus.setFocusedRowIndex,
     pendingDeleteIndex,
     expandedRowKey,
     nestedFocusIndex: focus.nestedFocusIndex,

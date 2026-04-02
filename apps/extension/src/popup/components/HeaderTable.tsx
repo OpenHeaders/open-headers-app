@@ -23,6 +23,7 @@ import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRowActionRegistration } from '@/hooks/useRowActionRegistration';
 import { useTablePagination } from '@/hooks/useTablePagination';
+import { useKeyboardNav } from '@context/KeyboardNavContext';
 import { type PageInfo, type RowActions, getTagColor } from '../utils/table-shared';
 import { type TagDescriptor, renderDomainTags, renderTagOverflow, renderValueWithCopy, truncateValue } from './columns/sharedColumnRenderers';
 import DeleteConfirmOverlay from './DeleteConfirmOverlay';
@@ -77,6 +78,7 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
   const appLauncher = getAppLauncher();
 
   const { headerEntries, dynamicSources, isConnected, uiState, updateUiState, disabledTagGroups } = useHeader();
+  const { setFocusedRowIndex } = useKeyboardNav();
 
   const [copiedRowId, setCopiedRowId] = useState<string | number | null>(null);
   const [searchText, setSearchText] = useState(uiState?.tableState?.searchText || '');
@@ -177,6 +179,7 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
 
   const enabledCount = dataSource.filter((item) => item.isEnabled).length;
   const injectingCount = dataSource.filter((item) => item.isEnabled && !item.placeholderType).length;
+  const pausedCount = dataSource.filter((item) => item.isEnabled && disabledTagGroups.has(item.tag || '__no_tag__')).length;
   const totalCount = dataSource.length;
 
   const { paginationConfig } = useTablePagination({
@@ -692,15 +695,24 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
     <div className="header-rules-section">
       <div className="table-toolbar">
         <div className="header-rules-title">
-          <Space align="center" size={8}>
-            <Text style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Header Rules</Text>
-            {totalCount > 0 && (
-              <Text type="secondary" style={{ fontSize: '12px' }}>
-                {injectingCount} of {totalCount} enabled
-                {injectingCount < enabledCount ? `, ${enabledCount - injectingCount} unresolved` : ''}
-              </Text>
+          <div>
+            <Space align="center" size={8}>
+              <Text style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Header Rules</Text>
+              {totalCount > 0 && (
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  {injectingCount} of {totalCount} enabled
+                  {injectingCount < enabledCount ? `, ${enabledCount - injectingCount} unresolved` : ''}
+                </Text>
+              )}
+            </Space>
+            {pausedCount > 0 && (
+              <div>
+                <Text type="warning" style={{ fontSize: '11px' }}>
+                  {pausedCount} rule{pausedCount !== 1 ? 's' : ''} paused by tag group
+                </Text>
+              </div>
             )}
-          </Space>
+          </div>
           <Space>
             <Dropdown menu={{ items: addRuleMenuItems }} placement="bottomRight" trigger={['click']}>
               <Button type="primary" size="middle" className="add-rule-button">
@@ -751,6 +763,9 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
           size="small"
           scroll={{ x: 920, y: 290 }}
           onChange={handleChange}
+          onRow={(_record: TableRecord, index) => ({
+            onClick: () => { if (index !== undefined) { setFocusedRowIndex(index); (document.activeElement as HTMLElement)?.blur(); } },
+          })}
           rowClassName={(record: TableRecord, index: number) => {
             const classes: string[] = [];
             if (record.isEnabled && record.placeholderType) classes.push('row-not-injecting');
