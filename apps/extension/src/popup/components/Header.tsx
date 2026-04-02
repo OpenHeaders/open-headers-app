@@ -8,6 +8,7 @@ import {
   KeyOutlined,
   MenuOutlined,
   QuestionCircleOutlined,
+  RocketOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
 import { useTheme } from '@context';
@@ -23,6 +24,7 @@ const { Title, Text } = Typography;
 interface HeaderProps {
   onOpenSetupGuide: () => void;
   onShowShortcuts: () => void;
+  onShowTour: () => void;
 }
 
 type ThemeMode = 'light' | 'dark' | 'auto';
@@ -72,7 +74,7 @@ const LOG_LEVEL_OPTIONS: Array<{ value: LogLevel; label: React.ReactNode }> = [
   },
 ];
 
-const Header: React.FC<HeaderProps> = ({ onOpenSetupGuide, onShowShortcuts }) => {
+const Header: React.FC<HeaderProps> = ({ onOpenSetupGuide, onShowShortcuts, onShowTour }) => {
   const { isConnected, isStatusLoaded } = useHeader();
   const { themeMode, setThemeMode, isCompactMode, toggleCompactMode } = useTheme();
   const [logLevel, setLogLevel] = useState<LogLevel>(logger.getLevel());
@@ -194,6 +196,12 @@ const Header: React.FC<HeaderProps> = ({ onOpenSetupGuide, onShowShortcuts }) =>
         </Space>
       ),
       onClick: onShowShortcuts,
+    },
+    {
+      key: 'tour',
+      icon: <RocketOutlined />,
+      label: 'Show Tour',
+      onClick: onShowTour,
     },
     { type: 'divider' as const },
     {

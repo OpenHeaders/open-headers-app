@@ -12,6 +12,7 @@ import ConnectionInfo from './components/ConnectionInfo';
 import Footer from './components/Footer';
 import Header from './components/Header';
 import KeyboardShortcutsOverlay from './components/KeyboardShortcutsOverlay';
+import OnboardingTour from './components/OnboardingTour';
 import RulesList from './components/RulesList';
 
 const { Content } = Layout;
@@ -21,6 +22,9 @@ const THEME_CYCLE = ['light', 'dark', 'auto'] as const;
 const AppInner: React.FC = () => {
   const { isDarkMode } = useTheme();
   const { containerRef, isShortcutsOverlayVisible, setIsShortcutsOverlayVisible } = useKeyboardNav();
+  const [tourOpen, setTourOpen] = useState<boolean | null>(null);
+  // When tour closes via OnboardingTour, reset local trigger state
+  const handleTourClose = useCallback(() => setTourOpen(null), []);
 
   const handleOpenSetupGuide = async (): Promise<void> => {
     const response = await sendMessage({ type: 'forceOpenWelcomePage' });
@@ -35,6 +39,7 @@ const AppInner: React.FC = () => {
         <Header
           onOpenSetupGuide={handleOpenSetupGuide}
           onShowShortcuts={() => setIsShortcutsOverlayVisible(true)}
+          onShowTour={() => setTourOpen(true)}
         />
         <Content className="content">
           <ConnectionInfo />
@@ -48,6 +53,7 @@ const AppInner: React.FC = () => {
         visible={isShortcutsOverlayVisible}
         onClose={() => setIsShortcutsOverlayVisible(false)}
       />
+      <OnboardingTour open={tourOpen} onClose={handleTourClose} />
     </div>
   );
 };

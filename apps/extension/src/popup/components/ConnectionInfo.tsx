@@ -1,4 +1,5 @@
 import { DownloadOutlined } from '@ant-design/icons';
+import { useKeyboardNav } from '@context/KeyboardNavContext';
 import { useHeader } from '@hooks/useHeader';
 import { storage } from '@utils/browser-api';
 import { sendMessage } from '@utils/messaging';
@@ -8,6 +9,7 @@ import { useEffect, useState } from 'react';
 
 const ConnectionInfo: React.FC = () => {
   const { isConnected, isStatusLoaded, headerEntries } = useHeader();
+  const { isTourOpen } = useKeyboardNav();
   const [dismissed, setDismissed] = useState(false);
   const [lastConnectionState, setLastConnectionState] = useState(isConnected);
 
@@ -27,7 +29,7 @@ const ConnectionInfo: React.FC = () => {
     setLastConnectionState(isConnected);
   }, [isConnected, lastConnectionState]);
 
-  const isVisible = isStatusLoaded && !isConnected && !dismissed;
+  const isVisible = isStatusLoaded && !isConnected && !dismissed && !isTourOpen;
 
   const handleOpenWelcomePage = async (): Promise<void> => {
     const response = await sendMessage({ type: 'forceOpenWelcomePage' });

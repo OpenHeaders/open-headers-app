@@ -20,6 +20,7 @@ interface UseKeyboardDispatchOptions {
   nestedRowCount: number;
   isShortcutsOverlayVisible: boolean;
   setIsShortcutsOverlayVisible: (visible: boolean | ((prev: boolean) => boolean)) => void;
+  isTourOpen: boolean;
   containerRef: RefObject<HTMLDivElement | null>;
   onTabChange: (tab: string) => void;
   visibleRowCount: number;
@@ -69,6 +70,7 @@ export function useKeyboardDispatch(options: UseKeyboardDispatchOptions): void {
     nestedRowCount,
     isShortcutsOverlayVisible,
     setIsShortcutsOverlayVisible,
+    isTourOpen,
     containerRef,
     onTabChange,
     visibleRowCount,
@@ -121,6 +123,9 @@ export function useKeyboardDispatch(options: UseKeyboardDispatchOptions): void {
 
       if (isShortcutsOverlayVisible) return;
 
+      // Tour is open — let Escape and arrow keys through for tour navigation, block everything else
+      if (isTourOpen) return;
+
       // Toggle options dropdown — must be handled before isOverlayOpen() bail-out
       // so pressing 'o' again can close the dropdown
       if (key === 'o' && !isInputFocused() && onToggleOptions) {
@@ -170,6 +175,9 @@ export function useKeyboardDispatch(options: UseKeyboardDispatchOptions): void {
       }
 
       if (isInputFocused()) return;
+
+      // Ignore single-key shortcuts when a modifier is held (e.g. Ctrl+R to reload)
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
 
       // Tab switching: 1, 2, 3
       if (TAB_KEYS[key]) {
@@ -386,6 +394,7 @@ export function useKeyboardDispatch(options: UseKeyboardDispatchOptions): void {
       hasNextPage,
       hasPrevPage,
       isShortcutsOverlayVisible,
+      isTourOpen,
       onTabChange,
       onNextPage,
       onPrevPage,

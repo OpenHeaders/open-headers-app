@@ -18,6 +18,8 @@ export interface KeyboardNavContextValue {
   nestedFocusIndex: number;
   isShortcutsOverlayVisible: boolean;
   setIsShortcutsOverlayVisible: (visible: boolean | ((prev: boolean) => boolean)) => void;
+  isTourOpen: boolean;
+  setIsTourOpen: (open: boolean) => void;
   containerRef: React.RefObject<HTMLDivElement | null>;
   setPageInfo: (info: PageInfo) => void;
   setRowActions: (actions: RowActions) => void;
@@ -45,6 +47,7 @@ export const KeyboardNavProvider: React.FC<KeyboardNavProviderProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [isShortcutsOverlayVisible, setIsShortcutsOverlayVisible] = useState(false);
+  const [isTourOpen, setIsTourOpen] = useState(false);
 
   const [pageInfo, setPageInfo] = useState<PageInfo>({
     visibleRowCount: 0,
@@ -77,6 +80,7 @@ export const KeyboardNavProvider: React.FC<KeyboardNavProviderProps> = ({
     nestedRowCount,
     isShortcutsOverlayVisible,
     setIsShortcutsOverlayVisible,
+    isTourOpen,
     containerRef,
     onTabChange,
     visibleRowCount: pageInfo.visibleRowCount,
@@ -142,6 +146,8 @@ export const KeyboardNavProvider: React.FC<KeyboardNavProviderProps> = ({
     nestedFocusIndex: focus.nestedFocusIndex,
     isShortcutsOverlayVisible,
     setIsShortcutsOverlayVisible,
+    isTourOpen,
+    setIsTourOpen,
     containerRef,
     setPageInfo: setPageInfoStable,
     setRowActions: setRowActionsStable,
