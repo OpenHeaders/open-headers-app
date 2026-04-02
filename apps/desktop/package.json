@@ -3,6 +3,9 @@
   "version": "4.1.0",
   "private": true,
   "description": "OpenHeaders desktop app",
+  "homepage": "https://openheaders.io",
+  "author": "Open Headers <contact@openheaders.io>",
+  "license": "MIT",
   "main": "dist-webpack/main/index.js",
   "scripts": {
     "start": "electron .",
