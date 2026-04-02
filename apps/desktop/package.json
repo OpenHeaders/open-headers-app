@@ -202,13 +202,13 @@
         "--deb-recommends=libuuid1",
         "--deb-recommends=libsecret-1-0"
       ],
-      "artifactName": "${name}_${version}_${arch}.${ext}",
+      "artifactName": "open-headers_${version}_${arch}.${ext}",
       "compression": "xz",
       "priority": "optional",
       "afterInstall": "./scripts/debian/postinst"
     },
     "rpm": {
-      "artifactName": "${name}-${version}.${arch}.rpm",
+      "artifactName": "open-headers-${version}.${arch}.rpm",
       "depends": [
         "gtk3",
         "libnotify",
