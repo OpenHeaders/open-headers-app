@@ -91,20 +91,21 @@ jobs:
             echo '' >> release_body.md
           fi
 
-          cat >> release_body.md << BODY
-## Browser Extension Downloads
-
-- [Chrome](https://github.com/OpenHeaders/open-headers-browser-extension/releases/download/${REF_NAME}/open-headers-chrome-v${TAG}.zip)
-- [Firefox](https://github.com/OpenHeaders/open-headers-browser-extension/releases/download/${REF_NAME}/open-headers-firefox-v${TAG}.zip)
-- [Edge](https://github.com/OpenHeaders/open-headers-browser-extension/releases/download/${REF_NAME}/open-headers-edge-v${TAG}.zip)
-- [Safari](https://github.com/OpenHeaders/open-headers-browser-extension/releases/download/${REF_NAME}/open-headers-safari-v${TAG}.zip)
-
-### Installation
-1. Download the zip for your browser
-2. Extract to a folder
-3. Chrome/Edge: Go to \`chrome://extensions\`, enable Developer mode, click Load unpacked
-4. Firefox: Go to \`about:debugging#/runtime/this-firefox\`, click Load Temporary Add-on
-BODY
+          REPO_BASE="https://github.com/OpenHeaders/open-headers-browser-extension/releases/download/${REF_NAME}"
+          {
+            echo "## Browser Extension Downloads"
+            echo ""
+            echo "- [Chrome](${REPO_BASE}/open-headers-chrome-v${TAG}.zip)"
+            echo "- [Firefox](${REPO_BASE}/open-headers-firefox-v${TAG}.zip)"
+            echo "- [Edge](${REPO_BASE}/open-headers-edge-v${TAG}.zip)"
+            echo "- [Safari](${REPO_BASE}/open-headers-safari-v${TAG}.zip)"
+            echo ""
+            echo "### Installation"
+            echo "1. Download the zip for your browser"
+            echo "2. Extract to a folder"
+            echo '3. Chrome/Edge: Go to `chrome://extensions`, enable Developer mode, click Load unpacked'
+            echo '4. Firefox: Go to `about:debugging#/runtime/this-firefox`, click Load Temporary Add-on'
+          } >> release_body.md
 
       - name: Publish to extension repo
         uses: softprops/action-gh-release@v2
