@@ -9,6 +9,7 @@ import {
   MenuOutlined,
   QuestionCircleOutlined,
   RocketOutlined,
+  StarOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
 import { useTheme } from '@context';
@@ -202,6 +203,15 @@ const Header: React.FC<HeaderProps> = ({ onOpenSetupGuide, onShowShortcuts, onSh
       icon: <RocketOutlined />,
       label: 'Show Tour',
       onClick: onShowTour,
+    },
+    { type: 'divider' as const },
+    {
+      key: 'github',
+      icon: <StarOutlined />,
+      label: 'Give a Star on GitHub',
+      onClick: () => {
+        void chrome.tabs.create({ url: 'https://github.com/OpenHeaders/open-headers-app' });
+      },
     },
     { type: 'divider' as const },
     {

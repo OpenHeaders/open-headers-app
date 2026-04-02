@@ -4,6 +4,9 @@ import {
   EditTwoTone,
   EyeTwoTone,
   LayoutTwoTone,
+  LikeTwoTone,
+  SmileTwoTone,
+  StarTwoTone,
   ThunderboltTwoTone,
   VideoCameraTwoTone,
 } from '@ant-design/icons';
@@ -18,7 +21,7 @@ const logoUrl = getBrowserAPI().runtime.getURL('images/icon48.png');
 const { Text } = Typography;
 
 const STORAGE_KEY = 'onboardingCompleted';
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 7;
 
 interface OnboardingTourProps {
   open: boolean | null;
@@ -300,6 +303,37 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose }) => {
         ),
         target: () => getTarget('.footer .kbd-key')!,
         placement: 'top' as const,
+        ...sharedStepProps,
+      },
+      {
+        title: (
+          <Space size={8}>
+            <SmileTwoTone />
+            <span>Help Us Grow</span>
+          </Space>
+        ),
+        description: (
+          <StepDescription>
+            <Text type="secondary" style={{ fontSize: 12 }}>Help us grow and reach more developers.</Text>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <StarTwoTone style={{ fontSize: 14 }} />
+                <a
+                  onClick={() => { void chrome.tabs.create({ url: 'https://github.com/OpenHeaders/open-headers-app' }); }}
+                  style={{ cursor: 'pointer', fontSize: 13 }}
+                >
+                  Give us a star on GitHub
+                </a>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <LikeTwoTone style={{ fontSize: 14 }} />
+                <Text style={{ fontSize: 13 }}>Recommend us to your friends & colleagues</Text>
+              </div>
+            </div>
+          </StepDescription>
+        ),
+        target: () => getTarget('.header')!,
+        placement: 'bottom' as const,
         ...lastStepProps,
       },
     ],

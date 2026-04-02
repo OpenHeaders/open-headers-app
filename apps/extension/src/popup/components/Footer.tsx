@@ -7,6 +7,7 @@ import {
   NodeExpandOutlined,
   PlaySquareOutlined,
   SettingOutlined,
+  StarOutlined,
   TrademarkCircleTwoTone,
   VideoCameraTwoTone,
 } from '@ant-design/icons';
@@ -511,13 +512,24 @@ const Footer: React.FC = () => {
       <div>
         <Space size={8} align="center">
           <Text style={{ fontSize: '11px', color: token.colorTextTertiary }}>v{version}</Text>
-          <Button
-            type="text"
-            icon={<GlobalOutlined />}
-            onClick={handleOpenWebsite}
-            size="small"
-            style={{ padding: '0 4px', height: '20px', minWidth: 'auto' }}
-          />
+          <Tooltip title="Help us with a star on GitHub">
+            <Button
+              type="text"
+              icon={<StarOutlined />}
+              onClick={() => { void chrome.tabs.create({ url: 'https://github.com/OpenHeaders/open-headers-app' }); }}
+              size="small"
+              style={{ padding: '0 4px', height: '20px', minWidth: 'auto' }}
+            />
+          </Tooltip>
+          <Tooltip title="Visit our website">
+            <Button
+              type="text"
+              icon={<GlobalOutlined />}
+              onClick={handleOpenWebsite}
+              size="small"
+              style={{ padding: '0 4px', height: '20px', minWidth: 'auto' }}
+            />
+          </Tooltip>
         </Space>
       </div>
     </div>
