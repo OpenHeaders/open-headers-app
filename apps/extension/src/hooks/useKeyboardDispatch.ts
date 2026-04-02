@@ -250,6 +250,23 @@ export function useKeyboardDispatch(options: UseKeyboardDispatchOptions): void {
           }
           return;
         }
+        if (key === ' ') {
+          e.preventDefault();
+          // Toggle the switch in the focused nested row
+          const activePane = containerRef.current?.querySelector('.ant-tabs-tabpane-active') ?? containerRef.current;
+          if (activePane) {
+            const parentRows = activePane.querySelectorAll('.ant-table-tbody > tr.ant-table-row');
+            const parentRow = parentRows[focusedRowIndex];
+            const expandedRow = parentRow?.nextElementSibling;
+            if (expandedRow?.classList.contains('ant-table-expanded-row')) {
+              const nestedRows = expandedRow.querySelectorAll('.ant-table-tbody > tr.ant-table-row');
+              const nestedRow = nestedRows[nestedFocusIndex];
+              const toggle = nestedRow?.querySelector('.ant-switch') as HTMLButtonElement | null;
+              if (toggle) toggle.click();
+            }
+          }
+          return;
+        }
         // Other keys in nested mode — don't process as parent actions
         return;
       }

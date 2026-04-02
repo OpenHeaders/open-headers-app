@@ -15,7 +15,7 @@ import { logger } from '@utils/logger';
 import { getChunkedData } from '@utils/storage-chunking.js';
 import type { ActiveRule, HotkeyCommand } from '@/types/browser';
 import type { IRecordingService } from '@/types/recording';
-import { initPauseState, setRulesPaused } from './header-manager';
+import { getDisabledTagGroups, initPauseState, setDisabledTagGroups, setRulesPaused } from './header-manager';
 import { updateExtensionBadge } from './modules/badge-manager';
 import { handleGeneralMessage } from './modules/message-handler';
 import { handleRecordingMessage } from './modules/recording-handler';
@@ -71,8 +71,11 @@ async function updateBadgeForCurrentTab(): Promise<void> {
       }
 
       const allMatchingRules: ActiveRule[] = await getActiveRulesForTab(currentTab?.id, currentUrl);
-      const enabledRules = allMatchingRules.filter((r) => r.isEnabled !== false);
-      await updateExtensionBadge(isConnected, enabledRules, isPaused, recordingService, reconnectAttempts);
+      const disabledGroups = new Set(getDisabledTagGroups());
+      const activeRules = allMatchingRules.filter(
+        (r) => r.isEnabled !== false && !disabledGroups.has((r.tag as string) || '__no_tag__'),
+      );
+      await updateExtensionBadge(isConnected, activeRules, isPaused, recordingService, reconnectAttempts);
     });
   });
 }
@@ -159,6 +162,15 @@ storage.onChanged.addListener((changes: { [key: string]: chrome.storage.StorageC
     logger.info('Background', 'Rules execution pause state changed to:', paused);
     setRulesPaused(paused);
     scheduleUpdate('pause', { immediate: true });
+    debouncedUpdateBadge();
+  }
+
+  // Tag group state — immediate rule update
+  if (area === 'local' && changes.disabledTagGroups) {
+    const groups = (changes.disabledTagGroups.newValue as string[]) || [];
+    logger.info('Background', 'Disabled tag groups changed:', groups);
+    setDisabledTagGroups(groups);
+    scheduleUpdate('tagGroups', { immediate: true });
     debouncedUpdateBadge();
   }
 

@@ -76,7 +76,7 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
   const { message } = App.useApp();
   const appLauncher = getAppLauncher();
 
-  const { headerEntries, dynamicSources, isConnected, uiState, updateUiState } = useHeader();
+  const { headerEntries, dynamicSources, isConnected, uiState, updateUiState, disabledTagGroups } = useHeader();
 
   const [copiedRowId, setCopiedRowId] = useState<string | number | null>(null);
   const [searchText, setSearchText] = useState(uiState?.tableState?.searchText || '');
@@ -395,6 +395,7 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
         ...new Set([
           ...dataSource.map((item) => (item.isResponse ? 'Response' : 'Request')),
           ...dataSource.filter((item) => item.tag).map((item) => item.tag),
+          ...dataSource.filter((item) => disabledTagGroups.has(item.tag || '__no_tag__')).map(() => 'Paused'),
           ...dataSource.filter((item) => item.isCachedValue).map(() => 'Cached'),
           ...dataSource
             .filter((item) => item.placeholderType)
@@ -417,6 +418,7 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
       filterSearch: true,
       onFilter: (value, record) => {
         const tags = [record.isResponse ? 'Response' : 'Request', ...(record.tag ? [record.tag] : [])];
+        if (disabledTagGroups.has(record.tag || '__no_tag__')) tags.push('Paused');
         if (record.isCachedValue) tags.push('Cached');
         if (record.placeholderType) {
           switch (record.placeholderType) {
@@ -436,6 +438,14 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
       sortOrder: sortedInfo.columnKey === 'tags' ? sortedInfo.order : null,
       render: (_: unknown, record: TableRecord) => {
         const allTags: TagDescriptor[] = [];
+        const tagGroup = record.tag || '__no_tag__';
+        if (disabledTagGroups.has(tagGroup)) {
+          allTags.push({
+            label: 'Paused',
+            color: 'warning',
+            tooltip: `Tag group "${record.tag || 'Untagged'}" is paused — rule not injected`,
+          });
+        }
         if (!record.placeholderType && record.isCachedValue && record.isEnabled) {
           allTags.push({
             label: 'Cached',
@@ -456,7 +466,7 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
         allTags.push({ label: record.isResponse ? 'Res' : 'Req', tooltip: record.isResponse ? 'Response' : 'Request' });
 
         const hasStatusTag =
-          allTags[0]?.label === 'Cached' || allTags[0]?.label === 'Missing' || allTags[0]?.label === 'Empty';
+          allTags[0]?.label === 'Paused' || allTags[0]?.label === 'Cached' || allTags[0]?.label === 'Missing' || allTags[0]?.label === 'Empty';
         return renderTagOverflow(allTags, hasStatusTag ? 1 : 2);
       },
     },
@@ -489,8 +499,15 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
       fixed: 'right',
       sorter: (a, b) => Number(b.isEnabled) - Number(a.isEnabled),
       sortOrder: sortedInfo.columnKey === 'isEnabled' ? sortedInfo.order : null,
-      render: (enabled: boolean, record: TableRecord) => (
-        <Tooltip title={isConnected ? 'Enable/disable rule' : 'App not connected'}>
+      render: (enabled: boolean, record: TableRecord) => {
+        const groupPaused = disabledTagGroups.has(record.tag || '__no_tag__');
+        const tooltip = !isConnected
+          ? 'App not connected'
+          : groupPaused && enabled
+            ? 'Enabled but tag group is paused — not being injected'
+            : 'Enable/disable rule';
+        return (
+        <Tooltip title={tooltip}>
           <Switch
             checked={enabled}
             disabled={!isConnected}
@@ -506,7 +523,8 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
             size="small"
           />
         </Tooltip>
-      ),
+        );
+      },
     },
     {
       title: 'Actions',
@@ -736,6 +754,7 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
           rowClassName={(record: TableRecord, index: number) => {
             const classes: string[] = [];
             if (record.isEnabled && record.placeholderType) classes.push('row-not-injecting');
+            if (disabledTagGroups.has(record.tag || '__no_tag__')) classes.push('row-group-paused');
             if (index === focusedRowIndex) classes.push('keyboard-focused-row');
             if (index === pendingDeleteIndex) classes.push('keyboard-pending-delete-row');
             return classes.join(' ');

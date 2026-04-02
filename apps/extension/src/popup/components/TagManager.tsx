@@ -1,4 +1,4 @@
-import { AppstoreOutlined, FolderOpenOutlined, FolderOutlined, TagsOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, FolderOpenOutlined, FolderOutlined, PauseCircleOutlined, TagsOutlined } from '@ant-design/icons';
 import type { HeaderEntry } from '@context/HeaderContext';
 import { useKeyboardNav } from '@context/KeyboardNavContext';
 import { useHeader } from '@hooks/useHeader';
@@ -25,6 +25,7 @@ interface TagGroupRecord {
   totalCount: number;
   enabledCount: number;
   allEnabled: boolean;
+  isGroupDisabled: boolean;
 }
 
 interface NestedRuleRecord {
@@ -50,7 +51,7 @@ const TagManager: React.FC<TagManagerProps> = ({
   onPageInfoChange,
   onRowActionsChange,
 }) => {
-  const { headerEntries, isConnected } = useHeader();
+  const { headerEntries, isConnected, disabledTagGroups, toggleTagGroup } = useHeader();
   const { message } = App.useApp();
   const { expandedRowKey, setNestedRowCount, toggleExpandedRow } = useKeyboardNav();
   const [searchText, setSearchText] = useState('');
@@ -88,9 +89,10 @@ const TagManager: React.FC<TagManagerProps> = ({
         totalCount: groupData.rules.length,
         enabledCount: enabled,
         allEnabled: enabled === groupData.rules.length && groupData.rules.length > 0,
+        isGroupDisabled: disabledTagGroups.has(groupKey),
       };
     });
-  }, [headerEntries]);
+  }, [headerEntries, disabledTagGroups]);
 
   // Filter by search
   const filteredGroups = useMemo(() => {
@@ -130,23 +132,10 @@ const TagManager: React.FC<TagManagerProps> = ({
   });
 
   const handleGroupToggle = useCallback(
-    async (groupKey: string, enabled: boolean) => {
-      const group = dataSourceRef.current.find((g) => g.groupKey === groupKey);
-      if (!group) return;
-      if (!isConnected) {
-        message.warning('Please connect to the desktop app to toggle rules');
-        return;
-      }
-      const { runtime } = await import('../../utils/browser-api');
-      for (const rule of group.rules) {
-        runtime.sendMessage({ type: 'toggleRule', ruleId: rule.id, enabled }, (response: unknown) => {
-          if (!(response as { success?: boolean })?.success)
-            console.error(new Date().toISOString(), 'ERROR', '[TagManager]', `Failed to toggle rule ${rule.id}`);
-        });
-      }
-      message.success(`${enabled ? 'Enabled' : 'Disabled'} ${group.rules.length} rules in "${group.name}"`);
+    (groupKey: string) => {
+      toggleTagGroup(groupKey);
     },
-    [isConnected, message],
+    [toggleTagGroup],
   );
 
   // Row actions for keyboard navigation
@@ -154,7 +143,7 @@ const TagManager: React.FC<TagManagerProps> = ({
     (index: number) => {
       const record = dataSourceRef.current[index];
       if (!record) return;
-      void handleGroupToggle(record.groupKey, !record.allEnabled);
+      handleGroupToggle(record.groupKey);
     },
     [handleGroupToggle],
   );
@@ -177,13 +166,16 @@ const TagManager: React.FC<TagManagerProps> = ({
         return (
           <Space>
             {isExpanded ? (
-              <FolderOpenOutlined style={{ color: 'var(--text-secondary)' }} />
+              <FolderOpenOutlined style={{ color: record.isGroupDisabled ? 'var(--ant-color-warning)' : 'var(--text-secondary)' }} />
             ) : (
-              <FolderOutlined style={{ color: 'var(--text-secondary)' }} />
+              <FolderOutlined style={{ color: record.isGroupDisabled ? 'var(--ant-color-warning)' : 'var(--text-secondary)' }} />
             )}
-            <Text strong style={{ fontSize: '13px' }}>
+            <Text strong style={{ fontSize: '13px', opacity: record.isGroupDisabled ? 0.6 : 1 }}>
               {name}
             </Text>
+            {record.isGroupDisabled && (
+              <PauseCircleOutlined style={{ fontSize: '12px', color: 'var(--ant-color-warning)' }} />
+            )}
           </Space>
         );
       },
@@ -192,32 +184,41 @@ const TagManager: React.FC<TagManagerProps> = ({
       title: 'Stats',
       key: 'stats',
       width: 140,
-      render: (_: unknown, record: TagGroupRecord) => (
-        <Text type="secondary" style={{ fontSize: '12px' }}>
-          {record.enabledCount} of {record.totalCount} enabled
-        </Text>
-      ),
+      render: (_: unknown, record: TagGroupRecord) => {
+        if (record.isGroupDisabled) {
+          return (
+            <Text type="warning" style={{ fontSize: '12px' }}>
+              Paused · {record.enabledCount} of {record.totalCount} enabled
+            </Text>
+          );
+        }
+        return (
+          <Text type="secondary" style={{ fontSize: '12px' }}>
+            {record.enabledCount} of {record.totalCount} enabled
+          </Text>
+        );
+      },
     },
     {
       title: 'Status',
       key: 'status',
-      width: 80,
+      width: 100,
       align: 'center',
       fixed: 'right',
       render: (_: unknown, record: TagGroupRecord) => (
         <span onClick={(e: React.MouseEvent) => e.stopPropagation()}>
           <Tooltip
             title={
-              isConnected
-                ? `${record.allEnabled ? 'Disable' : 'Enable'} all rules in this group`
-                : 'App not connected'
+              record.isGroupDisabled
+                ? `Resume — all ${record.totalCount} rules in this group become active again`
+                : `Pause — suspend all ${record.totalCount} rules without changing individual settings`
             }
           >
             <Switch
-              size="small"
-              checked={record.allEnabled}
-              disabled={!isConnected}
-              onChange={(checked) => void handleGroupToggle(record.groupKey, checked)}
+              checked={!record.isGroupDisabled}
+              onChange={() => handleGroupToggle(record.groupKey)}
+              checkedChildren="Active"
+              unCheckedChildren="Paused"
             />
           </Tooltip>
         </span>
@@ -275,9 +276,8 @@ const TagManager: React.FC<TagManagerProps> = ({
               }
               const { runtime } = await import('../../utils/browser-api');
               runtime.sendMessage({ type: 'toggleRule', ruleId: record.id, enabled: checked }, (response: unknown) => {
-                if ((response as { success?: boolean })?.success)
-                  message.success(`Rule ${checked ? 'enabled' : 'disabled'}`);
-                else message.error('Failed to toggle rule');
+                if (!(response as { success?: boolean })?.success)
+                  message.error('Failed to toggle rule');
               });
             }}
           />
@@ -365,7 +365,7 @@ const TagManager: React.FC<TagManagerProps> = ({
                       height: 18,
                       padding: '0 5px',
                       borderRadius: 5,
-                      backgroundColor: badgeCount > 0 ? '#8c8c8c' : '#d9d9d9',
+                      backgroundColor: record.isGroupDisabled ? 'var(--ant-color-warning)' : badgeCount > 0 ? '#8c8c8c' : '#d9d9d9',
                       color: '#fff',
                       fontSize: '11px',
                       fontWeight: 600,
@@ -412,8 +412,9 @@ const TagManager: React.FC<TagManagerProps> = ({
               return (
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                    <Text type="secondary" style={{ fontSize: '11px' }}>
-                      {record.enabledCount} of {record.totalCount} rule{record.totalCount !== 1 ? 's' : ''} enabled
+                    <Text type={record.isGroupDisabled ? 'warning' : 'secondary'} style={{ fontSize: '11px' }}>
+                      {record.isGroupDisabled ? 'Paused · ' : ''}
+                      {record.enabledCount} of {record.totalCount} rule{record.totalCount !== 1 ? 's' : ''} individually enabled
                     </Text>
                   </div>
                   <Table<NestedRuleRecord>

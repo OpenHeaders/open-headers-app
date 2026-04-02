@@ -22,6 +22,9 @@ import { isValidHeaderValue, sanitizeHeaderValue } from './rule-validator';
 // Cached pause state — updated by setRulesPaused() from storage.onChanged listener
 let isPaused = false;
 
+// Cached disabled tag groups — updated by setDisabledTagGroups() from storage.onChanged listener
+let disabledTagGroups: Set<string> = new Set();
+
 /**
  * Set the paused state. Called from background.ts when isRulesExecutionPaused changes.
  */
@@ -30,12 +33,32 @@ export function setRulesPaused(paused: boolean): void {
 }
 
 /**
- * Initialize pause state from storage. Called once at startup.
+ * Set disabled tag groups. Called from background.ts when disabledTagGroups changes.
+ */
+export function setDisabledTagGroups(groups: string[]): void {
+  disabledTagGroups = new Set(groups);
+}
+
+/**
+ * Get current disabled tag groups.
+ */
+export function getDisabledTagGroups(): string[] {
+  return [...disabledTagGroups];
+}
+
+/**
+ * Initialize pause state and tag group states from storage. Called once at startup.
  */
 export function initPauseState(): void {
   const browserAPI = (typeof browser !== 'undefined' ? browser : chrome) as typeof chrome;
   browserAPI.storage.sync.get(['isRulesExecutionPaused'], (result: Record<string, unknown>) => {
     isPaused = (result.isRulesExecutionPaused as boolean) || false;
+  });
+  browserAPI.storage.local.get(['disabledTagGroups'], (result: Record<string, unknown>) => {
+    const groups = result.disabledTagGroups as string[] | undefined;
+    if (Array.isArray(groups)) {
+      disabledTagGroups = new Set(groups);
+    }
   });
 }
 
@@ -75,6 +98,12 @@ export function updateNetworkRules(dynamicSources: Source[]): void {
 
       if (entry.isEnabled === false) {
         logger.debug('HeaderManager', `Skipping disabled rule for ${entry.headerName}`);
+        continue;
+      }
+
+      const tagGroup = entry.tag || '__no_tag__';
+      if (disabledTagGroups.has(tagGroup)) {
+        logger.debug('HeaderManager', `Skipping rule for ${entry.headerName} — tag group "${tagGroup}" is disabled`);
         continue;
       }
 

@@ -164,7 +164,7 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
   onRowActionsChange,
 }) => {
   const { message } = App.useApp();
-  const { isConnected } = useHeader();
+  const { isConnected, disabledTagGroups } = useHeader();
   const appLauncher = getAppLauncher();
   const { expandedRowKey, setNestedRowCount, toggleExpandedRow } = useKeyboardNav();
   const [currentTab, setCurrentTab] = useState<CurrentTabInfo | null>(null);
@@ -408,6 +408,7 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
           'Resource',
           ...dataSource.map((item) => (item.isResponse ? 'Response' : 'Request')),
           ...dataSource.filter((item) => item.tag).map((item) => item.tag as string),
+          ...dataSource.filter((item) => disabledTagGroups.has(item.tag || '__no_tag__')).map(() => 'Paused'),
         ]),
       ].map((tag) => ({ text: tag, value: tag })),
       filteredValue: filteredInfo.tags || null,
@@ -421,11 +422,20 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
           ...(hasIndirectMatch ? ['Resource'] : []),
           record.isResponse ? 'Response' : 'Request',
           ...(record.tag ? [record.tag] : []),
+          ...(disabledTagGroups.has(record.tag || '__no_tag__') ? ['Paused'] : []),
         ];
         return tags.includes(value as string);
       },
       render: (_: unknown, record: TableRecord) => {
         const allTags: TagDescriptor[] = [];
+        const tagGroup = record.tag || '__no_tag__';
+        if (disabledTagGroups.has(tagGroup)) {
+          allTags.push({
+            label: 'Paused',
+            color: 'warning',
+            tooltip: `Tag group "${record.tag || 'Untagged'}" is paused — rule not injected`,
+          });
+        }
         // Derive Page/Resource from actual matched URLs, not just matchType
         const urls = record.matchedUrls || [];
         const hasDirectMatch = urls.some((m) => m.url === currentTab?.url) || record.matchType === 'direct';
@@ -440,7 +450,7 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
           allTags.push({ label: record.tag, color: getTagColor(record.tag) });
         }
         allTags.push({ label: record.isResponse ? 'Res' : 'Req', tooltip: record.isResponse ? 'Response' : 'Request' });
-        const hasStatusTag = allTags[0]?.label === 'Page' || allTags[0]?.label === 'Resource';
+        const hasStatusTag = allTags[0]?.label === 'Paused' || allTags[0]?.label === 'Page' || allTags[0]?.label === 'Resource';
         return renderTagOverflow(allTags, hasStatusTag ? 1 : 2);
       },
     },
@@ -455,8 +465,14 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
       sortOrder: sortedInfo.columnKey === 'isEnabled' ? sortedInfo.order : null,
       render: (enabled: unknown, record: TableRecord) => {
         const isEnabled = enabled !== false;
+        const groupPaused = disabledTagGroups.has(record.tag || '__no_tag__');
+        const tooltip = !isConnected
+          ? 'App not connected'
+          : groupPaused && isEnabled
+            ? 'Enabled but tag group is paused — not being injected'
+            : 'Enable/disable rule';
         return (
-          <Tooltip title={isConnected ? 'Enable/disable rule' : 'App not connected'}>
+          <Tooltip title={tooltip}>
             <Switch
               checked={isEnabled}
               disabled={!isConnected}
@@ -577,22 +593,16 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
                 {enabledCount} of {activeRules.length} enabled
               </Text>
             </Space>
-            <div>
-            <Text type="secondary" style={{ fontSize: '11px' }}>
-              {(() => {
-                const totalRequests = activeRules.reduce((sum, r) => sum + (r.matchedUrls || []).length, 0);
-                if (!searchText) {
-                  return `${activeRules.length} rule${activeRules.length !== 1 ? 's' : ''}, ${totalRequests} request${totalRequests !== 1 ? 's' : ''}`;
-                }
-                const filteredRequests = urlMatchCountMap.size > 0
-                  ? Array.from(urlMatchCountMap.values()).reduce((sum, c) => sum + c, 0)
-                  : 0;
-                return filteredRequests > 0
-                  ? `${sortedFilteredRules.length} rule${sortedFilteredRules.length !== 1 ? 's' : ''}, ${filteredRequests} request${filteredRequests !== 1 ? 's' : ''} matched`
-                  : `${sortedFilteredRules.length} rule${sortedFilteredRules.length !== 1 ? 's' : ''} matched`;
-              })()}
-            </Text>
-            </div>
+            {(() => {
+              const pausedCount = activeRules.filter((r) => disabledTagGroups.has(r.tag || '__no_tag__')).length;
+              return pausedCount > 0 ? (
+                <div>
+                  <Text type="warning" style={{ fontSize: '11px' }}>
+                    {pausedCount} rule{pausedCount !== 1 ? 's' : ''} paused by tag group
+                  </Text>
+                </div>
+              ) : null;
+            })()}
           </div>
           <Space align="start">
             <Space align="center" size={6} style={{ height: 24 }}>
@@ -601,20 +611,38 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
                 Live — monitoring requests
               </Text>
             </Space>
-            <Input.Search
-              placeholder="Search anything..."
-              allowClear
-              size="small"
-              style={{ width: 300 }}
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape' && searchText) {
+            <div>
+              <Input.Search
+                placeholder="Search anything..."
+                allowClear
+                size="small"
+                style={{ width: 300 }}
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape' && searchText) {
                   e.stopPropagation();
                   setSearchText('');
                 }
               }}
-            />
+              />
+              <div style={{ textAlign: 'right', marginTop: 2 }}>
+                <Text type="secondary" style={{ fontSize: '11px' }}>
+                  {(() => {
+                    const totalRequests = activeRules.reduce((sum, r) => sum + (r.matchedUrls || []).length, 0);
+                    if (!searchText) {
+                      return `${activeRules.length} rule${activeRules.length !== 1 ? 's' : ''}, ${totalRequests} request${totalRequests !== 1 ? 's' : ''}`;
+                    }
+                    const filteredRequests = urlMatchCountMap.size > 0
+                      ? Array.from(urlMatchCountMap.values()).reduce((sum, c) => sum + c, 0)
+                      : 0;
+                    return filteredRequests > 0
+                      ? `${sortedFilteredRules.length} rule${sortedFilteredRules.length !== 1 ? 's' : ''}, ${filteredRequests} request${filteredRequests !== 1 ? 's' : ''} matched`
+                      : `${sortedFilteredRules.length} rule${sortedFilteredRules.length !== 1 ? 's' : ''} matched`;
+                  })()}
+                </Text>
+              </div>
+            </div>
           </Space>
         </div>
       </div>
@@ -626,8 +654,9 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
           pagination={paginationConfig}
           size="small"
           scroll={{ x: 770, y: 290 }}
-          rowClassName={(_record: TableRecord, index: number) => {
+          rowClassName={(record: TableRecord, index: number) => {
             const classes: string[] = [];
+            if (disabledTagGroups.has(record.tag || '__no_tag__')) classes.push('row-group-paused');
             if (index === focusedRowIndex) classes.push('keyboard-focused-row');
             if (index === pendingDeleteIndex) classes.push('keyboard-pending-delete-row');
             return classes.join(' ');

@@ -173,6 +173,23 @@ body {
       box-shadow: inset 3px 0 0 0 #faad14;
     }
 
+    // Dim paused group rows without using opacity (which breaks fixed column z-index)
+    .ant-table-tbody > tr.row-group-paused > td {
+      color: var(--ant-color-text-quaternary, rgba(0, 0, 0, 0.25));
+
+      .ant-typography {
+        color: inherit !important;
+      }
+      .ant-tag, .ant-switch, .ant-btn {
+        opacity: 0.45;
+      }
+    }
+    // Fixed columns in paused rows need background to cover Source column behind them
+    .ant-table-tbody > tr.row-group-paused > td.ant-table-cell-fix-end,
+    .ant-table-tbody > tr.row-group-paused > td.ant-table-cell-fix-start {
+      background: var(--ant-color-bg-container, #fff);
+    }
+
     /* Ensure the column headers don't wrap unnecessarily */
     .ant-table-thead > tr > th {
       white-space: nowrap;

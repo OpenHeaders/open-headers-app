@@ -42,6 +42,8 @@ export interface HeaderContextValue {
   isStatusLoaded: boolean;
   rulesFromApp: boolean;
   uiState: UiState;
+  disabledTagGroups: Set<string>;
+  toggleTagGroup: (tagGroup: string) => void;
   loadHeaderEntries: (forceRefresh?: boolean) => void;
   loadDynamicSources: () => void;
   refreshHeaderEntries: () => void;
@@ -72,6 +74,8 @@ const defaultContextValue: HeaderContextValue = {
       sortedInfo: {},
     },
   },
+  disabledTagGroups: new Set(),
+  toggleTagGroup: () => {},
   loadHeaderEntries: () => {},
   loadDynamicSources: () => {},
   refreshHeaderEntries: () => {},
@@ -100,6 +104,7 @@ export const HeaderProvider: React.FC<HeaderProviderProps> = ({ children }) => {
       sortedInfo: {},
     },
   });
+  const [disabledTagGroups, setDisabledTagGroups] = useState<Set<string>>(new Set());
 
   const isLoadingRef = useRef(false);
   const loadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -159,6 +164,14 @@ export const HeaderProvider: React.FC<HeaderProviderProps> = ({ children }) => {
     loadHeaderEntries();
     loadDynamicSources();
 
+    // Load disabled tag groups
+    storage.local.get(['disabledTagGroups'], (result: Record<string, unknown>) => {
+      const groups = result.disabledTagGroups as string[] | undefined;
+      if (Array.isArray(groups)) {
+        setDisabledTagGroups(new Set(groups));
+      }
+    });
+
     const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
       if (areaName === 'sync') {
         const hasDataChange =
@@ -177,6 +190,11 @@ export const HeaderProvider: React.FC<HeaderProviderProps> = ({ children }) => {
             setHeaderEntries((data || {}) as Record<string, HeaderEntry>);
           });
         }
+      }
+      // Track disabled tag groups changes (from background or other popup instances)
+      if (areaName === 'local' && changes.disabledTagGroups) {
+        const groups = (changes.disabledTagGroups.newValue as string[]) || [];
+        setDisabledTagGroups(new Set(groups));
       }
     };
 
@@ -268,6 +286,37 @@ export const HeaderProvider: React.FC<HeaderProviderProps> = ({ children }) => {
     }));
   }, []);
 
+  // Prune stale entries from disabledTagGroups when headerEntries change
+  useEffect(() => {
+    if (disabledTagGroups.size === 0) return;
+    const activeTags = new Set<string>();
+    for (const entry of Object.values(headerEntries)) {
+      activeTags.add(entry.tag || '__no_tag__');
+    }
+    const stale = [...disabledTagGroups].filter((tag) => !activeTags.has(tag));
+    if (stale.length === 0) return;
+    setDisabledTagGroups((prev) => {
+      const next = new Set(prev);
+      for (const tag of stale) next.delete(tag);
+      storage.local.set({ disabledTagGroups: [...next] });
+      return next;
+    });
+  }, [headerEntries, disabledTagGroups]);
+
+  const toggleTagGroup = useCallback((tagGroup: string) => {
+    setDisabledTagGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(tagGroup)) {
+        next.delete(tagGroup);
+      } else {
+        next.add(tagGroup);
+      }
+      // Persist to storage.local — background listener picks this up and updates DNR rules
+      storage.local.set({ disabledTagGroups: [...next] });
+      return next;
+    });
+  }, []);
+
   const contextValue: HeaderContextValue = {
     headerEntries,
     dynamicSources,
@@ -275,6 +324,8 @@ export const HeaderProvider: React.FC<HeaderProviderProps> = ({ children }) => {
     isStatusLoaded,
     rulesFromApp,
     uiState,
+    disabledTagGroups,
+    toggleTagGroup,
     loadHeaderEntries,
     loadDynamicSources,
     refreshHeaderEntries,

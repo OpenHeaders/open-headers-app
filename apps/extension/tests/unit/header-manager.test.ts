@@ -34,7 +34,7 @@ vi.mock('@/utils/logger', () => ({
 }));
 
 import { declarativeNetRequest } from '@utils/browser-api';
-import { setRulesPaused, updateNetworkRules } from '@/background/header-manager';
+import { setDisabledTagGroups, setRulesPaused, updateNetworkRules } from '@/background/header-manager';
 import { formatUrlPattern } from '@/background/modules/url-utils';
 
 const mockGetDynamicRules = declarativeNetRequest!.getDynamicRules as ReturnType<typeof vi.fn>;
@@ -78,6 +78,7 @@ describe('header-manager', () => {
     vi.clearAllMocks();
     mockSavedData = {};
     setRulesPaused(false);
+    setDisabledTagGroups([]);
     mockGetDynamicRules.mockResolvedValue([]);
     mockUpdateDynamicRules.mockResolvedValue(undefined);
   });
@@ -251,6 +252,95 @@ describe('header-manager', () => {
       await flushPromises();
 
       expect(mockUpdateDynamicRules).toHaveBeenCalledWith(expect.objectContaining({ addRules: [] }));
+    });
+  });
+
+  // ── Disabled tag groups ──
+
+  describe('disabled tag groups', () => {
+    it('skips rules whose tag group is disabled', async () => {
+      setDisabledTagGroups(['api']);
+      mockSavedData = {
+        'rule-1': makeSavedEntry({
+          isDynamic: false,
+          sourceId: undefined,
+          headerName: 'X-Api',
+          headerValue: 'value',
+          domains: ['openheaders.io'],
+          tag: 'api',
+        }),
+      };
+
+      updateNetworkRules([]);
+      await flushPromises();
+
+      const rules = getRulesFromLastCall();
+      expect(rules).toHaveLength(0);
+    });
+
+    it('injects rules from non-disabled tag groups', async () => {
+      setDisabledTagGroups(['api']);
+      mockSavedData = {
+        'rule-1': makeSavedEntry({
+          isDynamic: false,
+          sourceId: undefined,
+          headerName: 'X-Other',
+          headerValue: 'value',
+          domains: ['openheaders.io'],
+          tag: 'other',
+        }),
+      };
+
+      updateNetworkRules([]);
+      await flushPromises();
+
+      const rules = getRulesFromLastCall();
+      expect(rules.length).toBeGreaterThan(0);
+    });
+
+    it('skips untagged rules when __no_tag__ group is disabled', async () => {
+      setDisabledTagGroups(['__no_tag__']);
+      mockSavedData = {
+        'rule-1': makeSavedEntry({
+          isDynamic: false,
+          sourceId: undefined,
+          headerName: 'X-Untagged',
+          headerValue: 'value',
+          domains: ['openheaders.io'],
+        }),
+      };
+
+      updateNetworkRules([]);
+      await flushPromises();
+
+      const rules = getRulesFromLastCall();
+      expect(rules).toHaveLength(0);
+    });
+
+    it('allows rules when tag group is re-enabled', async () => {
+      setDisabledTagGroups(['api']);
+      mockSavedData = {
+        'rule-1': makeSavedEntry({
+          isDynamic: false,
+          sourceId: undefined,
+          headerName: 'X-Api',
+          headerValue: 'value',
+          domains: ['openheaders.io'],
+          tag: 'api',
+        }),
+      };
+
+      updateNetworkRules([]);
+      await flushPromises();
+      expect(getRulesFromLastCall()).toHaveLength(0);
+
+      // Re-enable the group
+      setDisabledTagGroups([]);
+      updateNetworkRules([]);
+      await flushPromises();
+
+      const rules = getRulesFromLastCall();
+      expect(rules.length).toBeGreaterThan(0);
     });
   });
 
