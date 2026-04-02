@@ -38,6 +38,9 @@
   "build": {
     "appId": "io.openheaders",
     "productName": "OpenHeaders",
+    "extraMetadata": {
+      "name": "open-headers"
+    },
     "protocols": [
       {
         "name": "OpenHeaders Protocol",
