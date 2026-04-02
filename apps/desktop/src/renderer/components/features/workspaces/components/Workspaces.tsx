@@ -1,0 +1,200 @@
+import { PlusOutlined } from '@ant-design/icons';
+import { Alert, Button, Card, Divider, Space, Typography } from 'antd';
+import React, { useCallback, useState } from 'react';
+import { useWorkspaceActions } from '@/renderer/components/features/workspaces/hooks';
+import { useSettings, useWorkspaces } from '@/renderer/contexts';
+import type { Workspace } from '@/types/workspace';
+import WorkspaceEditModal from './WorkspaceEditModal';
+import WorkspaceModal from './WorkspaceModal';
+import WorkspacesTable from './WorkspacesTable';
+
+const { Title, Text } = Typography;
+
+// Constants
+const COMPONENT_PADDING = '24px';
+const TITLE_MARGIN = 0;
+const TUTORIAL_MARGIN = '8px 0';
+const TUTORIAL_PADDING = '20px';
+const DIVIDER_MARGIN = '12px 0';
+
+// Styles object for better maintainability
+const styles = {
+  container: { padding: COMPONENT_PADDING },
+  headerContainer: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  title: { margin: TITLE_MARGIN },
+  tutorialList: { margin: TUTORIAL_MARGIN, paddingLeft: TUTORIAL_PADDING },
+  tutorialDivider: { margin: DIVIDER_MARGIN },
+  spaceVertical: { width: '100%' },
+};
+
+/**
+ * Main Workspaces component for managing personal and team workspaces
+ *
+ * This component serves as the main orchestrator for workspace management,
+ * handling the display of workspaces in a table format and providing
+ * functionality for creating, editing, and managing both personal and
+ * team workspaces with Git synchronization capabilities.
+ *
+ * Features:
+ * - Display workspaces in a comprehensive table
+ * - Create new personal or team workspaces
+ * - Edit existing workspace configurations
+ * - Git repository integration with authentication
+ * - Real-time sync status monitoring
+ * - Workspace cloning and deletion
+ * - Connection testing for Git repositories
+ *
+ *  The main Workspaces component
+ */
+const Workspaces = () => {
+  const workspaceContext = useWorkspaces();
+  const { settings } = useSettings();
+  const { workspaces, activeWorkspaceId, switchWorkspace, syncStatus, updateWorkspace } = workspaceContext;
+
+  // Component state
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editingWorkspace, setEditingWorkspace] = useState<Workspace | null>(null);
+
+  // Workspace actions hook
+  const { handleDeleteWorkspace, handleCloneToPersonal, handleSyncWorkspace } = useWorkspaceActions(workspaceContext);
+
+  /**
+   * Handles adding a new workspace
+   */
+  const handleAddWorkspace = useCallback(() => {
+    setEditingWorkspace(null);
+    setModalVisible(true);
+  }, []);
+
+  /**
+   * Handles editing an existing workspace
+   *  workspace - Workspace object to edit
+   */
+  const handleEditWorkspace = (workspace: Workspace) => {
+    setEditingWorkspace(workspace);
+    setModalVisible(true);
+  };
+
+  /**
+   * Handles modal close/cancel
+   */
+  const handleModalClose = useCallback(() => {
+    setModalVisible(false);
+    setEditingWorkspace(null);
+  }, []);
+
+  /**
+   * Handles successful workspace creation
+   *  workspaceId - ID of the created workspace
+   */
+  const handleWorkspaceSuccess = (workspaceId?: string) => {
+    console.log('Workspace created successfully:', workspaceId);
+    setModalVisible(false);
+    setEditingWorkspace(null);
+  };
+
+  /**
+   * Renders the tutorial alert for new users
+   *
+   * Displays an informational alert explaining workspaces, their types,
+   * and privacy information. Only shown if tutorial mode is enabled
+   * in user settings.
+   *
+   *  Tutorial alert component or null if disabled
+   */
+  const renderTutorialAlert = () => {
+    if (settings?.tutorialMode === false) {
+      return null;
+    }
+
+    return (
+      <Alert
+        title="About Workspaces"
+        description={
+          <Space orientation="vertical">
+            <Text>Workspaces allow you to organize and share configurations:</Text>
+            <ul style={styles.tutorialList}>
+              <li>
+                <Text>
+                  <strong>Personal Workspace:</strong> Your local configuration (default)
+                </Text>
+              </li>
+              <li>
+                <Text>
+                  <strong>Team Workspaces:</strong> Git-based shared configurations that sync automatically (read-only)
+                </Text>
+              </li>
+            </ul>
+            <Text>
+              Team workspaces support various Git sources: remote providers (GitHub, GitLab, Bitbucket), local
+              repositories, network shares, and self-hosted Git servers.
+            </Text>
+            <Text type="secondary">
+              💡 Tip: Disable auto-sync or Clone a team workspace to a personal workspace to test changes without being
+              overwritten by auto-sync.
+            </Text>
+            <Divider style={styles.tutorialDivider} />
+            <Text type="secondary">
+              <strong>🔒 Privacy First:</strong> All workspace data is stored locally on your device. There is{' '}
+              <strong>no</strong> analytics, telemetry, or usage data collection. Your configurations, API keys, and
+              workspace settings never leave your device.
+            </Text>
+          </Space>
+        }
+        type="info"
+        showIcon
+        closable
+      />
+    );
+  };
+
+  return (
+    <div style={styles.container}>
+      <Card>
+        <Space orientation="vertical" style={styles.spaceVertical} size="large">
+          <div style={styles.headerContainer}>
+            <Space>
+              <Title level={4} style={styles.title}>
+                Workspaces
+              </Title>
+              <Text type="secondary">Manage your personal and team workspaces</Text>
+            </Space>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAddWorkspace}>
+              Add Workspace
+            </Button>
+          </div>
+
+          {renderTutorialAlert()}
+
+          <WorkspacesTable
+            workspaces={workspaces}
+            activeWorkspaceId={activeWorkspaceId}
+            syncStatus={syncStatus}
+            onSyncWorkspace={handleSyncWorkspace}
+            onEditWorkspace={handleEditWorkspace}
+            onDeleteWorkspace={handleDeleteWorkspace}
+            onCloneToPersonal={handleCloneToPersonal}
+            onSwitchWorkspace={switchWorkspace}
+            onUpdateWorkspace={updateWorkspace}
+          />
+        </Space>
+      </Card>
+
+      <WorkspaceModal
+        visible={modalVisible && !editingWorkspace}
+        editingWorkspace={null}
+        onCancel={handleModalClose}
+        onSuccess={handleWorkspaceSuccess}
+      />
+
+      <WorkspaceEditModal
+        visible={!!(modalVisible && editingWorkspace)}
+        workspace={editingWorkspace}
+        onCancel={handleModalClose}
+        onSuccess={handleWorkspaceSuccess}
+      />
+    </div>
+  );
+};
+
+export default Workspaces;

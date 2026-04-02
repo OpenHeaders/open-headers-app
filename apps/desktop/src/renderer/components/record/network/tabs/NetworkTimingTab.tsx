@@ -1,0 +1,101 @@
+/**
+ * NetworkTimingTab Component
+ *
+ * Displays request timing breakdown and details
+ * Shows DNS, connection, SSL, waiting, and download times
+ *
+ *  props - Component props
+ *  props.request - Network request data
+ *  props.record - Full record for context
+ *  props.token - Ant Design theme token
+ */
+
+import { Space, Typography } from 'antd';
+import type {
+  GlobalToken,
+  NetworkRecord,
+  NetworkTimingData,
+  RecordData,
+} from '@/renderer/components/record/network/types';
+import { format24HTimeWithMs } from '@/renderer/utils';
+
+const { Text } = Typography;
+
+interface NetworkTimingTabProps {
+  request: NetworkRecord;
+  record: RecordData;
+  token: GlobalToken;
+}
+const NetworkTimingTab = ({ request, record, token }: NetworkTimingTabProps) => {
+  const duration = request.duration || (request.endTime ?? 0) - request.timestamp || 0;
+  const timing: NetworkTimingData = request.timing || {};
+
+  const formatTimeWithMs = (relativeMs: number) => {
+    const absoluteTime = new Date((record.metadata?.startTime ?? 0) + relativeMs);
+    const formattedTime = format24HTimeWithMs(absoluteTime);
+    return (
+      <span>
+        {formattedTime.time}
+        <span style={{ fontSize: '0.85em', opacity: 0.8 }}>{formattedTime.ms}</span>
+      </span>
+    );
+  };
+
+  const renderTimingItem = (label: string, value: number | undefined | null, unit = 'ms') => {
+    if (value === undefined || value === null) return null;
+
+    return (
+      <div style={{ display: 'flex', marginBottom: '4px' }}>
+        <Text style={{ width: '140px', fontSize: '12px', color: token.colorTextTertiary }}>{label}:</Text>
+        <Text style={{ fontSize: '12px' }}>
+          {value.toFixed(2)} {unit}
+        </Text>
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ height: '100%', overflow: 'auto', padding: '0' }}>
+      <div style={{ padding: '16px' }}>
+        <Space orientation="vertical" style={{ width: '100%' }}>
+          <div>
+            <Text strong style={{ fontSize: '13px', color: token.colorTextSecondary }}>
+              Timing Breakdown
+            </Text>
+          </div>
+
+          <div style={{ marginTop: '8px' }}>
+            {renderTimingItem('Total Time', duration)}
+            {renderTimingItem('DNS Lookup', timing.dns)}
+            {renderTimingItem('Initial Connection', timing.connect)}
+            {renderTimingItem('SSL', timing.ssl)}
+            {renderTimingItem('Waiting (TTFB)', timing.waiting)}
+            {renderTimingItem('Content Download', timing.download)}
+          </div>
+
+          <div style={{ marginTop: '16px' }}>
+            <Text strong style={{ fontSize: '13px', color: token.colorTextSecondary }}>
+              Request Details
+            </Text>
+            <div style={{ marginTop: '8px' }}>
+              <div style={{ display: 'flex', marginBottom: '4px' }}>
+                <Text style={{ width: '140px', fontSize: '12px', color: token.colorTextTertiary }}>Started At:</Text>
+                <Text style={{ fontSize: '12px' }}>{formatTimeWithMs(request.timestamp)}</Text>
+              </div>
+              {request.endTime && (
+                <div style={{ display: 'flex', marginBottom: '4px' }}>
+                  <Text style={{ width: '140px', fontSize: '12px', color: token.colorTextTertiary }}>
+                    Completed At:
+                  </Text>
+                  <Text style={{ fontSize: '12px' }}>{formatTimeWithMs(request.endTime)}</Text>
+                </div>
+              )}
+            </div>
+          </div>
+        </Space>
+      </div>
+    </div>
+  );
+};
+
+export default NetworkTimingTab;

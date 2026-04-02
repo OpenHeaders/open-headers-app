@@ -1,0 +1,79 @@
+/**
+ * HTTP Body Tab Component
+ *
+ * Provides interface for configuring HTTP request body content with
+ * content type selection and environment variable validation.
+ *
+ * Features:
+ * - Content type selection (JSON, Form URL Encoded)
+ * - Dynamic body content area
+ * - Environment variable validation in body content
+ * - Real-time validation feedback
+ *
+ * @component
+ * @since 3.0.0
+ */
+
+import { Col, Form, Input, Row, Select } from 'antd';
+
+const { TextArea } = Input;
+
+/**
+ * HTTP Body tab component for request body configuration
+ *
+ *  props - Component props
+ *  props.contentType - Current content type
+ *  props.handleContentTypeChange - Content type change handler
+ *  props.validateVariableExists - Variable validation function
+ *  Body tab component
+ */
+interface HttpBodyTabProps {
+  contentType: string;
+  handleContentTypeChange: (value: string) => void;
+  validateVariableExists: (value: string) => { valid: boolean; error?: string };
+}
+
+const HttpBodyTab = ({ contentType, handleContentTypeChange, validateVariableExists }: HttpBodyTabProps) => {
+  return (
+    <Row gutter={16}>
+      <Col span={6}>
+        <Form.Item name={['requestOptions', 'contentType']} label="Content Type">
+          <Select
+            onChange={handleContentTypeChange}
+            size="small"
+            options={[
+              { value: 'application/json', label: 'JSON' },
+              { value: 'application/x-www-form-urlencoded', label: 'Form URL Encoded' },
+            ]}
+          />
+        </Form.Item>
+      </Col>
+      <Col span={18}>
+        <Form.Item
+          name={['requestOptions', 'body']}
+          label={contentType === 'application/json' ? 'JSON Body' : 'Form URL Encoded Body'}
+          rules={[
+            {
+              validator: (_, value) => {
+                if (!value) return Promise.resolve();
+                const result = validateVariableExists(value);
+                if (!result.valid) {
+                  return Promise.reject(new Error(result.error));
+                }
+                return Promise.resolve();
+              },
+            },
+          ]}
+        >
+          <TextArea
+            rows={3}
+            placeholder={contentType === 'application/json' ? 'Enter JSON body' : 'key1:value1\nkey2:value2\n...'}
+            size="small"
+          />
+        </Form.Item>
+      </Col>
+    </Row>
+  );
+};
+
+export default HttpBodyTab;

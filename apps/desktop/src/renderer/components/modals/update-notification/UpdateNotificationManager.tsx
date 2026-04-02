@@ -1,0 +1,241 @@
+import { CheckCircleOutlined, LoadingOutlined, ReloadOutlined } from '@ant-design/icons';
+import type { GlobalToken } from 'antd';
+import { Button, Progress } from 'antd';
+import type { ModalStaticFunctions } from 'antd/es/modal/confirm';
+import type { NotificationInstance } from 'antd/es/notification/interface';
+import React from 'react';
+
+/**
+ * UpdateNotificationManager - Manages notification display and formatting
+ *
+ * Provides centralized notification content generation and display logic
+ * for different update states. Handles notification keys, content formatting,
+ * and user interaction elements.
+ *
+ * Features:
+ * - Consistent notification formatting across all update states
+ * - Centralized notification key management
+ * - Progress indicator formatting
+ * - Install button generation with confirmation dialogs
+ * - Proper cleanup and state management
+ *
+ *  notification - Ant Design notification API
+ *  modal - Ant Design modal API
+ *  token - Theme token for styling
+ *  isInstalling - Whether update installation is in progress
+ *  setIsInstalling - State setter for installation status
+ *  debugLog - Debug logging function
+ */
+interface UpdateNotificationManagerProps {
+  notification: NotificationInstance;
+  modal: Omit<ModalStaticFunctions, 'warn'>;
+  token: GlobalToken;
+  isInstalling: boolean;
+  setIsInstalling: (value: boolean) => void;
+  debugLog: (message: string) => void;
+}
+
+export const UpdateNotificationManager = ({
+  notification,
+  modal,
+  token,
+  isInstalling,
+  setIsInstalling,
+  debugLog,
+}: UpdateNotificationManagerProps) => {
+  // Notification keys for proper management
+  const NOTIFICATION_KEYS = {
+    CHECKING: 'checking-updates',
+    DOWNLOADING: 'update-download-progress',
+    DOWNLOADED: 'update-downloaded',
+    INSTALLING: 'update-installing',
+    ERROR: 'update-error',
+    NOT_AVAILABLE: 'update-not-available',
+    ALREADY_CHECKING: 'update-already-checking',
+  };
+
+  /**
+   * Clear all update-related notifications
+   */
+  const clearAllNotifications = () => {
+    debugLog('Clearing all update notifications');
+    Object.values(NOTIFICATION_KEYS).forEach((key) => {
+      notification.destroy(key);
+    });
+  };
+
+  /**
+   * Clear a specific notification by key
+   *  key - Notification key to clear
+   */
+  const clearNotification = (key: string) => {
+    debugLog(`Clearing notification with key: ${key}`);
+    notification.destroy(key);
+  };
+
+  /**
+   * Show checking for updates notification
+   */
+  const showCheckingNotification = () => {
+    debugLog('Showing checking for updates notification');
+    notification.open({
+      title: 'Checking for Updates',
+      description: 'Looking for new versions…',
+      duration: 0,
+      key: NOTIFICATION_KEYS.CHECKING,
+      icon: <LoadingOutlined spin />,
+    });
+  };
+
+  /**
+   * Show already checking notification
+   *  isDownloading - Whether download/processing is in progress
+   */
+  const showAlreadyCheckingNotification = (isDownloading: boolean) => {
+    notification.info({
+      title: isDownloading ? 'Update In Progress' : 'Check In Progress',
+      description: isDownloading ? 'Already processing the latest update' : 'Already checking for updates',
+      duration: 3,
+      key: NOTIFICATION_KEYS.ALREADY_CHECKING,
+    });
+  };
+
+  /**
+   * Show update available notification with processing progress
+   *  info - Update information
+   *  progress - Processing progress (0-100)
+   */
+  const showUpdateAvailableNotification = (info: { version: string }, progress = 0) => {
+    debugLog(`Showing update available notification for version ${info.version}`);
+    notification.info({
+      title: 'Update Available',
+      description: (
+        <div>
+          <div>Version {info.version} is processing...</div>
+          <Progress percent={progress} status="active" />
+        </div>
+      ),
+      duration: 0,
+      key: NOTIFICATION_KEYS.DOWNLOADING,
+    });
+  };
+
+  /**
+   * Show update processing progress notification
+   *  percent - Processing progress percentage
+   */
+  const showDownloadProgressNotification = (percent: number) => {
+    notification.info({
+      title: 'Processing Update',
+      description: (
+        <div>
+          <Progress percent={percent} status="active" format={(percent) => `${percent}%`} />
+        </div>
+      ),
+      duration: 0,
+      key: NOTIFICATION_KEYS.DOWNLOADING,
+    });
+  };
+
+  /**
+   * Create install button with confirmation dialog
+   *  Install button component
+   */
+  const createInstallButton = () => {
+    return (
+      <Button
+        type="primary"
+        size="small"
+        icon={<ReloadOutlined />}
+        loading={isInstalling}
+        onClick={() => {
+          // Close notification
+          notification.destroy(NOTIFICATION_KEYS.DOWNLOADED);
+
+          // Show confirmation dialog
+          modal.confirm({
+            title: 'Install Update',
+            content: 'The application will restart to install the update. Continue?',
+            onOk: () => {
+              setIsInstalling(true);
+
+              // Show installation notification
+              notification.info({
+                title: 'Installing Update',
+                description: 'The application will restart momentarily...',
+                duration: 0,
+                key: NOTIFICATION_KEYS.INSTALLING,
+              });
+
+              // Call install function
+              window.electronAPI.installUpdate();
+            },
+            okText: 'Update Now',
+            cancelText: 'Later',
+          });
+        }}
+      >
+        {isInstalling ? 'Installing...' : 'Install Now'}
+      </Button>
+    );
+  };
+
+  /**
+   * Show update ready notification
+   *  info - Update information
+   */
+  const showUpdateReadyNotification = (info: { version: string }) => {
+    debugLog(`Showing update ready notification for version ${info.version}`);
+
+    const installButton = createInstallButton();
+
+    notification.success({
+      title: 'Update Ready',
+      description: `Version ${info.version} is ready to install`,
+      duration: 0,
+      key: NOTIFICATION_KEYS.DOWNLOADED,
+      actions: installButton,
+    });
+  };
+
+  /**
+   * Show no updates available notification
+   */
+  const showNoUpdatesNotification = () => {
+    debugLog('Showing no updates available notification');
+    notification.success({
+      title: 'No Updates Available',
+      description: 'You are already using the latest version.',
+      duration: 4,
+      key: NOTIFICATION_KEYS.NOT_AVAILABLE,
+      icon: <CheckCircleOutlined style={{ color: token.colorSuccess || '#52c41a' }} />,
+    });
+  };
+
+  /**
+   * Show update error notification
+   *  message - Error message
+   */
+  const showUpdateErrorNotification = (message: string) => {
+    debugLog('Showing update error notification');
+    notification.error({
+      title: 'Update Error',
+      description: message,
+      duration: 8,
+      key: NOTIFICATION_KEYS.ERROR,
+    });
+  };
+
+  return {
+    NOTIFICATION_KEYS,
+    clearAllNotifications,
+    clearNotification,
+    showCheckingNotification,
+    showAlreadyCheckingNotification,
+    showUpdateAvailableNotification,
+    showDownloadProgressNotification,
+    showUpdateReadyNotification,
+    showNoUpdatesNotification,
+    showUpdateErrorNotification,
+  };
+};

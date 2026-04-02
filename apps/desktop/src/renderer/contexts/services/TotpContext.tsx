@@ -1,0 +1,178 @@
+/**
+ * TotpContext — renderer-side TOTP state for UI display.
+ *
+ * Cooldown tracking is owned by main-process TotpCooldownTracker.
+ * This context polls main via IPC for cooldown state and provides
+ * synchronous access to cached values for component rendering.
+ */
+
+import type React from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useWorkspaces } from '@/renderer/contexts/data';
+
+interface TotpContextValue {
+  canUseTotpForSource: (sourceId: string) => boolean;
+  getCooldownSecondsForSource: (sourceId: string) => number;
+  trackTotpSource: (sourceId: string) => void;
+  untrackTotpSource: (sourceId: string) => void;
+  // Legacy method names for backward compatibility
+  canUseTotpSecret: (sourceId: string) => boolean;
+  getCooldownSeconds: (sourceId: string) => number;
+  trackTotpSecret: (sourceId: string) => void;
+  untrackTotpSecret: (sourceId: string) => void;
+}
+
+export const TotpContext = createContext<TotpContextValue | undefined>(undefined);
+
+export const useTotpState = (): TotpContextValue => {
+  const context = useContext(TotpContext);
+  if (!context) {
+    throw new Error('useTotpState must be used within TotpProvider');
+  }
+  return context;
+};
+
+export const TotpProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { activeWorkspaceId } = useWorkspaces();
+
+  // Local cache of cooldown state — polled from main process
+  const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
+  const trackedSourcesRef = useRef<Set<string>>(new Set());
+  const [hasActiveCooldowns, setHasActiveCooldowns] = useState(false);
+  const monitoringIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Check if a source can use TOTP (reads from local cache)
+  const canUseTotpForSource = useCallback(
+    (sourceId: string): boolean => {
+      if (!sourceId) return true;
+      return (cooldowns[sourceId] || 0) <= 0;
+    },
+    [cooldowns],
+  );
+
+  // Get cooldown remaining seconds (reads from local cache)
+  const getCooldownSecondsForSource = useCallback(
+    (sourceId: string): number => {
+      if (!sourceId) return 0;
+      return cooldowns[sourceId] || 0;
+    },
+    [cooldowns],
+  );
+
+  // Poll main process for cooldown state
+  // cooldowns is read via ref to avoid re-triggering the effect when cooldowns change
+  // (the effect itself sets cooldowns, which would cause an infinite loop)
+  const cooldownsRef = useRef(cooldowns);
+  cooldownsRef.current = cooldowns;
+
+  useEffect(() => {
+    const checkAllCooldowns = async (): Promise<boolean> => {
+      const allSourceIds = new Set<string>();
+      Object.keys(cooldownsRef.current).forEach((id) => {
+        allSourceIds.add(id);
+      });
+      trackedSourcesRef.current.forEach((id) => {
+        allSourceIds.add(id);
+      });
+
+      if (allSourceIds.size === 0) return false;
+
+      const newCooldowns: Record<string, number> = {};
+      let stillActive = false;
+
+      for (const sourceId of allSourceIds) {
+        try {
+          const info = await window.electronAPI.httpRequest.getTotpCooldown(activeWorkspaceId, sourceId);
+          if (info.inCooldown) {
+            newCooldowns[sourceId] = info.remainingSeconds;
+            stillActive = true;
+          }
+        } catch (_e) {
+          // IPC not ready yet — skip
+        }
+      }
+
+      setCooldowns(newCooldowns);
+      return stillActive;
+    };
+
+    const startMonitoring = () => {
+      if (monitoringIntervalRef.current) return;
+
+      checkAllCooldowns().then((hasActive) => {
+        if (hasActive) {
+          monitoringIntervalRef.current = setInterval(() => {
+            checkAllCooldowns().then((stillActive) => {
+              if (!stillActive && monitoringIntervalRef.current) {
+                clearInterval(monitoringIntervalRef.current);
+                monitoringIntervalRef.current = null;
+                setHasActiveCooldowns(false);
+              }
+            });
+          }, 1000);
+        } else {
+          setHasActiveCooldowns(false);
+        }
+      });
+    };
+
+    if (hasActiveCooldowns) {
+      startMonitoring();
+    }
+
+    return () => {
+      if (monitoringIntervalRef.current) {
+        clearInterval(monitoringIntervalRef.current);
+        monitoringIntervalRef.current = null;
+      }
+    };
+  }, [hasActiveCooldowns, activeWorkspaceId]);
+
+  const trackTotpSource = useCallback(
+    (sourceId: string): void => {
+      if (!sourceId) return;
+      trackedSourcesRef.current.add(sourceId);
+
+      window.electronAPI.httpRequest
+        .getTotpCooldown(activeWorkspaceId, sourceId)
+        .then((info) => {
+          if (info.inCooldown) {
+            setCooldowns((prev) => ({ ...prev, [sourceId]: info.remainingSeconds }));
+            setHasActiveCooldowns(true);
+          }
+        })
+        .catch(() => {
+          /* IPC not ready */
+        });
+    },
+    [activeWorkspaceId],
+  );
+
+  const untrackTotpSource = useCallback((sourceId: string): void => {
+    if (!sourceId) return;
+    trackedSourcesRef.current.delete(sourceId);
+    setCooldowns((prev) => {
+      if (!(sourceId in prev)) return prev;
+      const next = { ...prev };
+      delete next[sourceId];
+      return next;
+    });
+  }, []);
+
+  const value: TotpContextValue = useMemo(
+    () => ({
+      canUseTotpForSource,
+      getCooldownSecondsForSource,
+      trackTotpSource,
+      untrackTotpSource,
+      // Legacy aliases
+      canUseTotpSecret: canUseTotpForSource,
+      getCooldownSeconds: getCooldownSecondsForSource,
+      trackTotpSecret: trackTotpSource,
+      untrackTotpSecret: untrackTotpSource,
+    }),
+    [canUseTotpForSource, getCooldownSecondsForSource, trackTotpSource, untrackTotpSource],
+  );
+
+  return <TotpContext.Provider value={value}>{children}</TotpContext.Provider>;
+};

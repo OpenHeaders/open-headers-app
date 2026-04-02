@@ -1,0 +1,871 @@
+/**
+ * JWT Editor Modal - Two-pane editor for JWT tokens
+ * Left pane: Decoded editable JSON
+ * Right pane: Encoded JWT preview
+ */
+
+import {
+  CaretRightOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  CodeOutlined,
+  CopyOutlined,
+  EyeInvisibleOutlined,
+  FileTextOutlined,
+  KeyOutlined,
+  LockOutlined,
+  WarningOutlined,
+} from '@ant-design/icons';
+import type { JsonObject } from '@openheaders/core';
+import {
+  Alert,
+  Button,
+  Checkbox,
+  Col,
+  Collapse,
+  Input,
+  Modal,
+  message,
+  Radio,
+  Row,
+  Segmented,
+  Select,
+  Space,
+  Tag,
+  Tooltip,
+  Typography,
+  theme,
+} from 'antd';
+import type React from 'react';
+import { useEffect, useState } from 'react';
+import {
+  decodeJWT,
+  encodeJWT,
+  formatJSON,
+  getJWTExpiration,
+  JWT_CLAIM_DESCRIPTIONS,
+  signJWT,
+  validateJSON,
+} from '@/renderer/utils/jwtUtils';
+
+const { TextArea } = Input;
+const { Title, Text } = Typography;
+const { Panel } = Collapse;
+
+interface JWTEditorModalProps {
+  visible: boolean;
+  variableName: string;
+  initialValue: string;
+  isSecret: boolean;
+  onSave: (token: string, isSecret: boolean) => void;
+  onCancel: () => void;
+}
+
+const JWTEditorModal: React.FC<JWTEditorModalProps> = ({
+  visible,
+  variableName,
+  initialValue,
+  isSecret: initialIsSecret,
+  onSave,
+  onCancel,
+}) => {
+  const { token } = theme.useToken();
+  const [decodedHeader, setDecodedHeader] = useState('');
+  const [decodedPayload, setDecodedPayload] = useState('');
+  const [signature, setSignature] = useState('');
+  const [encodedToken, setEncodedToken] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [headerError, setHeaderError] = useState<string | null>(null);
+  const [payloadError, setPayloadError] = useState<string | null>(null);
+  const [expirationInfo, setExpirationInfo] = useState<{
+    hasExpiration: boolean;
+    isExpired?: boolean;
+    expiresAt?: Date;
+    expiresIn?: number;
+  } | null>(null);
+  const [isModified, setIsModified] = useState(false);
+  const [originalToken, setOriginalToken] = useState('');
+  const [useSecretKey, setUseSecretKey] = useState(false);
+  const [secretKey, setSecretKey] = useState('');
+  const [signingError, setSigningError] = useState<string | null>(null);
+  const [algorithm, setAlgorithm] = useState('HS256');
+  const [headerExpanded, setHeaderExpanded] = useState(false);
+  const [variableType, setVariableType] = useState('default');
+  const [editMode, setEditMode] = useState('decoded'); // 'decoded' or 'encoded'
+  const [encodedInput, setEncodedInput] = useState('');
+  const [encodedInputError, setEncodedInputError] = useState<string | null>(null);
+
+  // Initialize with decoded token
+  useEffect(() => {
+    if (visible && initialValue) {
+      try {
+        const decoded = decodeJWT(initialValue);
+        setDecodedHeader(formatJSON(decoded.header));
+        setDecodedPayload(formatJSON(decoded.payload));
+        setSignature(decoded.signature);
+        setEncodedToken(initialValue);
+        setEncodedInput(initialValue);
+        setOriginalToken(initialValue);
+        setError(null);
+        setHeaderError(null);
+        setPayloadError(null);
+        setEncodedInputError(null);
+        setIsModified(false);
+        setUseSecretKey(false);
+        setSecretKey('');
+        setSigningError(null);
+        setEditMode('decoded');
+        // Set algorithm from header if available
+        setAlgorithm(decoded.header.alg || 'HS256');
+        // Set variable type from props
+        setVariableType(initialIsSecret ? 'secret' : 'default');
+
+        // Check expiration
+        const expInfo = getJWTExpiration(decoded.payload);
+        setExpirationInfo(expInfo);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+        // Still show the original token even if it can't be decoded
+        setEncodedToken(initialValue);
+        setEncodedInput(initialValue);
+        setOriginalToken(initialValue);
+        // Set variable type from props even on error
+        setVariableType(initialIsSecret ? 'secret' : 'default');
+        setEditMode('encoded'); // Switch to encoded mode if decode fails
+      }
+    }
+  }, [visible, initialValue, initialIsSecret]);
+
+  /**
+   * Update the encoded token (with or without signing)
+   */
+  const updateEncodedToken = async (headerObj: JsonObject, payloadObj: JsonObject) => {
+    try {
+      let newToken: string;
+
+      if (useSecretKey && secretKey) {
+        // Sign with the provided secret
+        newToken = await signJWT(headerObj, payloadObj, secretKey, algorithm);
+        setEncodedToken(newToken);
+        setSigningError(null);
+      } else {
+        // Use original signature
+        newToken = encodeJWT(headerObj, payloadObj, signature);
+        setEncodedToken(newToken);
+      }
+
+      // Check if we're back to the original token
+      setIsModified(newToken !== originalToken);
+    } catch (err) {
+      setSigningError(err instanceof Error ? err.message : String(err));
+      // Still encode without signature as fallback
+      const newToken = encodeJWT(headerObj, payloadObj, signature);
+      setEncodedToken(newToken);
+      // We're modified if there was an error but we have changes
+      setIsModified(newToken !== originalToken);
+    }
+  };
+
+  /**
+   * Handle header changes
+   */
+  const handleHeaderChange = async (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newHeader = e.target.value;
+    setDecodedHeader(newHeader);
+
+    try {
+      const headerObj = validateJSON(newHeader);
+      const payloadObj = validateJSON(decodedPayload);
+      await updateEncodedToken(headerObj, payloadObj);
+      setHeaderError(null);
+      setError(null);
+    } catch (err) {
+      setHeaderError(err instanceof Error ? err.message : String(err));
+      // Still mark as modified when there's an error
+      setIsModified(true);
+    }
+  };
+
+  /**
+   * Handle payload changes
+   */
+  const handlePayloadChange = async (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newPayload = e.target.value;
+    setDecodedPayload(newPayload);
+
+    try {
+      const headerObj = validateJSON(decodedHeader);
+      const payloadObj = validateJSON(newPayload);
+      await updateEncodedToken(headerObj, payloadObj);
+      setPayloadError(null);
+      setError(null);
+
+      // Update expiration info
+      const expInfo = getJWTExpiration(payloadObj);
+      setExpirationInfo(expInfo);
+    } catch (err) {
+      setPayloadError(err instanceof Error ? err.message : String(err));
+      // Still mark as modified when there's an error
+      setIsModified(true);
+    }
+  };
+
+  /**
+   * Handle secret key changes
+   */
+  const handleSecretKeyChange = async (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+    const newSecret = e.target.value;
+    setSecretKey(newSecret);
+
+    if (useSecretKey) {
+      try {
+        const headerObj = validateJSON(decodedHeader);
+        const payloadObj = validateJSON(decodedPayload);
+        await updateEncodedToken(headerObj, payloadObj);
+      } catch (_err) {
+        // Errors already handled in updateEncodedToken
+      }
+    }
+  };
+
+  /**
+   * Handle toggle for using secret key
+   */
+  const handleUseSecretKeyToggle = async (checked: boolean) => {
+    setUseSecretKey(checked);
+    setSigningError(null);
+
+    try {
+      const headerObj = validateJSON(decodedHeader);
+      const payloadObj = validateJSON(decodedPayload);
+      await updateEncodedToken(headerObj, payloadObj);
+    } catch (_err) {
+      // Errors already handled in updateEncodedToken
+    }
+  };
+
+  /**
+   * Handle algorithm change
+   */
+  const handleAlgorithmChange = async (value: string) => {
+    setAlgorithm(value);
+
+    // Update the header to reflect the new algorithm
+    try {
+      const headerObj = validateJSON(decodedHeader);
+      headerObj.alg = value;
+      setDecodedHeader(formatJSON(headerObj));
+
+      if (useSecretKey && secretKey) {
+        const payloadObj = validateJSON(decodedPayload);
+        await updateEncodedToken(headerObj, payloadObj);
+      }
+    } catch (_err) {
+      // If there's an error parsing, just update the algorithm
+      // The error will be shown in the header error field
+    }
+  };
+
+  /**
+   * Format JSON on blur for better readability
+   */
+  const formatOnBlur = (type: 'header' | 'payload') => {
+    try {
+      if (type === 'header') {
+        const headerObj = validateJSON(decodedHeader);
+        setDecodedHeader(formatJSON(headerObj));
+        setHeaderError(null);
+      } else if (type === 'payload') {
+        const payloadObj = validateJSON(decodedPayload);
+        setDecodedPayload(formatJSON(payloadObj));
+        setPayloadError(null);
+      }
+    } catch (_err) {
+      // Keep the error already set
+    }
+  };
+
+  /**
+   * Handle encoded token input changes
+   */
+  const handleEncodedInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newToken = e.target.value;
+    setEncodedInput(newToken);
+    setEncodedInputError(null);
+
+    // Try to decode and update the decoded view
+    try {
+      const decoded = decodeJWT(newToken);
+      setDecodedHeader(formatJSON(decoded.header));
+      setDecodedPayload(formatJSON(decoded.payload));
+      setSignature(decoded.signature);
+      setEncodedToken(newToken);
+      setError(null);
+      setHeaderError(null);
+      setPayloadError(null);
+
+      // Update algorithm from header
+      setAlgorithm(decoded.header.alg || 'HS256');
+
+      // Check expiration
+      const expInfo = getJWTExpiration(decoded.payload);
+      setExpirationInfo(expInfo);
+
+      // Mark as modified if different from original
+      setIsModified(newToken !== originalToken);
+    } catch (err) {
+      setEncodedInputError(err instanceof Error ? err.message : String(err));
+      setEncodedToken(newToken);
+      // Mark as modified since we have an invalid token
+      setIsModified(true);
+    }
+  };
+
+  /**
+   * Handle mode switch
+   */
+  const handleModeSwitch = (mode: string) => {
+    setEditMode(mode);
+
+    // If switching to encoded mode, sync the encoded input with current encoded token
+    if (mode === 'encoded') {
+      setEncodedInput(encodedToken);
+      setEncodedInputError(null);
+    }
+  };
+
+  /**
+   * Copy token to clipboard
+   */
+  const copyToClipboard = async () => {
+    try {
+      const tokenToCopy = editMode === 'encoded' ? encodedInput : encodedToken;
+      await navigator.clipboard.writeText(tokenToCopy);
+      message.success('JWT token copied to clipboard');
+    } catch (_error) {
+      message.error('Failed to copy to clipboard');
+    }
+  };
+
+  /**
+   * Handle save
+   */
+  const handleSave = () => {
+    if (editMode === 'decoded') {
+      if (!headerError && !payloadError && encodedToken) {
+        onSave(encodedToken, variableType === 'secret');
+      }
+    } else {
+      // In encoded mode, save the encoded input if it's valid
+      if (!encodedInputError && encodedInput) {
+        onSave(encodedInput, variableType === 'secret');
+      }
+    }
+  };
+
+  /**
+   * Render expiration status
+   */
+  const renderExpirationStatus = () => {
+    if (!expirationInfo?.hasExpiration) {
+      return null;
+    }
+
+    const { isExpired, expiresAt } = expirationInfo;
+
+    return (
+      <Alert
+        title={
+          <Space>
+            {isExpired ? (
+              <>
+                <CloseCircleOutlined />
+                <Text strong>Token Expired</Text>
+                <Text type="secondary">Expired on {expiresAt?.toLocaleString()}</Text>
+              </>
+            ) : (
+              <>
+                <CheckCircleOutlined />
+                <Text strong>Token Valid</Text>
+                <Text type="secondary">Expires on {expiresAt?.toLocaleString()}</Text>
+              </>
+            )}
+          </Space>
+        }
+        type={isExpired ? 'error' : 'success'}
+        showIcon={false}
+        style={{ marginBottom: 16 }}
+      />
+    );
+  };
+
+  /**
+   * Render common claims helper
+   */
+  const renderClaimsHelper = () => {
+    try {
+      const payload = validateJSON(decodedPayload);
+      const claimDescriptions = JWT_CLAIM_DESCRIPTIONS as Record<string, string>;
+      const commonClaims = Object.keys(payload)
+        .filter((key) => claimDescriptions[key])
+        .map((key) => (
+          <Tooltip key={key} title={claimDescriptions[key]}>
+            <Tag color="blue">{key}</Tag>
+          </Tooltip>
+        ));
+
+      if (commonClaims.length > 0) {
+        return (
+          <div style={{ marginTop: 8, marginBottom: 24 }}>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Claims:{' '}
+            </Text>
+            {commonClaims}
+          </div>
+        );
+      }
+    } catch {
+      // Don't show claims if JSON is invalid
+    }
+    return null;
+  };
+
+  const hasErrors = editMode === 'decoded' ? headerError || payloadError || error : encodedInputError || error;
+
+  return (
+    <Modal
+      title={
+        <Space>
+          <span>JWT Token Editor</span>
+          <Tag color="purple">{variableName}</Tag>
+          {isModified && <Tag color="orange">Modified</Tag>}
+        </Space>
+      }
+      open={visible}
+      onOk={handleSave}
+      onCancel={onCancel}
+      width="90vw"
+      okText="Save"
+      okButtonProps={{
+        disabled: !!hasErrors,
+        type: 'primary',
+      }}
+      centered
+      styles={{
+        body: {
+          height: 'calc(80vh - 110px)',
+          overflow: 'hidden',
+          padding: '16px 24px',
+        },
+      }}
+      style={{
+        maxWidth: '1400px',
+      }}
+    >
+      {error && (
+        <Alert
+          title="Initial JWT Decode Error"
+          description={error}
+          type="error"
+          showIcon
+          closable
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
+      <Row gutter={16} style={{ height: '100%' }}>
+        {/* Left Pane - Editable Area */}
+        <Col span={14} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <Space>
+              <Title level={5} style={{ margin: 0 }}>
+                Edit Mode:
+              </Title>
+              <Segmented
+                value={editMode}
+                onChange={handleModeSwitch}
+                options={[
+                  {
+                    label: 'Decoded',
+                    value: 'decoded',
+                    icon: <CodeOutlined />,
+                  },
+                  {
+                    label: 'Encoded',
+                    value: 'encoded',
+                    icon: <FileTextOutlined />,
+                  },
+                ]}
+              />
+            </Space>
+
+            {/* Variable Type Selector */}
+            <Space>
+              <Text type="secondary">Env Var Type:</Text>
+              <Radio.Group value={variableType} onChange={(e) => setVariableType(e.target.value)} size="small">
+                <Radio.Button value="default">Default</Radio.Button>
+                <Radio.Button value="secret">
+                  <Space size={4}>
+                    <EyeInvisibleOutlined />
+                    Secret
+                  </Space>
+                </Radio.Button>
+              </Radio.Group>
+            </Space>
+          </div>
+
+          {editMode === 'decoded' ? (
+            <>
+              {/* Header Editor - Collapsible */}
+              <Collapse
+                defaultActiveKey={[]}
+                style={{ marginBottom: 16 }}
+                expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} />}
+                onChange={(keys) => setHeaderExpanded(keys.includes('1'))}
+              >
+                <Panel
+                  header={
+                    <Space>
+                      <Text strong>Header</Text>
+                      {headerError && (
+                        <Text type="danger" style={{ fontSize: 12 }}>
+                          <WarningOutlined /> {headerError}
+                        </Text>
+                      )}
+                    </Space>
+                  }
+                  key="1"
+                >
+                  <TextArea
+                    value={decodedHeader}
+                    onChange={handleHeaderChange}
+                    onBlur={() => formatOnBlur('header')}
+                    placeholder="JWT Header (JSON)"
+                    autoSize={{ minRows: 3, maxRows: 6 }}
+                    style={{
+                      fontFamily: 'monospace',
+                      borderColor: headerError ? '#ff4d4f' : undefined,
+                    }}
+                  />
+                </Panel>
+              </Collapse>
+
+              {/* Payload Editor - Collapsible but expanded by default */}
+              <Collapse
+                defaultActiveKey={['payload']}
+                expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} />}
+              >
+                <Panel
+                  header={
+                    <Space>
+                      <Text strong>Payload</Text>
+                      {payloadError && (
+                        <Text type="danger" style={{ fontSize: 12 }}>
+                          <WarningOutlined /> {payloadError}
+                        </Text>
+                      )}
+                    </Space>
+                  }
+                  key="payload"
+                >
+                  <TextArea
+                    value={decodedPayload}
+                    onChange={handlePayloadChange}
+                    onBlur={() => formatOnBlur('payload')}
+                    placeholder="JWT Payload (JSON)"
+                    style={{
+                      fontFamily: 'monospace',
+                      borderColor: payloadError ? '#ff4d4f' : undefined,
+                      height: headerExpanded ? 'calc(80vh - 480px)' : 'calc(80vh - 330px)',
+                      minHeight: '180px',
+                      maxHeight: '550px',
+                      resize: 'none',
+                    }}
+                  />
+                </Panel>
+              </Collapse>
+            </>
+          ) : (
+            /* Encoded Mode - Direct JWT Input */
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <Title level={5} style={{ marginBottom: 8 }}>
+                Paste or Edit JWT Token
+              </Title>
+              <TextArea
+                value={encodedInput}
+                onChange={handleEncodedInputChange}
+                placeholder="Paste your complete JWT token here (header.payload.signature)"
+                style={{
+                  flex: 1,
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  borderColor: encodedInputError ? '#ff4d4f' : undefined,
+                  minHeight: '200px',
+                }}
+              />
+              {encodedInputError && (
+                <Alert
+                  title="JWT Parse Error"
+                  description={encodedInputError}
+                  type="error"
+                  showIcon
+                  style={{ marginTop: 8 }}
+                />
+              )}
+              <Alert
+                title="Direct Edit Mode"
+                description="Paste a complete JWT token to decode and edit it. The decoded view will update automatically if the token is valid."
+                type="info"
+                showIcon
+                style={{ marginTop: 8 }}
+              />
+            </div>
+          )}
+        </Col>
+
+        {/* Right Pane - Preview and Options */}
+        <Col span={10} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+          {/* Fixed/Sticky Preview Section */}
+          <div style={{ flexShrink: 0 }}>
+            {/* Encoded JWT Preview Header - Sticky */}
+            <Space
+              style={{
+                marginBottom: 8,
+                width: '100%',
+                justifyContent: 'space-between',
+                position: 'sticky',
+                top: 0,
+                backgroundColor: token.colorBgContainer,
+                zIndex: 1,
+                paddingTop: 0,
+              }}
+            >
+              <Title level={5} style={{ marginTop: 0, marginBottom: 0 }}>
+                Encoded JWT (Preview)
+              </Title>
+              <Tooltip title="Copy value of Encoded JWT">
+                <Button icon={<CopyOutlined />} onClick={copyToClipboard} size="small">
+                  Copy
+                </Button>
+              </Tooltip>
+            </Space>
+
+            {/* Preview Box - Fixed Height */}
+            <div
+              style={{
+                height: '200px',
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                border: `1px solid ${token.colorBorder}`,
+                borderRadius: 4,
+                padding: 8,
+                backgroundColor: token.colorFillAlter,
+                marginBottom: 8,
+              }}
+            >
+              {(() => {
+                const displayToken = editMode === 'encoded' ? encodedInput : encodedToken;
+                if (displayToken) {
+                  return (
+                    <div
+                      style={{
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                        wordWrap: 'break-word',
+                        wordBreak: 'break-all',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {(() => {
+                        const parts = displayToken.split('.');
+                        if (parts.length === 3) {
+                          return (
+                            <>
+                              <span style={{ color: '#d4380d' }}>{parts[0]}</span>
+                              <span>.</span>
+                              <span style={{ color: '#389e0d' }}>{parts[1]}</span>
+                              <span>.</span>
+                              <span style={{ color: '#1677ff' }}>{parts[2]}</span>
+                            </>
+                          );
+                        }
+                        return displayToken;
+                      })()}
+                    </div>
+                  );
+                } else {
+                  return (
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Encoded JWT will appear here
+                    </Text>
+                  );
+                }
+              })()}
+            </div>
+
+            {/* Token Structure - Inline */}
+            <div
+              style={{
+                marginBottom: 16,
+                fontSize: 12,
+                fontFamily: 'monospace',
+              }}
+            >
+              <Text type="secondary" style={{ fontSize: 12, marginRight: 8 }}>
+                Token Structure:
+              </Text>
+              <Text style={{ color: '#d4380d' }}>header</Text>
+              <Text>.</Text>
+              <Text style={{ color: '#389e0d' }}>payload</Text>
+              <Text>.</Text>
+              <Text style={{ color: '#1677ff' }}>signature</Text>
+            </div>
+          </div>
+
+          {/* Scrollable Options Section */}
+          <div
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              minHeight: 0,
+            }}
+          >
+            {/* Expiration Status */}
+            {renderExpirationStatus()}
+
+            {/* Claims Helper */}
+            {renderClaimsHelper() || <div style={{ marginBottom: 24 }} />}
+
+            {/* Signature Section */}
+            <div
+              style={{
+                padding: 12,
+                border: `1px solid ${token.colorBorder}`,
+                borderRadius: 4,
+                backgroundColor: token.colorFillQuaternary,
+                marginBottom: 16,
+              }}
+            >
+              <Space orientation="vertical" style={{ width: '100%' }}>
+                <Checkbox checked={useSecretKey} onChange={(e) => handleUseSecretKeyToggle(e.target.checked)}>
+                  <Space>
+                    <KeyOutlined />
+                    <Text strong>Sign with Secret Key (Optional)</Text>
+                  </Space>
+                </Checkbox>
+
+                {useSecretKey && (
+                  <>
+                    <Select
+                      value={algorithm}
+                      onChange={handleAlgorithmChange}
+                      style={{ width: '100%', marginTop: 8 }}
+                      placeholder="Select signing algorithm"
+                      options={[
+                        {
+                          label: 'HMAC (Symmetric)',
+                          options: [
+                            { value: 'HS256', label: 'HS256 (HMAC with SHA-256)' },
+                            { value: 'HS384', label: 'HS384 (Coming Soon)', disabled: true },
+                            { value: 'HS512', label: 'HS512 (Coming Soon)', disabled: true },
+                          ],
+                        },
+                        {
+                          label: 'RSA (Asymmetric)',
+                          options: [
+                            { value: 'RS256', label: 'RS256 (RSA with SHA-256)' },
+                            { value: 'RS384', label: 'RS384 (Coming Soon)', disabled: true },
+                            { value: 'RS512', label: 'RS512 (Coming Soon)', disabled: true },
+                          ],
+                        },
+                        {
+                          label: 'ECDSA',
+                          options: [
+                            { value: 'ES256', label: 'ES256 (Coming Soon)', disabled: true },
+                            { value: 'ES384', label: 'ES384 (Coming Soon)', disabled: true },
+                            { value: 'ES512', label: 'ES512 (Coming Soon)', disabled: true },
+                          ],
+                        },
+                        {
+                          label: 'RSA-PSS',
+                          options: [
+                            { value: 'PS256', label: 'PS256 (Coming Soon)', disabled: true },
+                            { value: 'PS384', label: 'PS384 (Coming Soon)', disabled: true },
+                            { value: 'PS512', label: 'PS512 (Coming Soon)', disabled: true },
+                          ],
+                        },
+                      ]}
+                    />
+
+                    {algorithm.startsWith('RS') ? (
+                      <TextArea
+                        placeholder="Enter RSA private key (PEM format)&#10;-----BEGIN PRIVATE KEY-----&#10;...&#10;-----END PRIVATE KEY-----"
+                        value={secretKey}
+                        onChange={handleSecretKeyChange}
+                        autoSize={{ minRows: 4, maxRows: 8 }}
+                        style={{
+                          marginTop: 8,
+                          fontFamily: 'monospace',
+                          fontSize: 12,
+                        }}
+                      />
+                    ) : (
+                      <Input.Password
+                        placeholder="Enter secret key to sign the JWT"
+                        value={secretKey}
+                        onChange={handleSecretKeyChange}
+                        prefix={<LockOutlined />}
+                        style={{ marginTop: 8 }}
+                      />
+                    )}
+
+                    {signingError && (
+                      <Alert
+                        title="Signing Error"
+                        description={signingError}
+                        type="error"
+                        showIcon
+                        closable
+                        style={{ marginTop: 8 }}
+                      />
+                    )}
+                    {!signingError && secretKey && (
+                      <Alert
+                        title="Token will be re-signed"
+                        description={`The JWT will be signed with your secret key using ${algorithm} algorithm`}
+                        type="success"
+                        showIcon
+                        style={{ marginTop: 8 }}
+                      />
+                    )}
+                  </>
+                )}
+
+                {!useSecretKey && (
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Without a secret key, the original signature will be preserved. The token may be rejected by servers
+                    if the payload was modified.
+                  </Text>
+                )}
+              </Space>
+            </div>
+
+            {/* Modified Status Alert */}
+            {isModified && (
+              <Alert
+                title="Changes Preview"
+                description="The encoded token reflects your edits to the header and payload. Click Save to apply these changes."
+                type="warning"
+                showIcon
+                style={{ marginTop: 'auto' }}
+              />
+            )}
+          </div>
+        </Col>
+      </Row>
+    </Modal>
+  );
+};
+
+export default JWTEditorModal;

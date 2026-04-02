@@ -1,0 +1,162 @@
+import { Col, Input, Row, Select, Space, Switch, Tooltip } from 'antd';
+import type React from 'react';
+import { forwardRef } from 'react';
+import HotkeyInput from './HotkeyInput';
+
+/**
+ * Styles configuration for consistent setting item styling
+ *
+ * All styles are functions that accept an isActive parameter to provide
+ * state-dependent styling with smooth transitions between states.
+ */
+const styles = {
+  // Row container styling with state-dependent opacity
+  settingRow: (isActive = true) => ({
+    marginBottom: 20,
+    transition: 'opacity 0.2s ease',
+    opacity: isActive ? 1 : 0.6, // Dimmed when inactive
+  }),
+  // Label styling with flexbox layout
+  label: (isActive = true) => ({
+    fontWeight: 500,
+    display: 'flex',
+    alignItems: 'center',
+    transition: 'opacity 0.2s ease',
+    opacity: isActive ? 1 : 0.6, // Dimmed when inactive
+  }),
+  // Icon styling with consistent spacing
+  icon: (isActive = true) => ({
+    marginRight: 8,
+    transition: 'opacity 0.2s ease',
+    opacity: isActive ? 1 : 0.6, // Dimmed when inactive
+  }),
+  // Description text styling with smaller font
+  description: (isActive = true) => ({
+    fontSize: 12,
+    marginTop: 4,
+    transition: 'opacity 0.2s ease',
+    opacity: isActive ? 0.65 : 0.45, // More subtle dimming for description
+  }),
+};
+
+/**
+ * SettingItem component for rendering individual settings with consistent styling
+ *
+ * Provides a reusable interface for different types of settings including switches,
+ * selects, and other input types. Handles state-dependent styling and tooltips.
+ *
+ * Features:
+ * - Consistent layout and styling across all settings
+ * - Support for multiple input types (switch, select)
+ * - State-dependent visual feedback (active/inactive, disabled states)
+ * - Tooltip support for contextual help
+ * - Responsive layout with proper spacing
+ *
+ *  icon - Icon component to display next to the setting
+ *  title - Main title/label for the setting
+ *  description - Descriptive text explaining the setting
+ *  fieldName - Field name for the setting (used in onChange)
+ *  isActive - Whether the setting should appear active/enabled
+ *  disabled - Whether the setting control is disabled
+ *  tooltip - Optional tooltip text to show on hover
+ *  type - Type of input control ('switch', 'select', or 'text')
+ *  options - Options array for select type controls
+ *  placeholder - Placeholder text for text input
+ *  value - Current value of the setting
+ *  onChange - Callback function when setting value changes
+ */
+interface SettingItemProps {
+  icon?: React.ComponentType<{ style?: React.CSSProperties }>;
+  title: string;
+  description?: React.ReactNode;
+  fieldName: string;
+  isActive?: boolean;
+  disabled?: boolean;
+  tooltip?: string;
+  type?: 'switch' | 'select' | 'text';
+  options?: { value: string; label: React.ReactNode }[];
+  placeholder?: string;
+  value?: unknown;
+  onChange?: (fieldName: string, newValue: unknown) => void;
+}
+
+const SettingItem = forwardRef(
+  (
+    {
+      icon: Icon,
+      title,
+      description,
+      fieldName,
+      isActive = true,
+      disabled = false,
+      tooltip,
+      type = 'switch',
+      options = [],
+      placeholder = '',
+      value,
+      onChange,
+    }: SettingItemProps,
+    ref,
+  ) => {
+    /**
+     * Handle setting value changes
+     *  newValue - New value for the setting
+     */
+    const handleChange = (newValue: unknown) => {
+      onChange?.(fieldName, newValue);
+    };
+
+    // Main setting content with responsive layout
+    const content = (
+      <Row style={styles.settingRow(isActive && !disabled)} align="middle" justify="space-between">
+        {/* Left side: Icon, title, and description */}
+        <Col span={16}>
+          <div style={styles.label(isActive && !disabled && !!value)}>
+            {Icon && <Icon style={styles.icon(isActive && !disabled && !!value)} />}
+            <Space orientation="vertical" size={0}>
+              <span>{title}</span>
+              <span style={styles.description(isActive && !disabled && !!value)}>{description}</span>
+            </Space>
+          </div>
+        </Col>
+        {/* Right side: Control input (switch, select, text, or hotkey) */}
+        <Col span={8} style={{ textAlign: 'right' }}>
+          {type === 'switch' ? (
+            <Switch
+              checked={value as boolean | undefined}
+              onChange={handleChange}
+              disabled={disabled}
+              checkedChildren="Enabled"
+              unCheckedChildren="Disabled"
+            />
+          ) : type === 'select' ? (
+            <Select
+              style={{ width: 160 }}
+              options={options}
+              value={value as string | undefined}
+              onChange={handleChange}
+              disabled={disabled}
+            />
+          ) : type === 'text' ? (
+            <Input
+              style={{ width: 200 }}
+              placeholder={placeholder}
+              value={value as string | undefined}
+              onChange={(e) => handleChange(e.target.value)}
+              disabled={disabled}
+            />
+          ) : type === 'hotkey' ? (
+            <HotkeyInput ref={ref} value={value as string | undefined} onChange={handleChange} disabled={disabled} />
+          ) : null}
+        </Col>
+      </Row>
+    );
+
+    // Wrap with tooltip if provided
+    return tooltip ? <Tooltip title={tooltip}>{content}</Tooltip> : content;
+  },
+);
+
+SettingItem.displayName = 'SettingItem';
+
+export default SettingItem;

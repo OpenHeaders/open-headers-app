@@ -1,0 +1,45 @@
+/**
+ * NetworkRequestCell Component
+ *
+ * Renders the request name cell with appropriate styling and error handling
+ * Extracts display name from URL and shows error states
+ *
+ *  props - Component props
+ *  props.url - The request URL
+ *  props.record - The full network record
+ *  props.token - Ant Design theme token
+ */
+
+import { Typography } from 'antd';
+import type { GlobalToken, NetworkRecord } from './types';
+import { getDisplayName } from './utils/urlUtils';
+
+const { Text } = Typography;
+
+interface NetworkRequestCellProps {
+  url: string;
+  record: NetworkRecord;
+  token: GlobalToken;
+}
+const NetworkRequestCell = ({ url, record, token }: NetworkRequestCellProps) => {
+  const displayName = getDisplayName(url, 'index');
+
+  return (
+    <Text
+      style={{
+        fontSize: '12px',
+        cursor: 'pointer',
+        color: record.error ? token.colorError : token.colorLink,
+        display: 'block',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+      }}
+      title={url}
+    >
+      {displayName}
+    </Text>
+  );
+};
+
+export default NetworkRequestCell;

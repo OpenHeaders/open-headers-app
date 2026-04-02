@@ -1,0 +1,101 @@
+/**
+ * Storage Utilities
+ *
+ * Utilities for storage action types, colors, and formatting
+ * Extracted from RecordStorageTab for reusability
+ */
+
+/**
+ * Get color for storage action type
+ * @param action - Storage action ('set', 'remove', 'clear')
+ * @returns Ant Design color name
+ */
+export const getActionColor = (action: string) => {
+  if (!action) {
+    return 'default';
+  }
+
+  switch (action) {
+    case 'set':
+      return 'green';
+    case 'remove':
+      return 'red';
+    case 'clear':
+      return 'orange';
+    default:
+      return 'default';
+  }
+};
+
+/**
+ * Get color for storage type
+ * @param type - Storage type ('localStorage', 'sessionStorage', 'cookie')
+ * @returns Ant Design color name
+ */
+export const getTypeColor = (type: string) => {
+  if (!type) {
+    return 'default';
+  }
+
+  switch (type) {
+    case 'localStorage':
+      return 'blue';
+    case 'sessionStorage':
+      return 'green';
+    case 'cookie':
+      return 'orange';
+    default:
+      return 'default';
+  }
+};
+
+/**
+ * Format storage value for display
+ * @param value - Storage value to format
+ * @returns Formatted value string
+ */
+export const formatValue = (value: unknown) => {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch (error) {
+      console.warn('Failed to stringify object:', error);
+      return '[Object]';
+    }
+  }
+  try {
+    return String(value);
+  } catch (error) {
+    console.warn('Failed to convert value to string:', error);
+    return '[Invalid Value]';
+  }
+};
+
+/**
+ * Get tooltip text for storage action
+ * @param action - Storage action
+ * @returns Tooltip description
+ */
+export const getActionTooltip = (action: string) => {
+  const tooltips = {
+    set: 'Storage value was created or updated',
+    remove: 'Storage value was deleted',
+    clear: 'All storage entries were deleted at once',
+  };
+  return tooltips[action as keyof typeof tooltips] || 'Storage action';
+};
+
+/**
+ * Get tooltip text for storage type
+ * @param type - Storage type
+ * @returns Tooltip description
+ */
+export const getTypeTooltip = (type: string) => {
+  const tooltips = {
+    localStorage: 'Persistent storage that survives browser restarts',
+    sessionStorage: 'Temporary storage cleared when the tab closes',
+    cookie: 'Small data sent with HTTP requests',
+  };
+  return tooltips[type as keyof typeof tooltips] || 'Storage type';
+};

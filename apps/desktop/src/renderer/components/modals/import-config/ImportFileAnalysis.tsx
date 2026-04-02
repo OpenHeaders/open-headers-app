@@ -1,0 +1,105 @@
+import { ApiOutlined, ClusterOutlined, DatabaseOutlined, NodeExpandOutlined } from '@ant-design/icons';
+import { Alert, Card, Col, Row, Space, Statistic, Typography } from 'antd';
+import type React from 'react';
+
+const { Text } = Typography;
+
+/**
+ * ImportFileAnalysis component for displaying file analysis results
+ * Shows file information, statistics, and validation results
+ */
+interface ImportFileAnalysisProps {
+  fileInfo: {
+    version?: string | number;
+    sourceCount?: number;
+    ruleCount?: number;
+    proxyRuleCount?: number;
+    isEmpty?: boolean;
+    ruleBreakdown?: Record<string, number>;
+  } | null;
+  envFileData: { variableCount?: number; environmentCount?: number } | null;
+  hasAnyData: boolean;
+  combinedEnvInfo: {
+    hasEnvironmentSchema: boolean;
+    hasEnvironments: boolean;
+    variableCount: number;
+    environmentCount: number;
+  };
+}
+
+const ImportFileAnalysis = ({ fileInfo, envFileData, hasAnyData, combinedEnvInfo }: ImportFileAnalysisProps) => {
+  if (!fileInfo && !envFileData) {
+    return null;
+  }
+
+  return (
+    <>
+      {/* File Information */}
+      {fileInfo && (
+        <Card size="small" title="File Information">
+          <Space orientation="vertical" style={{ width: '100%' }}>
+            <Text>
+              <strong>Version:</strong> {fileInfo.version}
+            </Text>
+            {!hasAnyData && (
+              <Alert
+                title="Empty Configuration"
+                description="This file doesn't contain any data to import."
+                type="warning"
+                showIcon
+              />
+            )}
+          </Space>
+        </Card>
+      )}
+
+      {/* Import Statistics */}
+      {hasAnyData && (
+        <Card size="small" title="Import Preview">
+          <Row gutter={16}>
+            {fileInfo && (fileInfo.sourceCount ?? 0) > 0 && (
+              <Col span={6}>
+                <Statistic title="Sources" value={fileInfo.sourceCount} prefix={<ApiOutlined />} />
+              </Col>
+            )}
+            {fileInfo && (fileInfo.ruleCount ?? 0) > 0 && (
+              <Col span={6}>
+                <Statistic title="Rules" value={fileInfo.ruleCount} prefix={<NodeExpandOutlined />} />
+              </Col>
+            )}
+            {fileInfo && (fileInfo.proxyRuleCount ?? 0) > 0 && (
+              <Col span={6}>
+                <Statistic title="Proxy Rules" value={fileInfo.proxyRuleCount} prefix={<DatabaseOutlined />} />
+              </Col>
+            )}
+            {combinedEnvInfo.variableCount > 0 && (
+              <Col span={6}>
+                <Statistic title="Env Variables" value={combinedEnvInfo.variableCount} prefix={<ClusterOutlined />} />
+              </Col>
+            )}
+          </Row>
+
+          {/* Rule breakdown */}
+          {fileInfo &&
+            (fileInfo.ruleCount ?? 0) > 0 &&
+            fileInfo.ruleBreakdown &&
+            Object.keys(fileInfo.ruleBreakdown).length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <Text type="secondary">Rule Types: </Text>
+                {Object.entries(fileInfo.ruleBreakdown).map(([type, count]: [string, number], index) => (
+                  <span key={type}>
+                    {index > 0 && ', '}
+                    <Text>
+                      {type} ({count as React.ReactNode})
+                    </Text>
+                  </span>
+                ))}
+              </div>
+            )}
+        </Card>
+      )}
+    </>
+  );
+};
+
+export default ImportFileAnalysis;

@@ -1,0 +1,121 @@
+name: Release Extension
+
+on:
+  push:
+    tags:
+      - 'ext-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify extension version matches tag
+        working-directory: apps/extension
+        run: |
+          TAG="${GITHUB_REF_NAME/ext-v/}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+
+          # Extract base version (strip -beta.N suffix)
+          TAG_BASE=$(echo "$TAG" | sed 's/-beta\.[0-9]*$//')
+          PKG_BASE=$(echo "$PKG_VERSION" | sed 's/-beta\.[0-9]*$//')
+
+          if [ "$TAG_BASE" != "$PKG_BASE" ]; then
+            echo "::error::Version mismatch! Tag base is $TAG_BASE but apps/extension/package.json base is $PKG_BASE"
+            echo "::error::Bump apps/extension/package.json to $TAG_BASE and commit before tagging."
+            exit 1
+          fi
+
+          echo "Extension version verified: tag=$TAG, package.json=$PKG_VERSION (base: $TAG_BASE)"
+
+          # Set the full tag version in package.json for the build
+          node -e "const fs=require('fs'),p=JSON.parse(fs.readFileSync('package.json'));p.version='$TAG';fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
+
+      - name: Align manifests with version
+        working-directory: apps/extension
+        run: |
+          TAG="${GITHUB_REF_NAME/ext-v/}"
+
+          if [[ "$TAG" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-beta\.([0-9]+)$ ]]; then
+            MANIFEST_VERSION="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+          else
+            MANIFEST_VERSION="$TAG"
+          fi
+
+          for manifest in manifests/*/manifest.json; do
+            node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('$manifest'));m.version='$MANIFEST_VERSION';fs.writeFileSync('$manifest',JSON.stringify(m,null,2)+'\n')"
+          done
+
+      - name: Build core package
+        run: pnpm --filter @openheaders/core build
+
+      - name: Build and package extensions
+        working-directory: apps/extension
+        run: pnpm release
+
+      - name: Determine release type
+        id: release_type
+        run: |
+          if [[ "${{ github.ref_name }}" =~ -beta[.0-9]*$ ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate Release Body
+        run: |
+          TAG="${GITHUB_REF_NAME/ext-v/}"
+          REF_NAME="${{ github.ref_name }}"
+          IS_PRERELEASE="${{ steps.release_type.outputs.is_prerelease }}"
+
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            echo '> **This is a beta build for early testing.** It may contain bugs.' > release_body.md
+            echo '' >> release_body.md
+          fi
+
+          REPO_BASE="https://github.com/OpenHeaders/open-headers-browser-extension/releases/download/${REF_NAME}"
+          {
+            echo "## Browser Extension Downloads"
+            echo ""
+            echo "- [Chrome](${REPO_BASE}/open-headers-chrome-v${TAG}.zip)"
+            echo "- [Firefox](${REPO_BASE}/open-headers-firefox-v${TAG}.zip)"
+            echo "- [Edge](${REPO_BASE}/open-headers-edge-v${TAG}.zip)"
+            echo "- [Safari](${REPO_BASE}/open-headers-safari-v${TAG}.zip)"
+            echo ""
+            echo "### Installation"
+            echo "1. Download the zip for your browser"
+            echo "2. Extract to a folder"
+            echo '3. Chrome/Edge: Go to `chrome://extensions`, enable Developer mode, click Load unpacked'
+            echo '4. Firefox: Go to `about:debugging#/runtime/this-firefox`, click Load Temporary Add-on'
+          } >> release_body.md
+
+      - name: Publish to extension repo
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: OpenHeaders/open-headers-browser-extension
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ steps.release_type.outputs.is_prerelease == 'true' }}
+          name: "${{ github.ref_name }}"
+          files: apps/extension/releases/*.zip
+          body_path: release_body.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.EXTENSION_REPO_PAT }}

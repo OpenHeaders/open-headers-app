@@ -1,0 +1,72 @@
+import { InfoCircleOutlined, WarningOutlined } from '@ant-design/icons';
+import { Alert, Typography } from 'antd';
+
+const { Text } = Typography;
+
+/**
+ * ImportWarnings component for displaying contextual warnings and information alerts
+ * Shows dynamic warnings based on import mode and data types being imported
+ *
+ *  importMode - Import mode ('merge' or 'replace')
+ *  selectedItems - Selected items to import
+ *  combinedEnvInfo - Combined environment information
+ */
+interface ImportWarningsProps {
+  importMode: string;
+  selectedItems: Record<string, boolean>;
+  combinedEnvInfo: {
+    hasEnvironmentSchema: boolean;
+    hasEnvironments: boolean;
+    variableCount: number;
+    environmentCount: number;
+  };
+}
+const ImportWarnings = ({ importMode, selectedItems, combinedEnvInfo }: ImportWarningsProps) => {
+  return (
+    <>
+      {/* Replace mode warning */}
+      {importMode === 'replace' && (
+        <Alert
+          title="Data Will Be Replaced"
+          description={
+            <div>
+              <Text>
+                Sources, rules, and proxy rules will be completely replaced - all existing items will be deleted.
+              </Text>
+              <br />
+              <Text strong>Environment variables:</Text> Only variables with matching names will be replaced. Others
+              will remain unchanged.
+            </div>
+          }
+          type="warning"
+          showIcon
+          icon={<WarningOutlined />}
+        />
+      )}
+
+      {/* Sensitive data warning */}
+      {combinedEnvInfo.hasEnvironments && selectedItems.environments && (
+        <Alert
+          title="Contains Sensitive Data"
+          description="This file contains environment variable values which may include sensitive data like API keys and passwords."
+          type="warning"
+          showIcon
+          icon={<WarningOutlined />}
+        />
+      )}
+
+      {/* Schema only info */}
+      {combinedEnvInfo.hasEnvironmentSchema && !combinedEnvInfo.hasEnvironments && selectedItems.environments && (
+        <Alert
+          title="Environment Schema Only"
+          description="This file contains only the environment variable schema. You'll need to provide your own values after import."
+          type="info"
+          showIcon
+          icon={<InfoCircleOutlined />}
+        />
+      )}
+    </>
+  );
+};
+
+export default ImportWarnings;

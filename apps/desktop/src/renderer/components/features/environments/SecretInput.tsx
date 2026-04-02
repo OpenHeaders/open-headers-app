@@ -1,0 +1,140 @@
+/**
+ * Reusable secret input component with visibility toggle
+ * Provides consistent UI for entering and masking secret values
+ */
+
+import { EyeInvisibleOutlined, EyeOutlined } from '@ant-design/icons';
+import { Button, Input } from 'antd';
+import type { TextAreaRef } from 'antd/es/input/TextArea';
+import type React from 'react';
+import { forwardRef, useEffect, useState } from 'react';
+
+const { TextArea } = Input;
+type TextAreaProps = React.ComponentProps<typeof TextArea>;
+
+// Global preferences for showing secrets (reset on app restart)
+let globalShowSecretsInEditMode = true;
+let globalShowSecretsInModal = true;
+
+/**
+ * SecretInput - A reusable component for secret/password inputs with visibility toggle
+ *  props - Component props
+ *  props.value - Input value
+ *  props.onChange - Change handler
+ *  props.placeholder - Placeholder text
+ *  props.showButton - Whether to show the Show/Hide button (default: false)
+ *  props.useGlobalPreference - Whether to use global preference ('edit', 'modal', or false) (default: false)
+ *  props.autoSize - AutoSize configuration for TextArea
+ *  props.style - Additional styles
+ *  restProps - Additional props to pass to TextArea
+ */
+interface SecretInputOwnProps {
+  showButton?: boolean;
+  useGlobalPreference?: false | 'edit' | 'modal';
+}
+
+type SecretInputProps = SecretInputOwnProps & Omit<TextAreaProps, keyof SecretInputOwnProps>;
+
+const SecretInput = forwardRef<TextAreaRef, SecretInputProps>(
+  (
+    {
+      value,
+      onChange,
+      placeholder = 'Enter value',
+      showButton = false,
+      useGlobalPreference = false,
+      autoSize = { minRows: 1, maxRows: 14 },
+      style = {},
+      ...restProps
+    },
+    ref,
+  ) => {
+    const getInitialVisibility = () => {
+      if (useGlobalPreference === 'edit') return globalShowSecretsInEditMode;
+      if (useGlobalPreference === 'modal') return globalShowSecretsInModal;
+      return true;
+    };
+
+    const [showPassword, setShowPassword] = useState(getInitialVisibility());
+    const [internalValue, setInternalValue] = useState(value || '');
+
+    // Update internal value when prop value changes
+    useEffect(() => {
+      setInternalValue(value || '');
+    }, [value]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const newValue = e.target.value;
+      setInternalValue(newValue);
+      if (onChange) {
+        onChange(e);
+      }
+    };
+
+    const toggleVisibility = () => {
+      const newValue = !showPassword;
+      setShowPassword(newValue);
+
+      // Update global preference if enabled
+      if (useGlobalPreference === 'edit') {
+        globalShowSecretsInEditMode = newValue;
+      } else if (useGlobalPreference === 'modal') {
+        globalShowSecretsInModal = newValue;
+      }
+    };
+
+    const inputElement = (
+      <div style={{ position: 'relative', flex: showButton ? 1 : undefined }}>
+        <TextArea
+          ref={ref}
+          value={showPassword ? internalValue : '••••••••'}
+          onChange={showPassword ? handleChange : undefined}
+          placeholder={placeholder}
+          autoSize={autoSize}
+          style={{
+            paddingRight: '30px',
+            fontFamily: !showPassword ? 'monospace' : 'inherit',
+            ...style,
+          }}
+          readOnly={!showPassword}
+          {...restProps}
+        />
+        <span
+          role="button"
+          tabIndex={0}
+          style={{
+            position: 'absolute',
+            right: '8px',
+            top: '4px',
+            cursor: 'pointer',
+            color: 'rgba(0, 0, 0, 0.45)',
+            zIndex: 1,
+          }}
+          onClick={toggleVisibility}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') toggleVisibility();
+          }}
+        >
+          {showPassword ? <EyeOutlined /> : <EyeInvisibleOutlined />}
+        </span>
+      </div>
+    );
+
+    if (showButton) {
+      return (
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+          {inputElement}
+          <Button size="small" onClick={toggleVisibility} style={{ width: 60 }}>
+            {showPassword ? 'Hide' : 'Show'}
+          </Button>
+        </div>
+      );
+    }
+
+    return inputElement;
+  },
+);
+
+SecretInput.displayName = 'SecretInput';
+
+export default SecretInput;

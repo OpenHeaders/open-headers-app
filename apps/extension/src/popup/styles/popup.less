@@ -1,0 +1,806 @@
+@import 'antd/dist/reset.css';
+
+/* Global styles */
+html {
+  background-color: transparent;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  width: 800px;
+  height: 600px;
+  overflow: hidden !important;
+  box-sizing: border-box;
+  background-color: transparent;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+// Ensure Ant Design App component fills height
+#root > .ant-app {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden !important;
+}
+
+/* Ensure ant-layout doesn't add scrollbar */
+.ant-layout {
+  overflow: hidden !important;
+}
+
+.header {
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.header h1 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.header .ant-typography {
+  margin: 0;
+}
+
+.header .ant-typography h4 {
+  margin: 0;
+  font-weight: 600;
+}
+
+.content {
+  flex: 1 1 auto;
+  padding: 16px 16px 30px 16px;
+  overflow: hidden;
+  min-height: 0;
+  position: relative;
+}
+
+
+/* Ensure tab content panes fill available height */
+.header-rules-tabs {
+  .ant-tabs-content-holder {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+  .ant-tabs-content {
+    flex: 1;
+    min-height: 0;
+  }
+  .ant-tabs-tabpane-active {
+    height: 100%;
+  }
+}
+
+/* Header Rules Section */
+.header-rules-section {
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  .table-toolbar {
+    height: 70px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .header-rules-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+  }
+
+  /* Add Rule button styling */
+  .add-rule-button {
+    height: 36px;
+    padding: 0 20px;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    
+    &:hover {
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .anticon-plus {
+      font-size: 14px;
+    }
+    
+    .anticon-down {
+      margin-left: 4px;
+      opacity: 0.6;
+    }
+  }
+
+  .header-rules-table {
+    .ant-table {
+      border-radius: 0;
+    }
+
+    .ant-table-cell-fix-left,
+    .ant-table-cell-fix-right,
+    .ant-table-cell-fix-left-last,
+    .ant-table-cell-fix-right-first {
+      transition: none !important;
+      * {
+        transition: none !important;
+      }
+    }
+
+    .ant-table-ping-right .ant-table-cell-fix-right-first::after,
+    .ant-table-ping-left .ant-table-cell-fix-left-last::after {
+      transition: none !important;
+    }
+
+    .ant-table-thead > tr > th {
+      font-weight: 500;
+    }
+
+    .ant-table-tbody > tr > td {
+      overflow: hidden;
+      padding: 8px;
+      vertical-align: middle;
+    }
+
+    .ant-table-tbody > tr.row-not-injecting > td:first-child {
+      box-shadow: inset 3px 0 0 0 #faad14;
+    }
+
+    // Dim paused group rows without using opacity (which breaks fixed column z-index)
+    .ant-table-tbody > tr.row-group-paused > td {
+      color: var(--ant-color-text-quaternary, rgba(0, 0, 0, 0.25));
+
+      .ant-typography {
+        color: inherit !important;
+      }
+      .ant-tag, .ant-switch, .ant-btn {
+        opacity: 0.45;
+      }
+    }
+    // Fixed columns in paused rows need background to cover Source column behind them
+    .ant-table-tbody > tr.row-group-paused > td.ant-table-cell-fix-end,
+    .ant-table-tbody > tr.row-group-paused > td.ant-table-cell-fix-start {
+      background: var(--ant-color-bg-container, #fff);
+    }
+
+    /* Ensure the column headers don't wrap unnecessarily */
+    .ant-table-thead > tr > th {
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    /* Fix for tag display in the Tags column */
+    .ant-tag {
+      display: inline-block;
+      margin-bottom: 2px !important;
+      white-space: nowrap;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+
+      &:last-child {
+        margin-bottom: 0 !important;
+      }
+    }
+
+    /* Prevent cell content from overflowing, but exclude fixed columns (they use position: sticky) */
+    .ant-table-cell:not(.ant-table-cell-fix-left):not(.ant-table-cell-fix-right) {
+      overflow: hidden;
+    }
+  }
+}
+
+/* Show copy icon on value cell hover (shared across all tables) */
+.value-cell .value-copy-icon {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.value-cell:hover .value-copy-icon {
+  opacity: 1 !important;
+}
+
+.entries-list {
+  margin-top: 6px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 800px;
+  padding: 6px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+  height: 48px;
+  box-sizing: border-box;
+}
+
+/* Tag hover effects */
+.domain-tag {
+  position: relative;
+  max-width: 100%;
+  display: inline-block;
+  margin-right: 4px;
+  margin-bottom: 2px !important;
+  cursor: pointer;
+  vertical-align: middle;
+
+  .pattern-text {
+    display: inline-block;
+    max-width: calc(100% - 24px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+  }
+
+  &:hover {
+    opacity: 0.8;
+  }
+
+  &:last-child {
+    margin-bottom: 0 !important;
+  }
+}
+
+
+/* No outer scrollbar — only the table scrolls internally */
+
+/* Form item spacing adjustments */
+.ant-form-item {
+  margin-bottom: 12px;
+}
+
+.ant-form-item-label {
+  padding-bottom: 4px;
+}
+
+/* Empty state styling */
+.no-headers-message {
+  text-align: center;
+  padding: 60px 20px;
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.no-headers-message h4 {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.no-headers-message p {
+  font-size: 14px;
+  margin-bottom: 0;
+  max-width: 400px;
+}
+
+/* Alert styling for connection status */
+.connection-alert {
+  margin-bottom: 12px;
+}
+
+/* Alert close button alignment */
+.ant-alert-closable .ant-alert-close-icon {
+  top: 12px;
+  right: 12px;
+}
+
+/* Dropdown theme selector styling */
+.theme-selector {
+  .ant-dropdown-menu-item {
+    padding: 8px 16px;
+    
+    .ant-space {
+      width: 100%;
+      
+      .ant-typography {
+        flex: 1;
+      }
+    }
+  }
+}
+
+/* Settings modal styling */
+.settings-modal {
+  .ant-modal-body {
+    padding: 24px;
+  }
+  
+  .settings-section {
+    margin-bottom: 24px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+    
+    .section-title {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+  }
+}
+
+/* Collapse panel animation fix */
+.ant-collapse-content-inactive {
+  display: none;
+}
+
+/* Typography adjustments for consistency */
+.ant-typography {
+  margin-bottom: 0;
+}
+
+/* Responsive modal sizing */
+@media (max-width: 768px) {
+  .ant-modal {
+    max-width: calc(100vw - 32px);
+    margin: 16px;
+  }
+}
+
+/* Button group styling */
+.button-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Ensure proper z-index layering */
+.ant-dropdown {
+  z-index: 1050;
+}
+
+.ant-select-dropdown {
+  z-index: 1050;
+}
+
+.ant-tooltip {
+  z-index: 1060;
+}
+
+.ant-modal-mask {
+  z-index: 1000;
+}
+
+.ant-modal-wrap {
+  z-index: 1000;
+}
+
+/* Fix for domain tag styling with status colors */
+.domain-tag {
+  &.inactive-domain {
+    opacity: 0.5;
+  }
+  
+  &.error-domain {
+    .ant-tag {
+      border-color: #ff4d4f;
+    }
+  }
+}
+
+/* Connection status styling */
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  
+  .status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+/* Header count styling */
+.header-count {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+/* Loading state styling */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+/* Error state styling */
+.error-container {
+  text-align: center;
+  padding: 40px;
+  
+  .error-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+  
+  .error-message {
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+  
+  .error-description {
+    font-size: 14px;
+  }
+}
+
+/* Utility classes */
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.mb-0 {
+  margin-bottom: 0 !important;
+}
+
+.mb-2 {
+  margin-bottom: 8px !important;
+}
+
+.mb-3 {
+  margin-bottom: 12px !important;
+}
+
+.mb-4 {
+  margin-bottom: 16px !important;
+}
+
+.mt-2 {
+  margin-top: 8px !important;
+}
+
+.mt-3 {
+  margin-top: 12px !important;
+}
+
+.mt-4 {
+  margin-top: 16px !important;
+}
+
+/* Smooth transitions */
+* {
+  transition: none;
+}
+
+/* Only apply transitions to specific properties */
+.ant-btn,
+.ant-input,
+.ant-select-selector,
+.ant-tag,
+.ant-collapse-header {
+  transition: all 0.2s ease;
+}
+
+/* Keyboard-focused row highlight */
+.keyboard-focused-row > td {
+  background: #e6f4ff !important;
+  outline: none;
+}
+
+/* Fixed/sticky columns need the same opaque background to cover scrolled content */
+.keyboard-focused-row > td.ant-table-cell-fix-left,
+.keyboard-focused-row > td.ant-table-cell-fix-right {
+  background: #e6f4ff !important;
+}
+
+[data-theme='dark'] .keyboard-focused-row > td {
+  background: #112a45 !important;
+}
+
+[data-theme='dark'] .keyboard-focused-row > td.ant-table-cell-fix-left,
+[data-theme='dark'] .keyboard-focused-row > td.ant-table-cell-fix-right {
+  background: #112a45 !important;
+}
+
+/* Pending delete row — inline confirmation overlay */
+.keyboard-pending-delete-row {
+  position: relative;
+}
+
+/* Hide all cell content and disable interactions */
+.keyboard-pending-delete-row > td {
+  background: #fff1f0 !important;
+}
+
+.keyboard-pending-delete-row > td > * {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.keyboard-pending-delete-row > td.ant-table-cell-fix-left,
+.keyboard-pending-delete-row > td.ant-table-cell-fix-right {
+  background: #fff1f0 !important;
+}
+
+[data-theme='dark'] .keyboard-pending-delete-row > td {
+  background: #2a1215 !important;
+}
+
+[data-theme='dark'] .keyboard-pending-delete-row > td.ant-table-cell-fix-left,
+[data-theme='dark'] .keyboard-pending-delete-row > td.ant-table-cell-fix-right {
+  background: #2a1215 !important;
+}
+
+/* Delete confirmation overlay (React-rendered) */
+.delete-confirm-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: #fff1f0;
+  pointer-events: none;
+  animation: delete-confirm-in 0.12s ease-out;
+}
+
+[data-theme='dark'] .delete-confirm-overlay {
+  background: #2a1215;
+}
+
+@keyframes delete-confirm-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.delete-confirm-overlay .delete-confirm-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #ff4d4f;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-theme='dark'] .delete-confirm-overlay .delete-confirm-name {
+  color: #ff7875;
+}
+
+.delete-confirm-overlay .delete-confirm-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.delete-confirm-overlay .delete-confirm-action {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--ant-color-text-secondary, #8c8c8c);
+}
+
+.delete-confirm-overlay .delete-confirm-action.delete-action {
+  color: #ff4d4f;
+}
+
+[data-theme='dark'] .delete-confirm-overlay .delete-confirm-action.delete-action {
+  color: #ff7875;
+}
+
+.delete-confirm-overlay .delete-confirm-divider {
+  width: 1px;
+  height: 14px;
+  background: var(--ant-color-border, #d9d9d9);
+  opacity: 0.5;
+}
+
+/* Nested (expanded sub-table) focused row */
+.keyboard-focused-nested-row > td {
+  background: #e6f4ff !important;
+}
+
+[data-theme='dark'] .keyboard-focused-nested-row > td {
+  background: #112a45 !important;
+}
+
+/* Keyboard shortcuts overlay */
+.keyboard-shortcuts-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: kbd-fade-in 0.15s ease-out;
+}
+
+@keyframes kbd-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.keyboard-shortcuts-overlay {
+  background: var(--ant-color-bg-container, #fff);
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  width: 620px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: kbd-slide-in 0.15s ease-out;
+}
+
+@keyframes kbd-slide-in {
+  from { transform: translateY(-8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.keyboard-shortcuts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px 8px;
+  border-bottom: 1px solid var(--ant-color-border-secondary, #f0f0f0);
+}
+
+.keyboard-shortcuts-close {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.keyboard-shortcuts-body {
+  padding: 10px 18px 14px;
+  display: flex;
+  gap: 18px;
+}
+
+.keyboard-shortcuts-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.keyboard-shortcuts-divider {
+  width: 1px;
+  background: var(--ant-color-border-secondary, #f0f0f0);
+  align-self: stretch;
+}
+
+.keyboard-shortcuts-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.keyboard-shortcuts-group-title {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.keyboard-shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 0;
+}
+
+.keyboard-shortcut-keys {
+  min-width: 70px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  justify-content: flex-end;
+}
+
+.kbd-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 4px;
+  border: 1px solid var(--ant-color-border, #d9d9d9);
+  background: var(--ant-color-bg-layout, #f5f5f5);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ant-color-text, #000);
+  box-shadow: 0 1px 0 var(--ant-color-border, #d9d9d9);
+  line-height: 1;
+}
+
+.keyboard-shortcuts-customize-link {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--ant-color-text-secondary, #8c8c8c);
+  cursor: pointer;
+  transition: color 0.2s;
+
+  &:hover {
+    color: var(--ant-color-primary, #1677ff);
+  }
+}
+
+[data-theme='dark'] .kbd-key {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Add Rule dropdown menu styling */
+.ant-dropdown-menu {
+  &.ant-dropdown-menu-root {
+    min-width: 280px;
+    
+    .ant-dropdown-menu-item {
+      padding: 10px 16px;
+      font-size: 14px;
+      
+      .ant-dropdown-menu-item-icon {
+        font-size: 16px;
+        margin-right: 12px;
+        color: inherit;
+        opacity: 0.8;
+      }
+      
+      &:hover {
+        .ant-dropdown-menu-item-icon {
+          opacity: 1;
+        }
+      }
+    }
+    
+    .ant-dropdown-menu-item-divider {
+      margin: 4px 0;
+    }
+  }
+}
+
+

@@ -1,0 +1,329 @@
+/**
+ * Header Manager — builds declarativeNetRequest rules from saved data and dynamic sources.
+ *
+ * Performance notes:
+ * - isPaused is cached in-memory, updated via setRulesPaused() from storage.onChanged
+ * - savedData is read from chunked storage (unavoidable — it's the source of truth)
+ * - Rule arrays are built in a single pass, no intermediate allocations
+ */
+declare const browser: typeof chrome | undefined;
+
+import type { HeaderEntry, SavedDataMap, Source } from '@openheaders/core';
+import { declarativeNetRequest } from '@utils/browser-api.js';
+import { validateHeaderName } from '@utils/header-validator.js';
+import { logger } from '@utils/logger';
+import { sendMessageWithCallback } from '@utils/messaging';
+import { getChunkedData } from '@utils/storage-chunking.js';
+import { normalizeHeaderName } from '@utils/utils.js';
+import type { EntryResult, HeaderDnrRule, PlaceholderInfo, ResolvedEntry } from '@/types/header';
+import { formatUrlPattern } from './modules/url-utils';
+import { isValidHeaderValue, sanitizeHeaderValue } from './rule-validator';
+
+// Cached pause state — updated by setRulesPaused() from storage.onChanged listener
+let isPaused = false;
+
+// Cached disabled tag groups — updated by setDisabledTagGroups() from storage.onChanged listener
+let disabledTagGroups: Set<string> = new Set();
+
+/**
+ * Set the paused state. Called from background.ts when isRulesExecutionPaused changes.
+ */
+export function setRulesPaused(paused: boolean): void {
+  isPaused = paused;
+}
+
+/**
+ * Set disabled tag groups. Called from background.ts when disabledTagGroups changes.
+ */
+export function setDisabledTagGroups(groups: string[]): void {
+  disabledTagGroups = new Set(groups);
+}
+
+/**
+ * Get current disabled tag groups.
+ */
+export function getDisabledTagGroups(): string[] {
+  return [...disabledTagGroups];
+}
+
+/**
+ * Initialize pause state and tag group states from storage. Called once at startup.
+ */
+export function initPauseState(): void {
+  const browserAPI = (typeof browser !== 'undefined' ? browser : chrome) as typeof chrome;
+  browserAPI.storage.sync.get(['isRulesExecutionPaused'], (result: Record<string, unknown>) => {
+    isPaused = (result.isRulesExecutionPaused as boolean) || false;
+  });
+  browserAPI.storage.local.get(['disabledTagGroups'], (result: Record<string, unknown>) => {
+    const groups = result.disabledTagGroups as string[] | undefined;
+    if (Array.isArray(groups)) {
+      disabledTagGroups = new Set(groups);
+    }
+  });
+}
+
+/**
+ * Updates the network request rules based on saved data and dynamic sources.
+ */
+export function updateNetworkRules(dynamicSources: Source[]): void {
+  if (isPaused) {
+    logger.info('HeaderManager', 'Rules execution is paused, clearing all active rules');
+    declarativeNetRequest!
+      .getDynamicRules()
+      .then((existingRules) => {
+        const removeIds = existingRules.map((r) => r.id);
+        return declarativeNetRequest!.updateDynamicRules({
+          removeRuleIds: removeIds,
+          addRules: [],
+        });
+      })
+      .then(() => {
+        logger.debug('HeaderManager', 'All rules cleared while paused');
+      });
+    return;
+  }
+
+  getChunkedData('savedData', (savedData: SavedDataMap | null) => {
+    savedData = savedData || {};
+
+    const rules: HeaderDnrRule[] = [];
+    let ruleId = 1;
+
+    const requestEntries: ResolvedEntry[] = [];
+    const responseEntries: ResolvedEntry[] = [];
+    const placeholders: PlaceholderInfo[] = [];
+
+    for (const id in savedData) {
+      const entry: HeaderEntry = savedData[id];
+
+      if (entry.isEnabled === false) {
+        logger.debug('HeaderManager', `Skipping disabled rule for ${entry.headerName}`);
+        continue;
+      }
+
+      const tagGroup = entry.tag || '__no_tag__';
+      if (disabledTagGroups.has(tagGroup)) {
+        logger.debug('HeaderManager', `Skipping rule for ${entry.headerName} — tag group "${tagGroup}" is disabled`);
+        continue;
+      }
+
+      const result = processEntry(entry, dynamicSources);
+      if (!result) continue;
+
+      if (result.resolved) {
+        if (result.entry.isResponse) {
+          responseEntries.push(result.entry);
+        } else {
+          requestEntries.push(result.entry);
+        }
+      } else {
+        placeholders.push(result.placeholder);
+      }
+    }
+
+    requestEntries.forEach((entry) => {
+      const requestRules = createRequestHeaderDnrRules(entry, ruleId);
+      rules.push(...requestRules);
+      ruleId += requestRules.length;
+    });
+
+    responseEntries.forEach((entry) => {
+      const responseRules = createResponseHeaderDnrRules(entry, ruleId);
+      rules.push(...responseRules);
+      ruleId += responseRules.length;
+    });
+
+    if (placeholders.length > 0) {
+      logger.warn('HeaderManager', `${placeholders.length} headers not injected (unresolved):`, placeholders);
+    }
+
+    // Get ALL existing dynamic rule IDs so we remove everything —
+    // including stale rules from previous sessions or versions
+    declarativeNetRequest!
+      .getDynamicRules()
+      .then((existingRules) => {
+        const removeRuleIds = existingRules.map((r) => r.id);
+
+        return declarativeNetRequest!.updateDynamicRules({
+          removeRuleIds,
+          addRules: rules,
+        });
+      })
+      .then(() => {
+        logger.info('HeaderManager', `Successfully updated ${rules.length} network rules`);
+      })
+      .catch((e: Error) => {
+        logger.error('HeaderManager', 'Error updating rules:', e.message || 'Unknown error');
+        sendMessageWithCallback(
+          {
+            type: 'ruleUpdateError',
+            error: e.message || 'Unknown error',
+          },
+          (_response, _error) => {},
+        );
+      });
+  });
+}
+
+function processEntry(entry: HeaderEntry, dynamicSources: Source[]): EntryResult | null {
+  const headerNameValidation = validateHeaderName(entry.headerName, entry.isResponse);
+  if (!headerNameValidation.valid) {
+    logger.debug('HeaderManager', `Skipping rule for ${entry.headerName} - ${headerNameValidation.message}`);
+    return null;
+  }
+
+  const domains: string[] = Array.isArray(entry.domains) ? entry.domains : entry.domain ? [entry.domain] : [];
+
+  if (domains.length === 0) {
+    logger.debug('HeaderManager', `Skipping rule for ${entry.headerName} - no domains specified`);
+    return null;
+  }
+
+  const headerName = headerNameValidation.sanitized || normalizeHeaderName(entry.headerName);
+
+  if (entry.isDynamic && entry.sourceId) {
+    const source = dynamicSources.find((s) => s.sourceId?.toString() === entry.sourceId?.toString());
+
+    if (!source) {
+      logger.warn('HeaderManager', `Header "${entry.headerName}" not injected — source #${entry.sourceId} not found`);
+      return {
+        resolved: false,
+        placeholder: { headerName, sourceId: entry.sourceId, reason: 'source_not_found', domains },
+      };
+    }
+
+    const dynamicContent = source.sourceContent || '';
+
+    if (!dynamicContent) {
+      logger.warn('HeaderManager', `Header "${entry.headerName}" not injected — source #${entry.sourceId} is empty`);
+      return {
+        resolved: false,
+        placeholder: { headerName, sourceId: entry.sourceId, reason: 'empty_source', domains },
+      };
+    }
+
+    const headerValue = `${entry.prefix || ''}${dynamicContent}${entry.suffix || ''}`;
+    if (!isValidHeaderValue(headerValue, entry.headerName)) {
+      const sanitized = sanitizeHeaderValue(headerValue);
+      if (!isValidHeaderValue(sanitized, entry.headerName)) {
+        logger.debug('HeaderManager', `Skipping invalid header value for ${entry.headerName}`);
+        return null;
+      }
+      return {
+        resolved: true,
+        entry: { headerName, headerValue: sanitized, domains, isResponse: entry.isResponse === true },
+      };
+    }
+    return { resolved: true, entry: { headerName, headerValue, domains, isResponse: entry.isResponse === true } };
+  }
+
+  if (!entry.headerValue?.trim()) {
+    logger.warn('HeaderManager', `Header "${entry.headerName}" not injected — value is empty`);
+    return { resolved: false, placeholder: { headerName, reason: 'empty_value', domains } };
+  }
+
+  let headerValue = entry.headerValue;
+  if (!isValidHeaderValue(headerValue, entry.headerName)) {
+    headerValue = sanitizeHeaderValue(headerValue);
+    if (!isValidHeaderValue(headerValue, entry.headerName)) {
+      logger.debug('HeaderManager', `Skipping invalid header value for ${entry.headerName}`);
+      return null;
+    }
+  }
+
+  return { resolved: true, entry: { headerName, headerValue, domains, isResponse: entry.isResponse === true } };
+}
+
+function createRequestHeaderDnrRules(entry: ResolvedEntry, startId: number): HeaderDnrRule[] {
+  const rules: HeaderDnrRule[] = [];
+  let ruleId = startId;
+
+  const ALL_RESOURCE_TYPES: chrome.declarativeNetRequest.ResourceType[] = [
+    'main_frame',
+    'sub_frame',
+    'stylesheet',
+    'script',
+    'image',
+    'font',
+    'object',
+    'xmlhttprequest',
+    'websocket',
+    'other',
+  ] as chrome.declarativeNetRequest.ResourceType[];
+
+  entry.domains.forEach((domain) => {
+    if (!domain || domain.trim() === '') return;
+
+    const urlFilter = formatUrlPattern(domain);
+
+    rules.push({
+      id: ruleId++,
+      priority: 100,
+      action: {
+        type: 'modifyHeaders',
+        requestHeaders: [
+          { header: entry.headerName, operation: 'set', value: entry.headerValue },
+          { header: 'Cache-Control', operation: 'set', value: 'no-cache, no-store, must-revalidate' },
+          { header: 'Pragma', operation: 'set', value: 'no-cache' },
+        ],
+      },
+      condition: {
+        urlFilter: urlFilter,
+        resourceTypes: ALL_RESOURCE_TYPES,
+      },
+    });
+  });
+
+  return rules;
+}
+
+function createResponseHeaderDnrRules(entry: ResolvedEntry, startId: number): HeaderDnrRule[] {
+  const rules: HeaderDnrRule[] = [];
+  let ruleId = startId;
+
+  const SUB_RESOURCE_TYPES: chrome.declarativeNetRequest.ResourceType[] = [
+    'sub_frame',
+    'stylesheet',
+    'script',
+    'image',
+    'font',
+    'xmlhttprequest',
+    'websocket',
+    'other',
+  ] as chrome.declarativeNetRequest.ResourceType[];
+
+  entry.domains.forEach((domain) => {
+    if (!domain || domain.trim() === '') return;
+
+    const urlFilter = formatUrlPattern(domain);
+
+    rules.push({
+      id: ruleId++,
+      priority: 1000,
+      action: {
+        type: 'modifyHeaders',
+        responseHeaders: [{ header: entry.headerName, operation: 'set', value: entry.headerValue }],
+      },
+      condition: {
+        urlFilter: urlFilter,
+        resourceTypes: ['main_frame' as chrome.declarativeNetRequest.ResourceType],
+      },
+    });
+
+    rules.push({
+      id: ruleId++,
+      priority: 950,
+      action: {
+        type: 'modifyHeaders',
+        responseHeaders: [{ header: entry.headerName, operation: 'set', value: entry.headerValue }],
+      },
+      condition: {
+        urlFilter: urlFilter,
+        resourceTypes: SUB_RESOURCE_TYPES,
+      },
+    });
+  });
+
+  return rules;
+}
+

@@ -1,0 +1,90 @@
+/**
+ * NetworkPayloadTab Component
+ *
+ * Displays request body with content type information
+ * Formats JSON and other payloads appropriately
+ *
+ *  props - Component props
+ *  props.request - Network request data
+ *  props.token - Ant Design theme token
+ */
+
+import { Space, Typography } from 'antd';
+import type { GlobalToken, NetworkRecord } from '@/renderer/components/record/network/types';
+
+const { Text } = Typography;
+
+interface NetworkPayloadTabProps {
+  request: NetworkRecord;
+  token: GlobalToken;
+}
+const NetworkPayloadTab = ({ request, token }: NetworkPayloadTabProps) => {
+  if (!request.requestBody) {
+    return (
+      <div style={{ height: '100%', overflow: 'auto', padding: '0' }}>
+        <div style={{ padding: '16px', textAlign: 'center' }}>
+          <Text type="secondary">No request body</Text>
+        </div>
+      </div>
+    );
+  }
+
+  let formattedPayload: string;
+  const contentType = request.requestHeaders?.['content-type'] || request.requestHeaders?.['Content-Type'] || '';
+
+  try {
+    if (contentType.includes('json')) {
+      const jsonData = JSON.parse(request.requestBody);
+      formattedPayload = JSON.stringify(jsonData, null, 2);
+    } else {
+      formattedPayload = request.requestBody;
+    }
+  } catch (_e) {
+    formattedPayload = String(request.requestBody);
+  }
+
+  return (
+    <div style={{ height: '100%', overflow: 'auto', padding: '0' }}>
+      <div style={{ padding: '16px' }}>
+        <Space orientation="vertical" style={{ width: '100%' }} size="large">
+          {contentType && (
+            <div>
+              <Text strong style={{ fontSize: '13px', color: token.colorTextSecondary }}>
+                Content Type
+              </Text>
+              <div style={{ marginTop: '8px' }}>
+                <Text style={{ fontSize: '12px' }}>{contentType}</Text>
+              </div>
+            </div>
+          )}
+
+          <div>
+            <Space>
+              <Text strong style={{ fontSize: '13px', color: token.colorTextSecondary }}>
+                Request Body
+              </Text>
+              <Text copyable={{ text: formattedPayload }} style={{ fontSize: '12px' }} />
+            </Space>
+            <div style={{ marginTop: '8px' }}>
+              <pre
+                style={{
+                  fontSize: '12px',
+                  margin: 0,
+                  whiteSpace: 'pre-wrap',
+                  backgroundColor: token.colorBgLayout,
+                  padding: '12px',
+                  borderRadius: '6px',
+                  border: `1px solid ${token.colorBorderSecondary}`,
+                }}
+              >
+                {formattedPayload}
+              </pre>
+            </div>
+          </div>
+        </Space>
+      </div>
+    </div>
+  );
+};
+
+export default NetworkPayloadTab;

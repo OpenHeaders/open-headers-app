@@ -1,0 +1,45 @@
+{
+  "name": "@openheaders/core",
+  "version": "4.1.0",
+  "private": true,
+  "description": "OpenHeaders core domain model — types, schemas, protocol, and shared utilities",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./types": {
+      "import": "./src/types/index.ts",
+      "default": "./dist/types/index.js"
+    },
+    "./protocol": {
+      "import": "./src/protocol/index.ts",
+      "default": "./dist/protocol/index.js"
+    },
+    "./schemas": {
+      "import": "./src/schemas/index.ts",
+      "default": "./dist/schemas/index.js"
+    },
+    "./utils": {
+      "import": "./src/utils/index.ts",
+      "default": "./dist/utils/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "valibot": "^1.3.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  }
+}
