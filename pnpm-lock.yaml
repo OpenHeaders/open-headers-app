@@ -164,8 +164,8 @@ importers:
         version: 4.1.2(@types/node@20.19.37)(jsdom@29.0.1)(vite@7.3.1(@types/node@20.19.37)(less@4.6.4)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0))
     optionalDependencies:
       '@openheaders/windows-foreground':
-        specifier: ^1.0.3
-        version: 1.0.3
+        specifier: ^1.0.4
+        version: 1.0.4
 
   apps/extension:
     dependencies:
@@ -993,8 +993,9 @@ packages:
   '@octokit/types@14.1.0':
     resolution: {integrity: sha512-1y6DgTy8Jomcpu33N+p5w58l6xyt55Ar2I91RPiIA0xCJBXyUAhXCcmZaDWSANiha7R9a6qJJ2CRomGPZ6f46g==}
 
-  '@openheaders/windows-foreground@1.0.3':
-    resolution: {integrity: sha512-5e9yA7YJPZOOmdBYHDPqOBs+USp4CkaDbMZ4ATtV46srBD7Ndd2OI8fpySIx/zlQ5vIYo7//gMSxXzy5BP6KQA==, tarball: https://npm.pkg.github.com/download/@openheaders/windows-foreground/1.0.3/168ed4820e2984c1401314b84650fc65deef69d7}
+  '@openheaders/windows-foreground@1.0.4':
+    resolution: {integrity: sha512-kaul7yY3WW4kzPr4cljkWM5E6jJCjyQSEPTA6Pue9C3+00tdtbc7KpQV4gSUAS0FS6nkuvgmNfD+J0PssAiXUw==, tarball: https://npm.pkg.github.com/download/@openheaders/windows-foreground/1.0.4/1b3cbcb73ecdf273ecdd7c0a53d13f8b1e5c17f7}
+    os: [win32]
 
   '@oxc-project/types@0.122.0':
     resolution: {integrity: sha512-oLAl5kBpV4w69UtFZ9xqcmTi+GENWOcPF7FCrczTiBbmC0ibXxCwyvZGbO39rCVEuLGAZM84DH0pUIyyv/YJzA==}
@@ -4584,7 +4585,7 @@ snapshots:
     dependencies:
       '@octokit/openapi-types': 25.1.0
 
-  '@openheaders/windows-foreground@1.0.3':
+  '@openheaders/windows-foreground@1.0.4':
     dependencies:
       node-gyp-build: 4.8.4
     optional: true

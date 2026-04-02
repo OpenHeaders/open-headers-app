@@ -286,12 +286,12 @@
     "ws": "^8.16.0"
   },
   "optionalDependencies": {
-    "@openheaders/windows-foreground": "^1.0.3"
+    "@openheaders/windows-foreground": "^1.0.4"
   },
   "devDependencies": {
-    "@openheaders/core": "workspace:*",
     "@electron/notarize": "^3.0.1",
     "@octokit/rest": "^21.1.1",
+    "@openheaders/core": "workspace:*",
     "@playwright/test": "^1.58.2",
     "@testing-library/react": "^16.3.2",
     "@types/adm-zip": "^0.5.7",
