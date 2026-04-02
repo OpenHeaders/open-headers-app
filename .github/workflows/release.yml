@@ -33,7 +33,7 @@ jobs:
 
       - name: Install Python setuptools
         if: matrix.os == 'windows-latest' || matrix.os == 'macos-latest'
-        run: pip install setuptools
+        run: python3 -m pip install setuptools
         shell: bash
 
       - name: Install RPM tools (Linux)
