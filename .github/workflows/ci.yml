@@ -44,8 +44,20 @@ jobs:
       - name: Typecheck all packages
         run: pnpm turbo typecheck
 
-      - name: Run all tests
-        run: pnpm turbo test
+      - name: Test core
+        run: |
+          echo "### Core" >> $GITHUB_STEP_SUMMARY
+          pnpm --filter @openheaders/core test -- --reporter=default --reporter=github-actions
+
+      - name: Test extension
+        run: |
+          echo "### Browser Extension" >> $GITHUB_STEP_SUMMARY
+          pnpm --filter @openheaders/extension test -- --reporter=default --reporter=github-actions
+
+      - name: Test desktop
+        run: |
+          echo "### Desktop App" >> $GITHUB_STEP_SUMMARY
+          pnpm --filter @openheaders/desktop test -- --reporter=default --reporter=github-actions
 
       - name: Build all packages
         run: pnpm turbo build
