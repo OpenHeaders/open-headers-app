@@ -78,8 +78,7 @@
     ],
     "asarUnpack": [
       "dist-webpack/renderer/images/**/*",
-      "node_modules/@openheaders/windows-foreground/**/*",
-      "node_modules/@openheaders/**/*"
+      "node_modules/@openheaders/windows-foreground/**/*"
     ],
     "npmRebuild": true,
     "nodeGypRebuild": false,
