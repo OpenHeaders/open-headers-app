@@ -31,8 +31,8 @@ jobs:
           node-version: 22.x
           cache: pnpm
 
-      - name: Install Python setuptools (Windows)
-        if: matrix.os == 'windows-latest'
+      - name: Install Python setuptools
+        if: matrix.os == 'windows-latest' || matrix.os == 'macos-latest'
         run: pip install setuptools
         shell: bash
 
