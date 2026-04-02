@@ -48,8 +48,7 @@
       "output": "dist"
     },
     "files": [
-      "dist-webpack/**/*",
-      "!node_modules/@openheaders/core"
+      "dist-webpack/**/*"
     ],
     "asar": true,
     "compression": "maximum",
@@ -264,7 +263,6 @@
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.1",
-    "@openheaders/core": "workspace:*",
     "adm-zip": "^0.5.16",
     "antd": "^6.3.5",
     "auto-launch": "^5.0.6",
@@ -291,6 +289,7 @@
     "@openheaders/windows-foreground": "^1.0.3"
   },
   "devDependencies": {
+    "@openheaders/core": "workspace:*",
     "@electron/notarize": "^3.0.1",
     "@octokit/rest": "^21.1.1",
     "@playwright/test": "^1.58.2",

@@ -36,22 +36,6 @@ jobs:
         run: pip install setuptools
         shell: bash
 
-      - name: Prepare electron-builder for monorepo
-        run: |
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('apps/desktop/package.json'));
-            if ('${{ matrix.os }}' !== 'windows-latest') {
-              pkg.build.npmRebuild = false;
-            }
-            fs.writeFileSync('apps/desktop/package.json', JSON.stringify(pkg, null, 2) + '\n');
-          "
-          # Remove @openheaders/core workspace symlink — it's bundled by vite,
-          # and the symlink resolves outside apps/desktop/ which breaks asar packing
-          find node_modules -path '*/@openheaders/core' -type l -delete 2>/dev/null || true
-          find apps/desktop/node_modules -path '*/@openheaders/core' -type l -delete 2>/dev/null || true
-        shell: bash
-
       - name: Install RPM tools (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
