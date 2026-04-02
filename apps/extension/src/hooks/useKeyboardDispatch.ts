@@ -5,6 +5,7 @@ import type { RowActions } from '@/popup/utils/table-shared';
 export interface FooterActions {
   onToggleRecording?: () => void;
   onToggleRulesPause?: () => void;
+  onToggleOptions?: () => void;
 }
 
 interface UseKeyboardDispatchOptions {
@@ -91,11 +92,17 @@ export function useKeyboardDispatch(options: UseKeyboardDispatchOptions): void {
     onAddRule,
   } = rowActions;
 
-  const { onToggleRecording, onToggleRulesPause } = footerActions;
+  const { onToggleRecording, onToggleRulesPause, onToggleOptions } = footerActions;
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       const key = e.key;
+
+      // Block Cmd/Ctrl+A (select all) — not useful in popup, except in input fields
+      if (key === 'a' && (e.metaKey || e.ctrlKey) && !isInputFocused()) {
+        e.preventDefault();
+        return;
+      }
 
       // Shortcuts overlay toggle
       if (key === '?' && !isInputFocused()) {
@@ -113,6 +120,15 @@ export function useKeyboardDispatch(options: UseKeyboardDispatchOptions): void {
       }
 
       if (isShortcutsOverlayVisible) return;
+
+      // Toggle options dropdown — must be handled before isOverlayOpen() bail-out
+      // so pressing 'o' again can close the dropdown
+      if (key === 'o' && !isInputFocused() && onToggleOptions) {
+        e.preventDefault();
+        onToggleOptions();
+        return;
+      }
+
       if (isOverlayOpen()) return;
 
       // Pending delete confirmation
@@ -283,6 +299,8 @@ export function useKeyboardDispatch(options: UseKeyboardDispatchOptions): void {
           } else if (rowId !== null) {
             // Expand this row (or collapse-then-expand if a different row was expanded)
             setExpandedRowKey(rowId);
+            // Blur to prevent Ant Design from moving focus to an element in another tab pane
+            (document.activeElement as HTMLElement)?.blur();
           }
           return;
         }
@@ -361,6 +379,7 @@ export function useKeyboardDispatch(options: UseKeyboardDispatchOptions): void {
       onAddRule,
       onToggleRecording,
       onToggleRulesPause,
+      onToggleOptions,
       onCycleTheme,
       onToggleCompactMode,
       setFocusedRowIndex,

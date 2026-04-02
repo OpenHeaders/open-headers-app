@@ -33,7 +33,7 @@ const formatHotkeyForDisplay = (hotkey: string): string => {
 };
 
 const Footer: React.FC = () => {
-  const { setFooterActions } = useKeyboardNav();
+  const { setFooterActions, setIsShortcutsOverlayVisible } = useKeyboardNav();
   const version = __APP_VERSION__;
   const { token } = theme.useToken();
   const [useWidget, setUseWidget] = useState(true);
@@ -41,6 +41,7 @@ const Footer: React.FC = () => {
   const [recordingHotkey, setRecordingHotkey] = useState('Cmd+Shift+E');
   const [recordingHotkeyEnabled, setRecordingHotkeyEnabled] = useState(true);
   const [optionsTooltipOpen, setOptionsTooltipOpen] = useState(false);
+  const [optionsDropdownOpen, setOptionsDropdownOpen] = useState(false);
   const [isRulesExecutionPaused, setIsRulesExecutionPaused] = useState(false);
   const { message } = App.useApp();
   const appLauncher = getAppLauncher();
@@ -205,12 +206,62 @@ const Footer: React.FC = () => {
     if (recordBtn && !recordBtn.disabled) recordBtn.click();
   }, []);
 
+  const handleToggleOptionsForKeyboard = useCallback(() => {
+    setOptionsDropdownOpen((prev) => {
+      if (!prev) {
+        // Opening — focus first interactive menu item after render
+        const tryFocus = (attempts: number) => {
+          const firstItem = document.querySelector(
+            '.ant-dropdown:not(.ant-dropdown-hidden) .ant-dropdown-menu-item:not(.ant-dropdown-menu-item-disabled)',
+          ) as HTMLElement | null;
+          if (firstItem) {
+            firstItem.focus();
+          } else if (attempts > 0) {
+            requestAnimationFrame(() => tryFocus(attempts - 1));
+          }
+        };
+        requestAnimationFrame(() => tryFocus(5));
+      }
+      return !prev;
+    });
+  }, []);
+
   useEffect(() => {
     setFooterActions({
       onToggleRecording: handleToggleRecordingForKeyboard,
       onToggleRulesPause: handleTogglePauseForKeyboard,
+      onToggleOptions: handleToggleOptionsForKeyboard,
     });
-  }, [setFooterActions, handleToggleRecordingForKeyboard, handleTogglePauseForKeyboard]);
+  }, [setFooterActions, handleToggleRecordingForKeyboard, handleTogglePauseForKeyboard, handleToggleOptionsForKeyboard]);
+
+  // When options dropdown is open, handle keyboard actions on focused menu items
+  useEffect(() => {
+    if (!optionsDropdownOpen) return;
+    const handleOptionsKeyDown = (e: KeyboardEvent) => {
+      const focused = document.activeElement as HTMLElement | null;
+      if (!focused?.closest('.ant-dropdown-menu-item')) return;
+
+      // Enter/Space — toggle the switch inside the focused item
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        const toggle = focused.querySelector('.ant-switch') as HTMLButtonElement | null;
+        if (toggle) toggle.click();
+        return;
+      }
+
+      // 'e' — click the edit button inside the focused item (e.g. hotkey edit)
+      if (e.key === 'e') {
+        const editBtn = focused.querySelector('.ant-btn .anticon-edit, .anticon-edit')?.closest('button') as HTMLButtonElement | null;
+        if (editBtn && !editBtn.disabled) {
+          e.preventDefault();
+          editBtn.click();
+        }
+        return;
+      }
+    };
+    document.addEventListener('keydown', handleOptionsKeyDown, true);
+    return () => document.removeEventListener('keydown', handleOptionsKeyDown, true);
+  }, [optionsDropdownOpen]);
 
   const optionsMenuItems = [
     {
@@ -384,7 +435,11 @@ const Footer: React.FC = () => {
           menu={{ items: optionsMenuItems }}
           placement="topRight"
           trigger={['click']}
-          onOpenChange={(open) => {
+          open={optionsDropdownOpen}
+          onOpenChange={(open, info) => {
+            // Don't close when interacting with menu items (Enter/click) — these are toggle items
+            if (!open && info.source === 'menu') return;
+            setOptionsDropdownOpen(open);
             if (open) setOptionsTooltipOpen(false);
           }}
         >
@@ -441,6 +496,16 @@ const Footer: React.FC = () => {
             </Tooltip>
           </div>
         )}
+
+        <Tooltip title="Keyboard shortcuts">
+          <span
+            className="kbd-key"
+            onClick={() => setIsShortcutsOverlayVisible((prev: boolean) => !prev)}
+            style={{ cursor: 'pointer', marginLeft: '4px' }}
+          >
+            ?
+          </span>
+        </Tooltip>
       </div>
 
       <div>

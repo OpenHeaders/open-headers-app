@@ -26,13 +26,12 @@ const LEFT_COLUMN: ShortcutGroup[] = [
   {
     title: 'Navigation',
     shortcuts: [
-      { keys: ['1'], description: 'Switch to This Page tab' },
-      { keys: ['2'], description: 'Switch to All Rules tab' },
-      { keys: ['3'], description: 'Switch to Tags tab' },
+      { keys: ['1'], description: 'This Page tab' },
+      { keys: ['2'], description: 'All Rules tab' },
+      { keys: ['3'], description: 'Tags tab' },
       { keys: ['/'], description: 'Focus search' },
-      { keys: ['['], description: 'Previous page' },
-      { keys: [']'], description: 'Next page' },
-      { keys: ['Esc'], description: 'Clear search / deselect row' },
+      { keys: ['[', ']'], description: 'Prev / next page' },
+      { keys: ['Esc'], description: 'Clear search / deselect' },
     ],
   },
   {
@@ -41,9 +40,10 @@ const LEFT_COLUMN: ShortcutGroup[] = [
       { keys: ['a'], description: 'Add new rule' },
       { keys: ['r'], description: 'Toggle recording' },
       { keys: ['p'], description: 'Pause / resume rules' },
-      { keys: ['t'], description: 'Cycle theme (light / dark / auto)' },
-      { keys: ['m'], description: 'Toggle compact mode' },
-      { keys: ['?'], description: 'Show / hide this panel' },
+      { keys: ['o'], description: 'Options menu' },
+      { keys: ['t'], description: 'Cycle theme' },
+      { keys: ['m'], description: 'Compact mode' },
+      { keys: ['?'], description: 'This panel' },
     ],
   },
 ];
@@ -58,16 +58,16 @@ const RIGHT_COLUMN: ShortcutGroup[] = [
       { keys: ['k', '\u2191'], description: 'Move up' },
       { keys: ['l', '\u2192'], description: 'Expand / enter sub-rows' },
       { keys: ['h', '\u2190'], description: 'Collapse / exit sub-rows' },
-      { keys: ['Space'], description: 'Toggle rule on / off' },
-      { keys: ['e'], description: 'Edit rule in desktop app' },
+      { keys: ['Space'], description: 'Toggle on / off' },
+      { keys: ['e'], description: 'Edit rule' },
       { keys: ['c'], description: 'Copy value' },
-      { keys: ['dd'], description: 'Delete rule (press twice)' },
+      { keys: ['dd'], description: 'Delete (press twice)' },
     ],
   },
   {
     title: 'Browser',
     shortcuts: [
-      { keys: isMac ? ['\u2318', '\u21E7', '.'] : ['Ctrl', 'Shift', '.'], combo: true, description: 'Open extension popup' },
+      { keys: isMac ? ['\u2318', '\u21E7', '.'] : ['Ctrl', 'Shift', '.'], combo: true, description: 'Open popup' },
     ],
     hint: {
       label: 'Customize browser shortcut \u2197',
@@ -144,7 +144,7 @@ const KeyboardShortcutsOverlay: React.FC<KeyboardShortcutsOverlayProps> = ({ vis
     <div className="keyboard-shortcuts-backdrop">
       <div className="keyboard-shortcuts-overlay" ref={overlayRef}>
         <div className="keyboard-shortcuts-header">
-          <Text strong style={{ fontSize: '15px' }}>
+          <Text strong style={{ fontSize: '14px' }}>
             Keyboard Shortcuts
           </Text>
           <span className="keyboard-shortcuts-close">

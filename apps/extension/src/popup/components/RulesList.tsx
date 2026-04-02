@@ -39,7 +39,14 @@ const RulesList: React.FC = () => {
     {
       key: 'tag-manager',
       label: 'Tags',
-      children: <TagManager />,
+      children: (
+        <TagManager
+          focusedRowIndex={activeTab === 'tag-manager' ? focusedRowIndex : -1}
+          pendingDeleteIndex={activeTab === 'tag-manager' ? pendingDeleteIndex : -1}
+          onPageInfoChange={activeTab === 'tag-manager' ? setPageInfo : undefined}
+          onRowActionsChange={activeTab === 'tag-manager' ? setRowActions : undefined}
+        />
+      ),
       icon: <TagsTwoTone />,
     },
   ];
