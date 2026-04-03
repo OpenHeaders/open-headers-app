@@ -29,8 +29,8 @@ import type {
   SourceRequestOptions,
   SourceType,
 } from '@openheaders/core';
-import type { RefObject } from 'react';
 import type { FormInstance } from 'antd';
+import type { RefObject } from 'react';
 import { showMessage } from '@/renderer/utils/ui/messageUtil';
 import type { EnvironmentContextLike } from '@/types/http';
 import { validateAllHttpFields } from './SourceFormValidation';

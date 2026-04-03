@@ -5,7 +5,9 @@ import type { AppSettings } from '@/types/settings';
 // ── Mocks ─────────────────────────────────────────────────────────
 
 const mockSend = vi.fn();
-const mockWindows = vi.fn<() => Array<{ isDestroyed: () => boolean; webContents: { send: typeof mockSend } }>>(() => []);
+const mockWindows = vi.fn<() => Array<{ isDestroyed: () => boolean; webContents: { send: typeof mockSend } }>>(
+  () => [],
+);
 
 vi.mock('electron', () => ({
   default: {

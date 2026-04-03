@@ -208,7 +208,11 @@ const CookieAttributes: React.FC<CookieAttributesProps> = ({
                         min={0}
                         size="small"
                       />
-                      <Input value="seconds" disabled style={{ width: 80, textAlign: 'center', pointerEvents: 'none' }} />
+                      <Input
+                        value="seconds"
+                        disabled
+                        style={{ width: 80, textAlign: 'center', pointerEvents: 'none' }}
+                      />
                     </Space.Compact>
                   </Form.Item>
                   <Space wrap>

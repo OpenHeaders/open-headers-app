@@ -239,7 +239,12 @@ describe('doesUrlMatchPattern', () => {
 
   // Path patterns without trailing wildcard — must match subpaths (urlFilter semantics)
   it('path pattern without trailing wildcard matches subpaths', () => {
-    expect(doesUrlMatchPattern('https://github.githubassets.com/assets/37160-72dc5a515abc7d3b.js', 'github.githubassets.com/assets')).toBe(true);
+    expect(
+      doesUrlMatchPattern(
+        'https://github.githubassets.com/assets/37160-72dc5a515abc7d3b.js',
+        'github.githubassets.com/assets',
+      ),
+    ).toBe(true);
   });
 
   it('path pattern without trailing wildcard matches exact path', () => {
@@ -247,7 +252,9 @@ describe('doesUrlMatchPattern', () => {
   });
 
   it('path pattern does not match different path', () => {
-    expect(doesUrlMatchPattern('https://github.githubassets.com/images/logo.png', 'github.githubassets.com/assets')).toBe(false);
+    expect(
+      doesUrlMatchPattern('https://github.githubassets.com/images/logo.png', 'github.githubassets.com/assets'),
+    ).toBe(false);
   });
 
   it('path pattern with trailing wildcard matches subpaths', () => {

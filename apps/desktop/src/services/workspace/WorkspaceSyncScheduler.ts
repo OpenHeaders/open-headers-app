@@ -14,6 +14,7 @@ import type { Workspace, WorkspaceSyncStatus } from '@/types/workspace';
 import { isSyncableWorkspace } from '@/types/workspace';
 import mainLogger from '@/utils/mainLogger';
 import { isTransientNetworkError } from './git/operations/TeamWorkspaceSyncer';
+import type { WorkspaceSyncSchedulerLike } from './state/types';
 import { broadcastToRenderers } from './sync/SyncBroadcaster';
 import { checkForDataChanges } from './sync/SyncChangeDetector';
 import { importSyncedData } from './sync/SyncDataImporter';
@@ -30,7 +31,6 @@ import type {
   SyncStatusOwnerLike,
   WorkspaceSettingsServiceLike,
 } from './sync/types';
-import type { WorkspaceSyncSchedulerLike } from './state/types';
 import { SYNC_CONSTANTS, SYNC_SKIP_MESSAGES } from './sync/types';
 
 const { createLogger } = mainLogger;

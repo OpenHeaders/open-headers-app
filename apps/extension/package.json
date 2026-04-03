@@ -1,6 +1,6 @@
 {
   "name": "@openheaders/extension",
-  "version": "4.1.0",
+  "version": "4.1.1",
   "private": true,
   "description": "OpenHeaders browser extension for Chrome, Firefox, Edge, and Safari",
   "scripts": {

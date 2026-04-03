@@ -16,7 +16,6 @@
  */
 
 import { Table, Typography, theme } from 'antd';
-import React from 'react';
 
 const { Text } = Typography;
 

@@ -753,15 +753,8 @@ const TeamWorkspaceAcceptInviteModal = ({
                             rules={[{ required: true, message: 'Please select your SSH key file' }]}
                           >
                             <Space.Compact style={{ width: '100%' }}>
-                              <Input
-                                placeholder="~/.ssh/id_rsa"
-                                size="small"
-                              />
-                              <Button
-                                icon={<FolderOpenOutlined />}
-                                onClick={handleBrowseSSHKey}
-                                size="small"
-                              >
+                              <Input placeholder="~/.ssh/id_rsa" size="small" />
+                              <Button icon={<FolderOpenOutlined />} onClick={handleBrowseSSHKey} size="small">
                                 Browse
                               </Button>
                             </Space.Compact>

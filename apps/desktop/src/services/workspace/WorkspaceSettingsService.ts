@@ -64,8 +64,6 @@ class WorkspaceSettingsService implements WorkspaceSettingsServiceLike, SyncStat
     };
   }
 
-
-
   /**
    * Get all workspace settings
    */

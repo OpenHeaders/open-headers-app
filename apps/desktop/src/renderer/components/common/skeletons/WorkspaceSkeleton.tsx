@@ -61,4 +61,3 @@ export const RecordViewerSkeleton = () => (
     </div>
   </Card>
 );
-

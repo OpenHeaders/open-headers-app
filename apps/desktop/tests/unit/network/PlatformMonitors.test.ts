@@ -146,7 +146,6 @@ describe('PlatformMonitors', () => {
       const monitor = new WindowsNetworkMonitor();
       expect(monitor).toBeInstanceOf(BasePlatformMonitor);
     });
-
   });
 
   describe('LinuxNetworkMonitor', () => {

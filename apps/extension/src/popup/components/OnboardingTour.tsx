@@ -33,11 +33,16 @@ function getTarget(selector: string): HTMLElement | null {
 }
 
 const Kbd: React.FC<{ children: string; small?: boolean }> = ({ children, small }) => (
-  <span className="kbd-key" style={{
-    fontSize: small ? 9 : 11,
-    verticalAlign: 'middle',
-    ...(small ? { height: 16, minWidth: 16, padding: '0 3px' } : {}),
-  }}>{children}</span>
+  <span
+    className="kbd-key"
+    style={{
+      fontSize: small ? 9 : 11,
+      verticalAlign: 'middle',
+      ...(small ? { height: 16, minWidth: 16, padding: '0 3px' } : {}),
+    }}
+  >
+    {children}
+  </span>
 );
 
 const StepDescription: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -60,7 +65,7 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose }) => {
         setTimeout(() => setIsVisible(true), 100);
       }
     });
-  }, [open]);
+  }, [open, setIsTourOpen]);
 
   // Controlled mode: open prop overrides
   useEffect(() => {
@@ -92,41 +97,51 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose }) => {
     [],
   );
 
-  const btnRow: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 4 };
+  const btnRow: React.CSSProperties = useMemo(() => ({ display: 'inline-flex', alignItems: 'center', gap: 4 }), []);
 
-  const sharedStepProps = useMemo(() => ({
-    prevButtonProps: {
-      children: (
-        <span style={btnRow}>
-          <Kbd small>{'\u2190'}</Kbd>
-          <span>Previous</span>
-        </span>
-      ),
-    },
-    nextButtonProps: {
-      children: (
-        <span style={btnRow}>
-          <span>Next</span>
-          <Kbd small>{'\u2192'}</Kbd>
-        </span>
-      ),
-    },
-    closable: {
-      closeIcon: <span className="kbd-key" style={{ fontSize: 13, height: 24, minWidth: 32, padding: '0 6px' }}>Esc</span>,
-    },
-  }), []);
+  const sharedStepProps = useMemo(
+    () => ({
+      prevButtonProps: {
+        children: (
+          <span style={btnRow}>
+            <Kbd small>{'\u2190'}</Kbd>
+            <span>Previous</span>
+          </span>
+        ),
+      },
+      nextButtonProps: {
+        children: (
+          <span style={btnRow}>
+            <span>Next</span>
+            <Kbd small>{'\u2192'}</Kbd>
+          </span>
+        ),
+      },
+      closable: {
+        closeIcon: (
+          <span className="kbd-key" style={{ fontSize: 13, height: 24, minWidth: 32, padding: '0 6px' }}>
+            Esc
+          </span>
+        ),
+      },
+    }),
+    [btnRow],
+  );
 
-  const lastStepProps = useMemo(() => ({
-    ...sharedStepProps,
-    nextButtonProps: {
-      children: (
-        <span style={btnRow}>
-          <span>Finish</span>
-          <Kbd small>Esc</Kbd>
-        </span>
-      ),
-    },
-  }), [sharedStepProps]);
+  const lastStepProps = useMemo(
+    () => ({
+      ...sharedStepProps,
+      nextButtonProps: {
+        children: (
+          <span style={btnRow}>
+            <span>Finish</span>
+            <Kbd small>Esc</Kbd>
+          </span>
+        ),
+      },
+    }),
+    [sharedStepProps, btnRow],
+  );
 
   const steps: TourProps['steps'] = useMemo(
     () => [
@@ -140,33 +155,86 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose }) => {
         styles: { section: { width: 380 } },
         description: (
           <StepDescription>
-            <Text type="secondary" style={{ fontSize: 12 }}>Intercept and modify HTTP traffic in real time.</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Intercept and modify HTTP traffic in real time.
+            </Text>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 10 }}>
               <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(22, 119, 255, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    background: 'rgba(22, 119, 255, 0.08)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
                   <EditTwoTone style={{ fontSize: 16 }} />
                 </div>
                 <div>
-                  <Text strong style={{ fontSize: 13 }}>Modify</Text>
-                  <div><Text type="secondary" style={{ fontSize: 12 }}>Headers, cookies, auth tokens, CORS, payloads</Text></div>
+                  <Text strong style={{ fontSize: 13 }}>
+                    Modify
+                  </Text>
+                  <div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Headers, cookies, auth tokens, CORS, payloads
+                    </Text>
+                  </div>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(114, 46, 209, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    background: 'rgba(114, 46, 209, 0.08)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
                   <ApiTwoTone twoToneColor="#722ed1" style={{ fontSize: 16 }} />
                 </div>
                 <div>
-                  <Text strong style={{ fontSize: 13 }}>Route</Text>
-                  <div><Text type="secondary" style={{ fontSize: 12 }}>Redirect requests, block trackers, rewrite URLs</Text></div>
+                  <Text strong style={{ fontSize: 13 }}>
+                    Route
+                  </Text>
+                  <div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Redirect requests, block trackers, rewrite URLs
+                    </Text>
+                  </div>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(82, 196, 26, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    background: 'rgba(82, 196, 26, 0.08)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
                   <EyeTwoTone twoToneColor="#52c41a" style={{ fontSize: 16 }} />
                 </div>
                 <div>
-                  <Text strong style={{ fontSize: 13 }}>Debug</Text>
-                  <div><Text type="secondary" style={{ fontSize: 12 }}>Inspect live requests, inject scripts, record sessions</Text></div>
+                  <Text strong style={{ fontSize: 13 }}>
+                    Debug
+                  </Text>
+                  <div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Inspect live requests, inject scripts, record sessions
+                    </Text>
+                  </div>
                 </div>
               </div>
             </div>
@@ -185,15 +253,25 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose }) => {
         ),
         description: (
           <StepDescription>
-            <Text type="secondary" style={{ fontSize: 12 }}>Shows whether the desktop app is connected.</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Shows whether the desktop app is connected.
+            </Text>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#52c41a' }} />
-                <Text style={{ fontSize: 12 }}><Text strong>Connected</Text> — live sync, create & edit rules</Text>
+                <span
+                  style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#52c41a' }}
+                />
+                <Text style={{ fontSize: 12 }}>
+                  <Text strong>Connected</Text> — live sync, create & edit rules
+                </Text>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#ff4d4f' }} />
-                <Text style={{ fontSize: 12 }}><Text strong>Disconnected</Text> — cached rules still active</Text>
+                <span
+                  style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#ff4d4f' }}
+                />
+                <Text style={{ fontSize: 12 }}>
+                  <Text strong>Disconnected</Text> — cached rules still active
+                </Text>
               </div>
             </div>
           </StepDescription>
@@ -211,19 +289,27 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose }) => {
         ),
         description: (
           <StepDescription>
-            <Text type="secondary" style={{ fontSize: 12 }}>Press a number key to switch instantly.</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Press a number key to switch instantly.
+            </Text>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
               <Space size={6}>
                 <Kbd>1</Kbd>
-                <Text style={{ fontSize: 12 }}><Text strong>This Page</Text> — rules matching the current tab</Text>
+                <Text style={{ fontSize: 12 }}>
+                  <Text strong>This Page</Text> — rules matching the current tab
+                </Text>
               </Space>
               <Space size={6}>
                 <Kbd>2</Kbd>
-                <Text style={{ fontSize: 12 }}><Text strong>All Rules</Text> — every rule you've created</Text>
+                <Text style={{ fontSize: 12 }}>
+                  <Text strong>All Rules</Text> — every rule you've created
+                </Text>
               </Space>
               <Space size={6}>
                 <Kbd>3</Kbd>
-                <Text style={{ fontSize: 12 }}><Text strong>Tags</Text> — organize and pause groups</Text>
+                <Text style={{ fontSize: 12 }}>
+                  <Text strong>Tags</Text> — organize and pause groups
+                </Text>
               </Space>
             </div>
           </StepDescription>
@@ -241,11 +327,28 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose }) => {
         ),
         description: (
           <StepDescription>
-            <Text type="secondary" style={{ fontSize: 12 }}>Navigate rows with keyboard shortcuts</Text>
-            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto 1fr auto 1fr', columnGap: 8, rowGap: 2, marginTop: 6, alignItems: 'center' }}>
-              <Space size={2}><Kbd>{'\u2191'}</Kbd><Kbd>{'\u2193'}</Kbd></Space>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Navigate rows with keyboard shortcuts
+            </Text>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'auto 1fr auto 1fr auto 1fr',
+                columnGap: 8,
+                rowGap: 2,
+                marginTop: 6,
+                alignItems: 'center',
+              }}
+            >
+              <Space size={2}>
+                <Kbd>{'\u2191'}</Kbd>
+                <Kbd>{'\u2193'}</Kbd>
+              </Space>
               <Text style={{ fontSize: 11 }}>Move</Text>
-              <Space size={2}><Kbd>{'\u2192'}</Kbd><Kbd>{'\u2190'}</Kbd></Space>
+              <Space size={2}>
+                <Kbd>{'\u2192'}</Kbd>
+                <Kbd>{'\u2190'}</Kbd>
+              </Space>
               <Text style={{ fontSize: 11 }}>Expand</Text>
               <Kbd>Space</Kbd>
               <Text style={{ fontSize: 11 }}>Toggle</Text>
@@ -253,7 +356,10 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose }) => {
               <Text style={{ fontSize: 11 }}>Edit</Text>
               <Kbd>c</Kbd>
               <Text style={{ fontSize: 11 }}>Copy</Text>
-              <Space size={2}><Kbd>d</Kbd><Kbd>d</Kbd></Space>
+              <Space size={2}>
+                <Kbd>d</Kbd>
+                <Kbd>d</Kbd>
+              </Space>
               <Text style={{ fontSize: 11 }}>Delete</Text>
             </div>
           </StepDescription>
@@ -272,7 +378,9 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose }) => {
         ),
         description: (
           <StepDescription>
-            <Text type="secondary" style={{ fontSize: 12 }}>Capture browser activity for debugging or demos.</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Capture browser activity for debugging or demos.
+            </Text>
             <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
               <Text style={{ fontSize: 12 }}>Press</Text>
               <Kbd>r</Kbd>
@@ -293,7 +401,9 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose }) => {
         ),
         description: (
           <StepDescription>
-            <Text type="secondary" style={{ fontSize: 12 }}>The popup is fully keyboard-navigable.</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              The popup is fully keyboard-navigable.
+            </Text>
             <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
               <Text style={{ fontSize: 12 }}>Press</Text>
               <Kbd>?</Kbd>
@@ -314,16 +424,28 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose }) => {
         ),
         description: (
           <StepDescription>
-            <Text type="secondary" style={{ fontSize: 12 }}>Help us grow and reach more developers.</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Help us grow and reach more developers.
+            </Text>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <StarTwoTone style={{ fontSize: 14 }} />
-                <a
-                  onClick={() => { void chrome.tabs.create({ url: 'https://github.com/OpenHeaders/open-headers-app' }); }}
-                  style={{ cursor: 'pointer', fontSize: 13 }}
+                <button
+                  type="button"
+                  onClick={() => {
+                    void chrome.tabs.create({ url: 'https://github.com/OpenHeaders/open-headers-app' });
+                  }}
+                  style={{
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    color: 'var(--ant-color-link)',
+                  }}
                 >
                   Give us a star on GitHub
-                </a>
+                </button>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <LikeTwoTone style={{ fontSize: 14 }} />
@@ -337,7 +459,7 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose }) => {
         ...lastStepProps,
       },
     ],
-    [],
+    [sharedStepProps, lastStepProps],
   );
 
   return (

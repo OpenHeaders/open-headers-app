@@ -1,6 +1,6 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { Alert, Button, Card, Divider, Space, Typography } from 'antd';
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useWorkspaceActions } from '@/renderer/components/features/workspaces/hooks';
 import { useSettings, useWorkspaces } from '@/renderer/contexts';
 import type { Workspace } from '@/types/workspace';

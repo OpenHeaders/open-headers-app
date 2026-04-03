@@ -4,7 +4,6 @@
  */
 
 import { Space, Switch, Tooltip, Typography } from 'antd';
-import React from 'react';
 
 const { Text } = Typography;
 

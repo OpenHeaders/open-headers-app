@@ -6,10 +6,10 @@ import {
   ExclamationCircleOutlined,
   FileTextOutlined,
 } from '@ant-design/icons';
+import { useKeyboardNav } from '@context/KeyboardNavContext';
 import { useHeader } from '@hooks/useHeader';
 import { getAppLauncher } from '@utils/app-launcher';
 import {
-  Alert,
   App,
   Badge,
   Button,
@@ -30,9 +30,14 @@ import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRowActionRegistration } from '@/hooks/useRowActionRegistration';
 import { useTablePagination } from '@/hooks/useTablePagination';
-import { useKeyboardNav } from '@context/KeyboardNavContext';
-import { type PageInfo, type RowActions, getTagColor } from '../utils/table-shared';
-import { type TagDescriptor, renderDomainTags, renderTagOverflow, renderValueWithCopy, truncateValue } from './columns/sharedColumnRenderers';
+import { getTagColor, type PageInfo, type RowActions } from '../utils/table-shared';
+import {
+  renderDomainTags,
+  renderTagOverflow,
+  renderValueWithCopy,
+  type TagDescriptor,
+  truncateValue,
+} from './columns/sharedColumnRenderers';
 import DeleteConfirmOverlay from './DeleteConfirmOverlay';
 
 declare const browser: typeof chrome | undefined;
@@ -118,7 +123,6 @@ interface CurrentTabInfo {
 interface TableRecord extends ActiveRule {
   key: string | number;
 }
-
 
 /**
  * Renders a URL with the portion matching the pattern highlighted.
@@ -450,7 +454,8 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
           allTags.push({ label: record.tag, color: getTagColor(record.tag) });
         }
         allTags.push({ label: record.isResponse ? 'Res' : 'Req', tooltip: record.isResponse ? 'Response' : 'Request' });
-        const hasStatusTag = allTags[0]?.label === 'Paused' || allTags[0]?.label === 'Page' || allTags[0]?.label === 'Resource';
+        const hasStatusTag =
+          allTags[0]?.label === 'Paused' || allTags[0]?.label === 'Page' || allTags[0]?.label === 'Resource';
         return renderTagOverflow(allTags, hasStatusTag ? 1 : 2);
       },
     },
@@ -562,23 +567,32 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
         style={{ padding: '40px 0' }}
       />
     );
-  if (!currentTab.domain || currentTab.url.startsWith('chrome://') || currentTab.url.startsWith('edge://'))
-    return (
-      <div style={{ padding: '20px' }}>
-        <Alert
-          title="System Page"
-          description="Header rules do not apply to browser system pages"
-          type="info"
-          showIcon
-        />
-      </div>
-    );
+  const isSystemPage =
+    !currentTab.domain ||
+    /^(chrome|chrome-extension|edge|moz-extension|about|opera|vivaldi|brave):/.test(currentTab.url);
 
   const enabledCount = activeRules.filter((r) => r.isEnabled !== false).length;
 
   return (
     <div className="header-rules-section" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div className="table-toolbar">
+      <div className="table-toolbar" style={{ position: 'relative' }}>
+        <div
+          style={{
+            position: 'absolute',
+            top: 4,
+            left: 0,
+            right: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <Badge status="processing" />
+          <Text type="secondary" style={{ fontSize: '11px' }}>
+            Live — monitoring requests
+          </Text>
+        </div>
         <div className="header-rules-title">
           <div>
             <Space align="center" size={8}>
@@ -592,6 +606,21 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
               <Text type="secondary" style={{ fontSize: '12px' }}>
                 {enabledCount} of {activeRules.length} enabled
               </Text>
+              <Text type="secondary" style={{ fontSize: '11px' }}>
+                {(() => {
+                  const totalRequests = activeRules.reduce((sum, r) => sum + (r.matchedUrls || []).length, 0);
+                  if (!searchText) {
+                    return `${totalRequests} request${totalRequests !== 1 ? 's' : ''}`;
+                  }
+                  const filteredRequests =
+                    urlMatchCountMap.size > 0
+                      ? Array.from(urlMatchCountMap.values()).reduce((sum, c) => sum + c, 0)
+                      : 0;
+                  return filteredRequests > 0
+                    ? `${filteredRequests} of ${totalRequests} request${totalRequests !== 1 ? 's' : ''} matched`
+                    : `${sortedFilteredRules.length} rule${sortedFilteredRules.length !== 1 ? 's' : ''} matched`;
+                })()}
+              </Text>
             </Space>
             {(() => {
               const pausedCount = activeRules.filter((r) => disabledTagGroups.has(r.tag || '__no_tag__')).length;
@@ -604,46 +633,20 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
               ) : null;
             })()}
           </div>
-          <Space align="start">
-            <Space align="center" size={6} style={{ height: 24 }}>
-              <Badge status="processing" />
-              <Text type="secondary" style={{ fontSize: '12px' }}>
-                Live — monitoring requests
-              </Text>
-            </Space>
-            <div>
-              <Input.Search
-                placeholder="Search anything..."
-                allowClear
-                size="small"
-                style={{ width: 300 }}
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape' && searchText) {
-                  e.stopPropagation();
-                  setSearchText('');
-                }
-              }}
-              />
-              <div style={{ textAlign: 'right', marginTop: 2 }}>
-                <Text type="secondary" style={{ fontSize: '11px' }}>
-                  {(() => {
-                    const totalRequests = activeRules.reduce((sum, r) => sum + (r.matchedUrls || []).length, 0);
-                    if (!searchText) {
-                      return `${activeRules.length} rule${activeRules.length !== 1 ? 's' : ''}, ${totalRequests} request${totalRequests !== 1 ? 's' : ''}`;
-                    }
-                    const filteredRequests = urlMatchCountMap.size > 0
-                      ? Array.from(urlMatchCountMap.values()).reduce((sum, c) => sum + c, 0)
-                      : 0;
-                    return filteredRequests > 0
-                      ? `${sortedFilteredRules.length} rule${sortedFilteredRules.length !== 1 ? 's' : ''}, ${filteredRequests} request${filteredRequests !== 1 ? 's' : ''} matched`
-                      : `${sortedFilteredRules.length} rule${sortedFilteredRules.length !== 1 ? 's' : ''} matched`;
-                  })()}
-                </Text>
-              </div>
-            </div>
-          </Space>
+          <Input.Search
+            placeholder="Search anything..."
+            allowClear
+            size="small"
+            style={{ width: 300 }}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' && searchText) {
+                e.stopPropagation();
+                setSearchText('');
+              }
+            }}
+          />
         </div>
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, paddingBottom: '8px' }}>
@@ -655,7 +658,12 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
           size="small"
           scroll={{ x: 770, y: 290 }}
           onRow={(_record: TableRecord, index) => ({
-            onClick: () => { if (index !== undefined) { setFocusedRowIndex(index); (document.activeElement as HTMLElement)?.blur(); } },
+            onClick: () => {
+              if (index !== undefined) {
+                setFocusedRowIndex(index);
+                (document.activeElement as HTMLElement)?.blur();
+              }
+            },
           })}
           rowClassName={(record: TableRecord, index: number) => {
             const classes: string[] = [];
@@ -670,36 +678,43 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
             expandedRowKeys: expandedRowKey !== null ? [expandedRowKey] : [],
             expandIcon: ({ record, onExpand }) => {
               const totalRequests = (record.matchedUrls || []).length;
-              const searchUrlMatches = searchText && record.id ? (urlMatchCountMap.get(record.id) || 0) : 0;
+              const searchUrlMatches = searchText && record.id ? urlMatchCountMap.get(record.id) || 0 : 0;
               const badgeCount = searchText ? searchUrlMatches : totalRequests;
               const bgColor = searchUrlMatches > 0 ? '#1677ff' : '#8c8c8c';
-              const badgeTooltip = searchUrlMatches > 0
-                ? `${searchUrlMatches} of ${totalRequests} request${totalRequests !== 1 ? 's' : ''} match "${searchText}" — click to expand`
-                : badgeCount > 0
-                  ? `${badgeCount} matched request${badgeCount !== 1 ? 's' : ''} — click to expand`
-                  : 'No matched requests yet — click to expand';
+              const badgeTooltip =
+                searchUrlMatches > 0
+                  ? `${searchUrlMatches} of ${totalRequests} request${totalRequests !== 1 ? 's' : ''} match "${searchText}" — click to expand`
+                  : badgeCount > 0
+                    ? `${badgeCount} matched request${badgeCount !== 1 ? 's' : ''} — click to expand`
+                    : 'No matched requests yet — click to expand';
               return (
                 <Tooltip title={badgeTooltip}>
-                <span
-                  style={{
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minWidth: 20,
-                    height: 18,
-                    padding: '0 5px',
-                    borderRadius: 5,
-                    backgroundColor: badgeCount > 0 ? bgColor : '#d9d9d9',
-                    color: '#fff',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    lineHeight: 1,
-                  }}
-                  onClick={(e) => onExpand(record, e)}
-                >
-                  {badgeCount}
-                </span>
+                  <span
+                    style={{
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minWidth: 20,
+                      height: 18,
+                      padding: '0 5px',
+                      borderRadius: 5,
+                      backgroundColor: badgeCount > 0 ? bgColor : '#d9d9d9',
+                      color: '#fff',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      lineHeight: 1,
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => onExpand(record, e)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ')
+                        onExpand(record, e as unknown as React.MouseEvent<HTMLElement>);
+                    }}
+                  >
+                    {badgeCount}
+                  </span>
                 </Tooltip>
               );
             },
@@ -888,18 +903,31 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
             rowExpandable: () => true,
           }}
           locale={{
-            emptyText: (
+            emptyText: isSystemPage ? (
               <Empty
-                image={<FileTextOutlined style={{ fontSize: 24, color: 'var(--text-tertiary)' }} />}
+                image={<ExclamationCircleOutlined style={{ fontSize: 28, color: 'var(--text-tertiary)' }} />}
+                description={
+                  <Space orientation="vertical" size={4}>
+                    <Text type="secondary">System Page</Text>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      Header rules do not apply to browser system pages
+                    </Text>
+                  </Space>
+                }
+                style={{ padding: '32px 0' }}
+              />
+            ) : (
+              <Empty
+                image={<FileTextOutlined style={{ fontSize: 28, color: 'var(--text-tertiary)' }} />}
                 description={
                   <Space orientation="vertical" size={4}>
                     <Text type="secondary">No rules match this page</Text>
-                    <Text type="secondary" style={{ fontSize: '11px' }}>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
                       No rules are configured for this domain
                     </Text>
                   </Space>
                 }
-                style={{ padding: '24px 0' }}
+                style={{ padding: '32px 0' }}
               />
             ),
           }}

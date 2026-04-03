@@ -252,8 +252,6 @@ describe('validateProxyRule', () => {
     expect(r.error).toContain('header rule ID');
   });
 
-
-
   it('accepts valid dynamic rule with UUID headerRuleId', () => {
     expect(
       validateProxyRule({

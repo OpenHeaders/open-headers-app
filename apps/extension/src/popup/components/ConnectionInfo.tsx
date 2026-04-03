@@ -2,7 +2,6 @@ import { DownloadOutlined } from '@ant-design/icons';
 import { useKeyboardNav } from '@context/KeyboardNavContext';
 import { useHeader } from '@hooks/useHeader';
 import { storage } from '@utils/browser-api';
-import { sendMessage } from '@utils/messaging';
 import { Alert, Button, Space } from 'antd';
 import type React from 'react';
 import { useEffect, useState } from 'react';
@@ -30,13 +29,6 @@ const ConnectionInfo: React.FC = () => {
   }, [isConnected, lastConnectionState]);
 
   const isVisible = isStatusLoaded && !isConnected && !dismissed && !isTourOpen;
-
-  const handleOpenWelcomePage = async (): Promise<void> => {
-    const response = await sendMessage({ type: 'forceOpenWelcomePage' });
-    if (!response.error) {
-      window.close();
-    }
-  };
 
   const handleDismiss: React.MouseEventHandler<HTMLButtonElement> = () => {
     setDismissed(true);
@@ -81,9 +73,6 @@ const ConnectionInfo: React.FC = () => {
                 onClick={() => window.open('https://openheaders.io', '_blank')}
               >
                 Download App
-              </Button>
-              <Button size="small" onClick={handleOpenWelcomePage}>
-                Setup Guide
               </Button>
             </Space>
           </div>

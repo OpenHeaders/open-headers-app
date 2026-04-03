@@ -519,7 +519,6 @@ class VideoCaptureService {
   getActiveRecordings(): RecordingInfo[] {
     return Array.from(this.activeRecordings.values());
   }
-
 }
 
 export { VideoCaptureService };

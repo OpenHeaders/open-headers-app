@@ -87,7 +87,6 @@ describe('ImportService._validateImportOptions', () => {
     ).toThrow('File content must be provided');
   });
 
-
   it('throws when selectedItems is missing', () => {
     const service = new ImportService(makeDeps());
     // intentionally passing invalid input to test runtime validation

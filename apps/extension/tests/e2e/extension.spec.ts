@@ -217,23 +217,6 @@ test.describe('Theme', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Static Pages
-// ---------------------------------------------------------------------------
-test.describe('Welcome Page', () => {
-  test('welcome.html loads and has content', async () => {
-    const welcomePage = await context.newPage();
-    await welcomePage.goto(`chrome-extension://${extensionId}/welcome.html`);
-    await welcomePage.waitForLoadState('domcontentloaded');
-
-    const body = await welcomePage.textContent('body');
-    expect(body).toBeTruthy();
-    expect(body!.length).toBeGreaterThan(0);
-
-    await welcomePage.close();
-  });
-});
-
-// ---------------------------------------------------------------------------
 // Manifest & Extension Assets
 // ---------------------------------------------------------------------------
 test.describe('Extension Assets', () => {

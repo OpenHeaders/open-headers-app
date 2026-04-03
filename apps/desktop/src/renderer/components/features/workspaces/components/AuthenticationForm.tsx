@@ -6,7 +6,6 @@ import {
   TOKEN_TYPES,
 } from '@/renderer/components/features/workspaces/constants/WorkspaceConstants';
 
-
 /**
  * Authentication form component for Git repository access
  *  props - Component props

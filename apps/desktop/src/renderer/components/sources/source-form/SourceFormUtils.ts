@@ -14,9 +14,9 @@
  * @since 3.0.0
  */
 
-import type { RefObject } from 'react';
 import type { SourceType } from '@openheaders/core';
 import type { FormInstance } from 'antd';
+import type { RefObject } from 'react';
 
 interface LoggerLike {
   debug: (message: string, data?: unknown) => void;
@@ -239,10 +239,7 @@ export const getFieldsWithTemplateVariables = (values: FormValues): string[] => 
   const fieldsToValidate = [];
 
   // Check URL for environment variables or TOTP codes
-  if (
-    values.sourcePath &&
-    (values.sourcePath.includes('{{') || values.sourcePath.includes('[['))
-  ) {
+  if (values.sourcePath && (values.sourcePath.includes('{{') || values.sourcePath.includes('[['))) {
     fieldsToValidate.push('sourcePath');
   }
 

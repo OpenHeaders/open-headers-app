@@ -94,7 +94,9 @@ describe('analyzeConfigFile (main config)', () => {
     const config = {
       sources: [{ sourceId: 's1' }],
     };
-    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('Invalid source at index 0: missing required fields');
+    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow(
+      'Invalid source at index 0: missing required fields',
+    );
   });
 
   it('throws for rules that is not an object', async () => {
@@ -234,14 +236,18 @@ describe('validateConfigStructure (via analyzeConfigFile)', () => {
     const config = {
       proxyRules: [{ isDynamic: true }],
     };
-    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('dynamic rule must have a valid header rule ID');
+    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow(
+      'dynamic rule must have a valid header rule ID',
+    );
   });
 
   it('validates static proxy rule requires headerName', async () => {
     const config = {
       proxyRules: [{ isDynamic: false, domains: ['example.com'] }],
     };
-    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow('static rule must have a valid header name');
+    await expect(analyzeConfigFile(JSON.stringify(config))).rejects.toThrow(
+      'static rule must have a valid header name',
+    );
   });
 });
 

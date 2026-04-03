@@ -1,5 +1,5 @@
-import fs from 'node:fs';
-import path from 'node:path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig, build as viteBuild } from 'vite';
 
@@ -40,9 +40,6 @@ function copyAssetsPlugin() {
     { from: 'src/assets/images/icon48.png', to: 'images/icon48.png' },
     { from: 'src/assets/images/icon128.png', to: 'images/icon128.png' },
     { from: 'src/assets/images/companion-app.png', to: 'images/companion-app.png' },
-    // Welcome page
-    { from: 'src/assets/welcome/welcome.html', to: 'welcome.html' },
-    { from: 'src/assets/welcome/welcome.js', to: 'js/welcome.js' },
     // Recording
     { from: 'src/assets/recording/inject/recorder-rrweb.js', to: 'js/recording/inject/recorder.js' },
     { from: 'src/assets/recording/inject/recording-widget.js', to: 'js/recording/inject/recording-widget.js' },
@@ -73,7 +70,7 @@ function copyAssetsPlugin() {
           if (to === 'manifest.json') {
             // Inject version from package.json into the output manifest
             const manifest = JSON.parse(fs.readFileSync(src, 'utf8'));
-            manifest.version = pkg.version;
+            manifest.version = pkg.version.replace(/^(\d+\.\d+\.\d+)-beta\.(\d+)$/, '$1.$2');
             fs.writeFileSync(dest, `${JSON.stringify(manifest, null, 2)}\n`);
           } else {
             fs.copyFileSync(src, dest);
@@ -156,7 +153,7 @@ export default defineConfig({
           beautify: false,
           comments: false,
         },
-      },
+      } as Record<string, unknown>,
     }),
     sourcemap: browser === 'firefox' ? 'inline' : false,
     // Disable module preload polyfill — it references `document` which
@@ -192,10 +189,10 @@ export default defineConfig({
   },
 
   // Build-time constants.
-  // __APP_VERSION__ is read from package.json (which CI aligns with the git tag).
+  // __APP_VERSION__ uses the numeric manifest-style version (e.g. 4.1.0.1 instead of 4.1.0-beta.1).
   // globalThis override prevents Vite from using detection code that violates CSP.
   define: {
-    __APP_VERSION__: JSON.stringify(pkg.version),
+    __APP_VERSION__: JSON.stringify(pkg.version.replace(/^(\d+\.\d+\.\d+)-beta\.(\d+)$/, '$1.$2')),
     globalThis: 'globalThis',
   },
 

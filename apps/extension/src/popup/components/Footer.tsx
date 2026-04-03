@@ -233,7 +233,12 @@ const Footer: React.FC = () => {
       onToggleRulesPause: handleTogglePauseForKeyboard,
       onToggleOptions: handleToggleOptionsForKeyboard,
     });
-  }, [setFooterActions, handleToggleRecordingForKeyboard, handleTogglePauseForKeyboard, handleToggleOptionsForKeyboard]);
+  }, [
+    setFooterActions,
+    handleToggleRecordingForKeyboard,
+    handleTogglePauseForKeyboard,
+    handleToggleOptionsForKeyboard,
+  ]);
 
   // When options dropdown is open, handle keyboard actions on focused menu items
   useEffect(() => {
@@ -252,7 +257,9 @@ const Footer: React.FC = () => {
 
       // 'e' — click the edit button inside the focused item (e.g. hotkey edit)
       if (e.key === 'e') {
-        const editBtn = focused.querySelector('.ant-btn .anticon-edit, .anticon-edit')?.closest('button') as HTMLButtonElement | null;
+        const editBtn = focused
+          .querySelector('.ant-btn .anticon-edit, .anticon-edit')
+          ?.closest('button') as HTMLButtonElement | null;
         if (editBtn && !editBtn.disabled) {
           e.preventDefault();
           editBtn.click();
@@ -501,7 +508,12 @@ const Footer: React.FC = () => {
         <Tooltip title="Keyboard shortcuts">
           <span
             className="kbd-key"
+            role="button"
+            tabIndex={0}
             onClick={() => setIsShortcutsOverlayVisible((prev: boolean) => !prev)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') setIsShortcutsOverlayVisible((prev: boolean) => !prev);
+            }}
             style={{ cursor: 'pointer', marginLeft: '4px' }}
           >
             ?
@@ -516,7 +528,9 @@ const Footer: React.FC = () => {
             <Button
               type="text"
               icon={<StarOutlined />}
-              onClick={() => { void chrome.tabs.create({ url: 'https://github.com/OpenHeaders/open-headers-app' }); }}
+              onClick={() => {
+                void chrome.tabs.create({ url: 'https://github.com/OpenHeaders/open-headers-app' });
+              }}
               size="small"
               style={{ padding: '0 4px', height: '20px', minWidth: 'auto' }}
             />

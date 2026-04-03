@@ -100,9 +100,7 @@ async function analyzeConfigFile(
         : data.environmentSchema?.environments
           ? Object.keys(data.environmentSchema.environments).length
           : 0,
-      variableCount: data.environmentSchema
-        ? Object.keys(data.environmentSchema.variableDefinitions || {}).length
-        : 0,
+      variableCount: data.environmentSchema ? Object.keys(data.environmentSchema.variableDefinitions || {}).length : 0,
       rawData: data,
     };
   }

@@ -10,7 +10,6 @@ import type { MessageHandlerContext, SendResponse } from '@/types/browser';
 import { clearAllTracking, getActiveRulesForTab } from './request-tracker';
 import { setSourcesFromApp } from './sources-store';
 import { generateSavedDataHash, generateSourcesHash } from './utils';
-import { openWelcomePageDirectly } from './welcome-page';
 
 const browserAPI = { runtime: browserRuntime };
 
@@ -233,13 +232,6 @@ export function handleGeneralMessage(
         new Date(message.timestamp as number).toISOString(),
       );
 
-      safeResponse({ acknowledged: true });
-    } else if (message.type === 'openWelcomePage') {
-      logger.info('MessageHandler', 'Ignoring openWelcomePage request - welcome page should only open on install');
-      safeResponse({ acknowledged: true });
-    } else if (message.type === 'forceOpenWelcomePage') {
-      logger.info('MessageHandler', 'Force opening welcome page requested from popup');
-      openWelcomePageDirectly();
       safeResponse({ acknowledged: true });
     } else if (message.type === 'openTab') {
       // Open a new tab with the specified URL

@@ -1,5 +1,5 @@
-import type { JsonObject, JsonValue } from '@openheaders/core';
 import type http from 'node:http';
+import type { JsonObject, JsonValue } from '@openheaders/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { CliApiService } from '@/services/cli/CliApiService';
 
