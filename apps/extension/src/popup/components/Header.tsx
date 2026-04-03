@@ -23,7 +23,6 @@ import { getBrowserAPI } from '@/types/browser';
 const { Title, Text } = Typography;
 
 interface HeaderProps {
-  onOpenSetupGuide: () => void;
   onShowShortcuts: () => void;
   onShowTour: () => void;
 }
@@ -75,7 +74,7 @@ const LOG_LEVEL_OPTIONS: Array<{ value: LogLevel; label: React.ReactNode }> = [
   },
 ];
 
-const Header: React.FC<HeaderProps> = ({ onOpenSetupGuide, onShowShortcuts, onShowTour }) => {
+const Header: React.FC<HeaderProps> = ({ onShowShortcuts, onShowTour }) => {
   const { isConnected, isStatusLoaded } = useHeader();
   const { themeMode, setThemeMode, isCompactMode, toggleCompactMode } = useTheme();
   const [logLevel, setLogLevel] = useState<LogLevel>(logger.getLevel());
@@ -182,12 +181,6 @@ const Header: React.FC<HeaderProps> = ({ onOpenSetupGuide, onShowShortcuts, onSh
 
   const menuItems: MenuProps['items'] = [
     {
-      key: 'setup',
-      icon: <QuestionCircleOutlined />,
-      label: 'Setup Guide',
-      onClick: onOpenSetupGuide,
-    },
-    {
       key: 'shortcuts',
       icon: <KeyOutlined />,
       label: (
@@ -274,9 +267,6 @@ const Header: React.FC<HeaderProps> = ({ onOpenSetupGuide, onShowShortcuts, onSh
         <Title level={4} style={{ margin: 0, color: '#1890ff' }}>
           Open Headers
         </Title>
-        <Text type="secondary" style={{ fontSize: '12px' }}>
-          Extension
-        </Text>
       </Space>
       <Space align="center" size={12}>
         <div className="connection-status">

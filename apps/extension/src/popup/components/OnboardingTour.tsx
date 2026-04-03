@@ -364,7 +364,7 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose }) => {
             </div>
           </StepDescription>
         ),
-        target: () => getTarget('.header-rules-table')!,
+        target: () => getTarget('.entries-list')!,
         placement: 'top' as const,
         scrollIntoViewOptions: false,
         ...sharedStepProps,
@@ -454,8 +454,8 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose }) => {
             </div>
           </StepDescription>
         ),
-        target: () => getTarget('.header')!,
-        placement: 'bottom' as const,
+        target: () => getTarget('.github-star-button')!,
+        placement: 'top' as const,
         ...lastStepProps,
       },
     ],
