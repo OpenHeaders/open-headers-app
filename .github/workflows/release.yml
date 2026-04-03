@@ -450,7 +450,7 @@ jobs:
         run: |
           EXT_VERSION="${{ steps.ext_ver.outputs.version }}"
           IS_PRERELEASE="${{ steps.release_type.outputs.is_prerelease }}"
-          EXT_TAG="ext-v${EXT_VERSION}"
+          EXT_TAG="v${EXT_VERSION}"
           DL="https://github.com/OpenHeaders/open-headers-browser-extension/releases/download/${EXT_TAG}"
 
           if [ "$IS_PRERELEASE" = "true" ]; then
@@ -478,9 +478,9 @@ jobs:
         with:
           token: ${{ secrets.EXTENSION_REPO_PAT }}
           repository: OpenHeaders/open-headers-browser-extension
-          tag_name: "ext-v${{ steps.ext_ver.outputs.version }}"
+          tag_name: "v${{ steps.ext_ver.outputs.version }}"
           draft: false
           prerelease: ${{ steps.release_type.outputs.is_prerelease == 'true' }}
-          name: "ext-v${{ steps.ext_ver.outputs.version }}"
+          name: "v${{ steps.ext_ver.outputs.version }}"
           files: dist/extension-packages/*.zip
           body_path: ext_release_body.md
