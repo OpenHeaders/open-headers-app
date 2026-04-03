@@ -238,16 +238,15 @@ describe('addTrackedUrl', () => {
     expect(tabsWithActiveRules.has(42)).toBe(true);
   });
 
-  it('evicts oldest entries when limit is reached', () => {
-    // Add 50 URLs (the max)
-    for (let i = 0; i < 50; i++) {
+  it('tracks all URLs without a cap', () => {
+    for (let i = 0; i < 100; i++) {
       addTrackedUrl(1, `https://openheaders.io/page/${i}`);
     }
-    expect(tabsWithActiveRules.get(1)!.size).toBe(50);
+    expect(tabsWithActiveRules.get(1)!.size).toBe(100);
 
-    // Adding one more should evict the oldest
     addTrackedUrl(1, 'https://openheaders.io/page/new');
-    expect(tabsWithActiveRules.get(1)!.size).toBe(50);
+    expect(tabsWithActiveRules.get(1)!.size).toBe(101);
+    expect(tabsWithActiveRules.get(1)!.has('https://openheaders.io/page/0')).toBe(true);
     expect(tabsWithActiveRules.get(1)!.has('https://openheaders.io/page/new')).toBe(true);
   });
 });

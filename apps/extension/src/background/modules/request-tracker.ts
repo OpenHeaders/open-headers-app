@@ -16,7 +16,6 @@ import {
 } from './url-utils';
 
 // Constants
-const MAX_TRACKED_URLS_PER_TAB = 50; // Limit tracked URLs to prevent memory leaks
 const REVALIDATION_QUEUE = new Set<number>(); // Track pending revalidations
 let isRevalidating = false; // Prevent concurrent revalidations
 
@@ -215,11 +214,8 @@ export async function revalidateTrackedRequests(): Promise<void> {
         for (const [tabId, trackedUrls] of tabsWithActiveRules.entries()) {
           const validUrls = new Map<string, number>();
 
-          // Limit the number of URLs we check to prevent performance issues
-          const urlsToCheck = Array.from(trackedUrls.entries()).slice(-MAX_TRACKED_URLS_PER_TAB);
-
           // Check each tracked URL against all rules
-          for (const [url, ts] of urlsToCheck) {
+          for (const [url, ts] of trackedUrls) {
             let stillMatches = false;
 
             for (const [_id, entry] of allRules) {
@@ -297,17 +293,6 @@ export function addTrackedUrl(tabId: number, url: string): void {
 
   // Skip if already tracked (no-op, no notification needed)
   if (trackedUrls.has(url)) return;
-
-  // Limit the number of tracked URLs per tab to prevent memory leaks
-  if (trackedUrls.size >= MAX_TRACKED_URLS_PER_TAB) {
-    // Remove oldest entries by timestamp
-    const sorted = Array.from(trackedUrls.entries()).sort((a, b) => a[1] - b[1]);
-    const toKeep = sorted.slice(-MAX_TRACKED_URLS_PER_TAB + 1);
-    trackedUrls.clear();
-    for (const [u, ts] of toKeep) {
-      trackedUrls.set(u, ts);
-    }
-  }
 
   trackedUrls.set(url, Date.now());
 

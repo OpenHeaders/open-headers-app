@@ -578,72 +578,68 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
 
   return (
     <div className="header-rules-section" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div className="table-toolbar">
+      <div className="table-toolbar active-rules-toolbar">
         <div className="header-rules-title">
-          <div>
-            <Space align="center" size={8}>
-              <Tooltip title={currentTab.domain.length > 30 ? currentTab.domain : undefined}>
-                <Text style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  {currentTab.domain.length > 30
-                    ? `${currentTab.domain.substring(0, 20)}...${currentTab.domain.substring(currentTab.domain.length - 7)}`
-                    : currentTab.domain}
-                </Text>
-              </Tooltip>
-              <Text type="secondary" style={{ fontSize: '12px' }}>
-                {enabledCount} of {activeRules.length} enabled
-              </Text>
-            </Space>
-            {(() => {
-              const pausedCount = activeRules.filter((r) => disabledTagGroups.has(r.tag || '__no_tag__')).length;
-              return pausedCount > 0 ? (
-                <div>
-                  <Text type="warning" style={{ fontSize: '11px' }}>
-                    {pausedCount} rule{pausedCount !== 1 ? 's' : ''} paused by tag group
-                  </Text>
-                </div>
-              ) : null;
-            })()}
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
+            <Badge status="processing" />
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              Live — monitoring requests
+            </Text>
           </div>
-          <Space align="start">
-            <Space align="center" size={6} style={{ height: 24 }}>
-              <Badge status="processing" />
-              <Text type="secondary" style={{ fontSize: '12px' }}>
-                Live — monitoring requests
-              </Text>
-            </Space>
-            <div>
-              <Input.Search
-                placeholder="Search anything..."
-                allowClear
-                size="small"
-                style={{ width: 300 }}
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape' && searchText) {
-                  e.stopPropagation();
-                  setSearchText('');
-                }
-              }}
-              />
-              <div style={{ textAlign: 'right', marginTop: 2 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <Space align="center" size={8} wrap>
+                <Tooltip title={currentTab.domain.length > 30 ? currentTab.domain : undefined}>
+                  <Text style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {currentTab.domain.length > 30
+                      ? `${currentTab.domain.substring(0, 20)}...${currentTab.domain.substring(currentTab.domain.length - 7)}`
+                      : currentTab.domain}
+                  </Text>
+                </Tooltip>
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  {enabledCount} of {activeRules.length} enabled
+                </Text>
                 <Text type="secondary" style={{ fontSize: '11px' }}>
                   {(() => {
                     const totalRequests = activeRules.reduce((sum, r) => sum + (r.matchedUrls || []).length, 0);
                     if (!searchText) {
-                      return `${activeRules.length} rule${activeRules.length !== 1 ? 's' : ''}, ${totalRequests} request${totalRequests !== 1 ? 's' : ''}`;
+                      return `${totalRequests} request${totalRequests !== 1 ? 's' : ''}`;
                     }
                     const filteredRequests = urlMatchCountMap.size > 0
                       ? Array.from(urlMatchCountMap.values()).reduce((sum, c) => sum + c, 0)
                       : 0;
                     return filteredRequests > 0
-                      ? `${sortedFilteredRules.length} rule${sortedFilteredRules.length !== 1 ? 's' : ''}, ${filteredRequests} request${filteredRequests !== 1 ? 's' : ''} matched`
+                      ? `${filteredRequests} of ${totalRequests} request${totalRequests !== 1 ? 's' : ''} matched`
                       : `${sortedFilteredRules.length} rule${sortedFilteredRules.length !== 1 ? 's' : ''} matched`;
                   })()}
                 </Text>
-              </div>
+              </Space>
+              {(() => {
+                const pausedCount = activeRules.filter((r) => disabledTagGroups.has(r.tag || '__no_tag__')).length;
+                return pausedCount > 0 ? (
+                  <div>
+                    <Text type="warning" style={{ fontSize: '11px' }}>
+                      {pausedCount} rule{pausedCount !== 1 ? 's' : ''} paused by tag group
+                    </Text>
+                  </div>
+                ) : null;
+              })()}
             </div>
-          </Space>
+            <Input.Search
+              placeholder="Search anything..."
+              allowClear
+              size="small"
+              style={{ width: 240, flexShrink: 0 }}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape' && searchText) {
+                  e.stopPropagation();
+                  setSearchText('');
+                }
+              }}
+            />
+          </div>
         </div>
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, paddingBottom: '8px' }}>

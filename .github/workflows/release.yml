@@ -277,8 +277,17 @@ jobs:
         id: ext_version
         working-directory: apps/extension
         run: |
-          # Read the extension's own version (independent from desktop tag)
+          TAG="${GITHUB_REF_NAME/v/}"
           EXT_VERSION=$(node -p "require('./package.json').version")
+
+          # If the tag has a beta suffix, apply it to the extension version too
+          if [[ "$TAG" =~ (-beta\.[0-9]+)$ ]]; then
+            BETA_SUFFIX="${BASH_REMATCH[1]}"
+            EXT_BASE=$(echo "$EXT_VERSION" | sed 's/-beta\.[0-9]*$//')
+            EXT_VERSION="${EXT_BASE}${BETA_SUFFIX}"
+            node -e "const fs=require('fs'),p=JSON.parse(fs.readFileSync('package.json'));p.version='$EXT_VERSION';fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
+          fi
+
           echo "version=$EXT_VERSION" >> $GITHUB_OUTPUT
 
           # Compute numeric manifest version for store compatibility

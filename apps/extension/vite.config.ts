@@ -73,7 +73,7 @@ function copyAssetsPlugin() {
           if (to === 'manifest.json') {
             // Inject version from package.json into the output manifest
             const manifest = JSON.parse(fs.readFileSync(src, 'utf8'));
-            manifest.version = pkg.version;
+            manifest.version = pkg.version.replace(/^(\d+\.\d+\.\d+)-beta\.(\d+)$/, '$1.$2');
             fs.writeFileSync(dest, `${JSON.stringify(manifest, null, 2)}\n`);
           } else {
             fs.copyFileSync(src, dest);
@@ -192,10 +192,12 @@ export default defineConfig({
   },
 
   // Build-time constants.
-  // __APP_VERSION__ is read from package.json (which CI aligns with the git tag).
+  // __APP_VERSION__ uses the numeric manifest-style version (e.g. 4.1.0.1 instead of 4.1.0-beta.1).
   // globalThis override prevents Vite from using detection code that violates CSP.
   define: {
-    __APP_VERSION__: JSON.stringify(pkg.version),
+    __APP_VERSION__: JSON.stringify(
+      pkg.version.replace(/^(\d+\.\d+\.\d+)-beta\.(\d+)$/, '$1.$2'),
+    ),
     globalThis: 'globalThis',
   },
 
