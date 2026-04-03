@@ -526,6 +526,7 @@ const Footer: React.FC = () => {
           <Text style={{ fontSize: '11px', color: token.colorTextTertiary }}>v{version}</Text>
           <Tooltip title="Help us with a star on GitHub">
             <Button
+              className="github-star-button"
               type="text"
               icon={<StarOutlined />}
               onClick={() => {

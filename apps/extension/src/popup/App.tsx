@@ -29,11 +29,7 @@ const AppInner: React.FC = () => {
   return (
     <div ref={containerRef} tabIndex={-1} style={{ outline: 'none', height: '100%' }}>
       <Layout className="app-container" data-theme={isDarkMode ? 'dark' : 'light'}>
-        <Header
-          onOpenSetupGuide={handleShowTour}
-          onShowShortcuts={() => setIsShortcutsOverlayVisible(true)}
-          onShowTour={handleShowTour}
-        />
+        <Header onShowShortcuts={() => setIsShortcutsOverlayVisible(true)} onShowTour={handleShowTour} />
         <Content className="content">
           <ConnectionInfo />
           <div className="entries-list">
