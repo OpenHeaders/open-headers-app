@@ -1,6 +1,6 @@
 /**
  * Shared types, constants, and utilities used by table components
- * (ActiveRules, HeaderTable, RulesList).
+ * (ThisPageRules, HeaderTable, RulesList).
  */
 
 export interface PageInfo {

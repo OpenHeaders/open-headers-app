@@ -92,7 +92,11 @@ body {
   }
   .ant-tabs-tabpane-active {
     height: 100%;
+  }
+  .ant-tabs-tabpane:focus,
+  .ant-tabs-tabpane:focus-visible {
     outline: none;
+    box-shadow: none;
   }
 }
 
@@ -103,7 +107,12 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
-  outline: none;
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
 
   .table-toolbar {
     height: 70px;

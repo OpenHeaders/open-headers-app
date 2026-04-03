@@ -154,14 +154,14 @@ function renderHighlightedUrl(url: string, pattern: string): React.ReactNode {
   );
 }
 
-interface ActiveRulesProps {
+interface ThisPageRulesProps {
   focusedRowIndex?: number;
   pendingDeleteIndex?: number;
   onPageInfoChange?: (info: PageInfo) => void;
   onRowActionsChange?: (actions: RowActions) => void;
 }
 
-const ActiveRules: React.FC<ActiveRulesProps> = ({
+const ThisPageRules: React.FC<ThisPageRulesProps> = ({
   focusedRowIndex = -1,
   pendingDeleteIndex = -1,
   onPageInfoChange,
@@ -196,7 +196,7 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
           setActiveRules(response.activeRules || []);
         }
       } catch (error) {
-        console.error(new Date().toISOString(), 'ERROR', '[ActiveRules]', 'Error getting active rules:', error);
+        console.error(new Date().toISOString(), 'ERROR', '[ThisPageRules]', 'Error getting active rules:', error);
         setActiveRules([]);
       } finally {
         setLoading(false);
@@ -942,4 +942,4 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
   );
 };
 
-export default ActiveRules;
+export default ThisPageRules;
