@@ -81,9 +81,11 @@ jobs:
           fi
 
       - name: Generate Release Body
+        id: ext_repo
         run: |
           TAG="${GITHUB_REF_NAME/ext-v/}"
-          REF_NAME="${{ github.ref_name }}"
+          EXT_REPO_TAG="v${TAG}"
+          echo "tag=${EXT_REPO_TAG}" >> $GITHUB_OUTPUT
           IS_PRERELEASE="${{ steps.release_type.outputs.is_prerelease }}"
 
           if [ "$IS_PRERELEASE" = "true" ]; then
@@ -91,7 +93,7 @@ jobs:
             echo '' >> release_body.md
           fi
 
-          REPO_BASE="https://github.com/OpenHeaders/open-headers-browser-extension/releases/download/${REF_NAME}"
+          REPO_BASE="https://github.com/OpenHeaders/open-headers-browser-extension/releases/download/${EXT_REPO_TAG}"
           {
             echo "## Browser Extension Downloads"
             echo ""
@@ -110,12 +112,11 @@ jobs:
       - name: Publish to extension repo
         uses: softprops/action-gh-release@v2
         with:
+          token: ${{ secrets.EXTENSION_REPO_PAT }}
           repository: OpenHeaders/open-headers-browser-extension
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ steps.ext_repo.outputs.tag }}
           draft: false
           prerelease: ${{ steps.release_type.outputs.is_prerelease == 'true' }}
-          name: "${{ github.ref_name }}"
+          name: ${{ steps.ext_repo.outputs.tag }}
           files: apps/extension/releases/*.zip
           body_path: release_body.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.EXTENSION_REPO_PAT }}
