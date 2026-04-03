@@ -266,6 +266,11 @@ const Header: React.FC<HeaderProps> = ({ onOpenSetupGuide, onShowShortcuts, onSh
   return (
     <div className="header">
       <Space align="center">
+        <img
+          src={getBrowserAPI().runtime.getURL('images/icon48.png')}
+          alt="Open Headers"
+          style={{ width: 24, height: 24 }}
+        />
         <Title level={4} style={{ margin: 0, color: '#1890ff' }}>
           Open Headers
         </Title>
