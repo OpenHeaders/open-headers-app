@@ -1,4 +1,4 @@
-import { AppstoreOutlined, FolderOpenOutlined, FolderOutlined, PauseCircleOutlined, TagsOutlined } from '@ant-design/icons';
+import { FolderOpenOutlined, FolderOutlined, PauseCircleOutlined, TagsOutlined } from '@ant-design/icons';
 import type { HeaderEntry } from '@context/HeaderContext';
 import { useKeyboardNav } from '@context/KeyboardNavContext';
 import { useHeader } from '@hooks/useHeader';
@@ -286,23 +286,6 @@ const TagManager: React.FC<TagManagerProps> = ({
     },
   ];
 
-  if (groupedRules.length === 0) {
-    return (
-      <Empty
-        image={<AppstoreOutlined style={{ fontSize: 32, color: 'var(--text-tertiary)' }} />}
-        description={
-          <Space orientation="vertical" size={4}>
-            <Text type="secondary">No rules to organize</Text>
-            <Text type="secondary" style={{ fontSize: '12px' }}>
-              Add rules and tag them for better organization
-            </Text>
-          </Space>
-        }
-        style={{ padding: '40px 0' }}
-      />
-    );
-  }
-
   return (
     <div className="header-rules-section" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div className="table-toolbar">
@@ -436,20 +419,20 @@ const TagManager: React.FC<TagManagerProps> = ({
           locale={{
             emptyText: (
               <Empty
-                image={<TagsOutlined style={{ fontSize: 24, color: 'var(--text-tertiary)' }} />}
+                image={<TagsOutlined style={{ fontSize: 28, color: 'var(--text-tertiary)' }} />}
                 description={
                   searchText ? (
                     <Text type="secondary">No matching tag groups found</Text>
                   ) : (
                     <Space orientation="vertical" size={4}>
                       <Text type="secondary">No tag groups</Text>
-                      <Text type="secondary" style={{ fontSize: '11px' }}>
+                      <Text type="secondary" style={{ fontSize: '12px' }}>
                         Tag your rules for better organization
                       </Text>
                     </Space>
                   )
                 }
-                style={{ padding: '24px 0' }}
+                style={{ padding: '32px 0' }}
               />
             ),
           }}

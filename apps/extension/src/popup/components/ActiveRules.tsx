@@ -873,29 +873,29 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
           locale={{
             emptyText: isSystemPage ? (
               <Empty
-                image={<ExclamationCircleOutlined style={{ fontSize: 24, color: 'var(--text-tertiary)' }} />}
+                image={<ExclamationCircleOutlined style={{ fontSize: 28, color: 'var(--text-tertiary)' }} />}
                 description={
                   <Space orientation="vertical" size={4}>
                     <Text type="secondary">System Page</Text>
-                    <Text type="secondary" style={{ fontSize: '11px' }}>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
                       Header rules do not apply to browser system pages
                     </Text>
                   </Space>
                 }
-                style={{ padding: '24px 0' }}
+                style={{ padding: '32px 0' }}
               />
             ) : (
               <Empty
-                image={<FileTextOutlined style={{ fontSize: 24, color: 'var(--text-tertiary)' }} />}
+                image={<FileTextOutlined style={{ fontSize: 28, color: 'var(--text-tertiary)' }} />}
                 description={
                   <Space orientation="vertical" size={4}>
                     <Text type="secondary">No rules match this page</Text>
-                    <Text type="secondary" style={{ fontSize: '11px' }}>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
                       No rules are configured for this domain
                     </Text>
                   </Space>
                 }
-                style={{ padding: '24px 0' }}
+                style={{ padding: '32px 0' }}
               />
             ),
           }}
