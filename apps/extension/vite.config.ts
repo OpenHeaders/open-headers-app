@@ -192,9 +192,7 @@ export default defineConfig({
   // __APP_VERSION__ uses the numeric manifest-style version (e.g. 4.1.0.1 instead of 4.1.0-beta.1).
   // globalThis override prevents Vite from using detection code that violates CSP.
   define: {
-    __APP_VERSION__: JSON.stringify(
-      pkg.version.replace(/^(\d+\.\d+\.\d+)-beta\.(\d+)$/, '$1.$2'),
-    ),
+    __APP_VERSION__: JSON.stringify(pkg.version.replace(/^(\d+\.\d+\.\d+)-beta\.(\d+)$/, '$1.$2')),
     globalThis: 'globalThis',
   },
 

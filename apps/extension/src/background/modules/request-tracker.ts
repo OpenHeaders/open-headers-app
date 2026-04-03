@@ -4,8 +4,8 @@
 
 import type { HeaderEntry, SavedDataMap } from '@openheaders/core';
 import { storage, tabs } from '@utils/browser-api.js';
-import { getChunkedData } from '@utils/storage-chunking.js';
 import { sendMessageWithCallback } from '@utils/messaging';
+import { getChunkedData } from '@utils/storage-chunking.js';
 import type { ActiveRule, MatchedRequest } from '@/types/browser';
 import {
   clearPatternCache,

@@ -166,9 +166,13 @@ const TagManager: React.FC<TagManagerProps> = ({
         return (
           <Space>
             {isExpanded ? (
-              <FolderOpenOutlined style={{ color: record.isGroupDisabled ? 'var(--ant-color-warning)' : 'var(--text-secondary)' }} />
+              <FolderOpenOutlined
+                style={{ color: record.isGroupDisabled ? 'var(--ant-color-warning)' : 'var(--text-secondary)' }}
+              />
             ) : (
-              <FolderOutlined style={{ color: record.isGroupDisabled ? 'var(--ant-color-warning)' : 'var(--text-secondary)' }} />
+              <FolderOutlined
+                style={{ color: record.isGroupDisabled ? 'var(--ant-color-warning)' : 'var(--text-secondary)' }}
+              />
             )}
             <Text strong style={{ fontSize: '13px', opacity: record.isGroupDisabled ? 0.6 : 1 }}>
               {name}
@@ -206,6 +210,8 @@ const TagManager: React.FC<TagManagerProps> = ({
       align: 'center',
       fixed: 'right',
       render: (_: unknown, record: TagGroupRecord) => (
+        // biome-ignore lint/a11y/useKeyWithClickEvents: stops row expand on switch click
+        // biome-ignore lint/a11y/noStaticElementInteractions: stops row expand on switch click
         <span onClick={(e: React.MouseEvent) => e.stopPropagation()}>
           <Tooltip
             title={
@@ -276,8 +282,7 @@ const TagManager: React.FC<TagManagerProps> = ({
               }
               const { runtime } = await import('../../utils/browser-api');
               runtime.sendMessage({ type: 'toggleRule', ruleId: record.id, enabled: checked }, (response: unknown) => {
-                if (!(response as { success?: boolean })?.success)
-                  message.error('Failed to toggle rule');
+                if (!(response as { success?: boolean })?.success) message.error('Failed to toggle rule');
               });
             }}
           />
@@ -323,7 +328,12 @@ const TagManager: React.FC<TagManagerProps> = ({
           size="small"
           scroll={{ x: 470, y: 290 }}
           onRow={(_record: TagGroupRecord, index) => ({
-            onClick: () => { if (index !== undefined) { setFocusedRowIndex(index); (document.activeElement as HTMLElement)?.blur(); } },
+            onClick: () => {
+              if (index !== undefined) {
+                setFocusedRowIndex(index);
+                (document.activeElement as HTMLElement)?.blur();
+              }
+            },
           })}
           rowClassName={(_record: TagGroupRecord, index: number) => {
             const classes: string[] = [];
@@ -338,9 +348,7 @@ const TagManager: React.FC<TagManagerProps> = ({
             expandIcon: ({ record, onExpand }) => {
               const badgeCount = record.totalCount;
               return (
-                <Tooltip
-                  title={`${badgeCount} rule${badgeCount !== 1 ? 's' : ''} in this group — click to expand`}
-                >
+                <Tooltip title={`${badgeCount} rule${badgeCount !== 1 ? 's' : ''} in this group — click to expand`}>
                   <span
                     style={{
                       cursor: 'pointer',
@@ -351,13 +359,23 @@ const TagManager: React.FC<TagManagerProps> = ({
                       height: 18,
                       padding: '0 5px',
                       borderRadius: 5,
-                      backgroundColor: record.isGroupDisabled ? 'var(--ant-color-warning)' : badgeCount > 0 ? '#8c8c8c' : '#d9d9d9',
+                      backgroundColor: record.isGroupDisabled
+                        ? 'var(--ant-color-warning)'
+                        : badgeCount > 0
+                          ? '#8c8c8c'
+                          : '#d9d9d9',
                       color: '#fff',
                       fontSize: '11px',
                       fontWeight: 600,
                       lineHeight: 1,
                     }}
+                    role="button"
+                    tabIndex={0}
                     onClick={(e) => onExpand(record, e)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ')
+                        onExpand(record, e as unknown as React.MouseEvent<HTMLElement>);
+                    }}
                   >
                     {badgeCount}
                   </span>
@@ -400,7 +418,8 @@ const TagManager: React.FC<TagManagerProps> = ({
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                     <Text type={record.isGroupDisabled ? 'warning' : 'secondary'} style={{ fontSize: '11px' }}>
                       {record.isGroupDisabled ? 'Paused · ' : ''}
-                      {record.enabledCount} of {record.totalCount} rule{record.totalCount !== 1 ? 's' : ''} individually enabled
+                      {record.enabledCount} of {record.totalCount} rule{record.totalCount !== 1 ? 's' : ''} individually
+                      enabled
                     </Text>
                   </div>
                   <Table<NestedRuleRecord>

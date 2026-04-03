@@ -6,10 +6,10 @@ import {
   ExclamationCircleOutlined,
   FileTextOutlined,
 } from '@ant-design/icons';
+import { useKeyboardNav } from '@context/KeyboardNavContext';
 import { useHeader } from '@hooks/useHeader';
 import { getAppLauncher } from '@utils/app-launcher';
 import {
-  Alert,
   App,
   Badge,
   Button,
@@ -30,9 +30,14 @@ import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRowActionRegistration } from '@/hooks/useRowActionRegistration';
 import { useTablePagination } from '@/hooks/useTablePagination';
-import { useKeyboardNav } from '@context/KeyboardNavContext';
-import { type PageInfo, type RowActions, getTagColor } from '../utils/table-shared';
-import { type TagDescriptor, renderDomainTags, renderTagOverflow, renderValueWithCopy, truncateValue } from './columns/sharedColumnRenderers';
+import { getTagColor, type PageInfo, type RowActions } from '../utils/table-shared';
+import {
+  renderDomainTags,
+  renderTagOverflow,
+  renderValueWithCopy,
+  type TagDescriptor,
+  truncateValue,
+} from './columns/sharedColumnRenderers';
 import DeleteConfirmOverlay from './DeleteConfirmOverlay';
 
 declare const browser: typeof chrome | undefined;
@@ -118,7 +123,6 @@ interface CurrentTabInfo {
 interface TableRecord extends ActiveRule {
   key: string | number;
 }
-
 
 /**
  * Renders a URL with the portion matching the pattern highlighted.
@@ -450,7 +454,8 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
           allTags.push({ label: record.tag, color: getTagColor(record.tag) });
         }
         allTags.push({ label: record.isResponse ? 'Res' : 'Req', tooltip: record.isResponse ? 'Response' : 'Request' });
-        const hasStatusTag = allTags[0]?.label === 'Paused' || allTags[0]?.label === 'Page' || allTags[0]?.label === 'Resource';
+        const hasStatusTag =
+          allTags[0]?.label === 'Paused' || allTags[0]?.label === 'Page' || allTags[0]?.label === 'Resource';
         return renderTagOverflow(allTags, hasStatusTag ? 1 : 2);
       },
     },
@@ -562,7 +567,8 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
         style={{ padding: '40px 0' }}
       />
     );
-  const isSystemPage = !currentTab.domain ||
+  const isSystemPage =
+    !currentTab.domain ||
     /^(chrome|chrome-extension|edge|moz-extension|about|opera|vivaldi|brave):/.test(currentTab.url);
 
   const enabledCount = activeRules.filter((r) => r.isEnabled !== false).length;
@@ -570,9 +576,22 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
   return (
     <div className="header-rules-section" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div className="table-toolbar" style={{ position: 'relative' }}>
-        <div style={{ position: 'absolute', top: 4, left: 0, right: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
+        <div
+          style={{
+            position: 'absolute',
+            top: 4,
+            left: 0,
+            right: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
           <Badge status="processing" />
-          <Text type="secondary" style={{ fontSize: '11px' }}>Live — monitoring requests</Text>
+          <Text type="secondary" style={{ fontSize: '11px' }}>
+            Live — monitoring requests
+          </Text>
         </div>
         <div className="header-rules-title">
           <div>
@@ -593,9 +612,10 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
                   if (!searchText) {
                     return `${totalRequests} request${totalRequests !== 1 ? 's' : ''}`;
                   }
-                  const filteredRequests = urlMatchCountMap.size > 0
-                    ? Array.from(urlMatchCountMap.values()).reduce((sum, c) => sum + c, 0)
-                    : 0;
+                  const filteredRequests =
+                    urlMatchCountMap.size > 0
+                      ? Array.from(urlMatchCountMap.values()).reduce((sum, c) => sum + c, 0)
+                      : 0;
                   return filteredRequests > 0
                     ? `${filteredRequests} of ${totalRequests} request${totalRequests !== 1 ? 's' : ''} matched`
                     : `${sortedFilteredRules.length} rule${sortedFilteredRules.length !== 1 ? 's' : ''} matched`;
@@ -638,7 +658,12 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
           size="small"
           scroll={{ x: 770, y: 290 }}
           onRow={(_record: TableRecord, index) => ({
-            onClick: () => { if (index !== undefined) { setFocusedRowIndex(index); (document.activeElement as HTMLElement)?.blur(); } },
+            onClick: () => {
+              if (index !== undefined) {
+                setFocusedRowIndex(index);
+                (document.activeElement as HTMLElement)?.blur();
+              }
+            },
           })}
           rowClassName={(record: TableRecord, index: number) => {
             const classes: string[] = [];
@@ -653,36 +678,43 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
             expandedRowKeys: expandedRowKey !== null ? [expandedRowKey] : [],
             expandIcon: ({ record, onExpand }) => {
               const totalRequests = (record.matchedUrls || []).length;
-              const searchUrlMatches = searchText && record.id ? (urlMatchCountMap.get(record.id) || 0) : 0;
+              const searchUrlMatches = searchText && record.id ? urlMatchCountMap.get(record.id) || 0 : 0;
               const badgeCount = searchText ? searchUrlMatches : totalRequests;
               const bgColor = searchUrlMatches > 0 ? '#1677ff' : '#8c8c8c';
-              const badgeTooltip = searchUrlMatches > 0
-                ? `${searchUrlMatches} of ${totalRequests} request${totalRequests !== 1 ? 's' : ''} match "${searchText}" — click to expand`
-                : badgeCount > 0
-                  ? `${badgeCount} matched request${badgeCount !== 1 ? 's' : ''} — click to expand`
-                  : 'No matched requests yet — click to expand';
+              const badgeTooltip =
+                searchUrlMatches > 0
+                  ? `${searchUrlMatches} of ${totalRequests} request${totalRequests !== 1 ? 's' : ''} match "${searchText}" — click to expand`
+                  : badgeCount > 0
+                    ? `${badgeCount} matched request${badgeCount !== 1 ? 's' : ''} — click to expand`
+                    : 'No matched requests yet — click to expand';
               return (
                 <Tooltip title={badgeTooltip}>
-                <span
-                  style={{
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minWidth: 20,
-                    height: 18,
-                    padding: '0 5px',
-                    borderRadius: 5,
-                    backgroundColor: badgeCount > 0 ? bgColor : '#d9d9d9',
-                    color: '#fff',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    lineHeight: 1,
-                  }}
-                  onClick={(e) => onExpand(record, e)}
-                >
-                  {badgeCount}
-                </span>
+                  <span
+                    style={{
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minWidth: 20,
+                      height: 18,
+                      padding: '0 5px',
+                      borderRadius: 5,
+                      backgroundColor: badgeCount > 0 ? bgColor : '#d9d9d9',
+                      color: '#fff',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      lineHeight: 1,
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => onExpand(record, e)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ')
+                        onExpand(record, e as unknown as React.MouseEvent<HTMLElement>);
+                    }}
+                  >
+                    {badgeCount}
+                  </span>
                 </Tooltip>
               );
             },
