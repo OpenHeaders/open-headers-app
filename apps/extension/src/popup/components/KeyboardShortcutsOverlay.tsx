@@ -1,7 +1,7 @@
+import { isFirefox } from '@utils/browser-api';
 import { Typography } from 'antd';
 import type React from 'react';
 import { useEffect, useRef } from 'react';
-import { isFirefox } from '@utils/browser-api';
 
 const { Text } = Typography;
 
@@ -109,7 +109,15 @@ const ShortcutColumn: React.FC<{ groups: ShortcutGroup[] }> = ({ groups }) => (
           </div>
         ))}
         {group.hint && (
-          <span className="keyboard-shortcuts-customize-link" onClick={group.hint.onClick}>
+          <span
+            className="keyboard-shortcuts-customize-link"
+            role="button"
+            tabIndex={0}
+            onClick={group.hint.onClick}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') group.hint!.onClick();
+            }}
+          >
             {group.hint.label}
           </span>
         )}

@@ -14,6 +14,7 @@ import {
   SwapOutlined,
 } from '@ant-design/icons';
 import type { DynamicSource, HeaderEntry } from '@context/HeaderContext';
+import { useKeyboardNav } from '@context/KeyboardNavContext';
 import { useHeader } from '@hooks/useHeader';
 import { getAppLauncher } from '@utils/app-launcher';
 import { App, Button, Dropdown, Empty, Input, Popconfirm, Space, Switch, Table, Tooltip, Typography } from 'antd';
@@ -23,9 +24,14 @@ import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRowActionRegistration } from '@/hooks/useRowActionRegistration';
 import { useTablePagination } from '@/hooks/useTablePagination';
-import { useKeyboardNav } from '@context/KeyboardNavContext';
-import { type PageInfo, type RowActions, getTagColor } from '../utils/table-shared';
-import { type TagDescriptor, renderDomainTags, renderTagOverflow, renderValueWithCopy, truncateValue } from './columns/sharedColumnRenderers';
+import { getTagColor, type PageInfo, type RowActions } from '../utils/table-shared';
+import {
+  renderDomainTags,
+  renderTagOverflow,
+  renderValueWithCopy,
+  type TagDescriptor,
+  truncateValue,
+} from './columns/sharedColumnRenderers';
 import DeleteConfirmOverlay from './DeleteConfirmOverlay';
 
 const { Search } = Input;
@@ -179,7 +185,9 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
 
   const enabledCount = dataSource.filter((item) => item.isEnabled).length;
   const injectingCount = dataSource.filter((item) => item.isEnabled && !item.placeholderType).length;
-  const pausedCount = dataSource.filter((item) => item.isEnabled && disabledTagGroups.has(item.tag || '__no_tag__')).length;
+  const pausedCount = dataSource.filter(
+    (item) => item.isEnabled && disabledTagGroups.has(item.tag || '__no_tag__'),
+  ).length;
   const totalCount = dataSource.length;
 
   const { paginationConfig } = useTablePagination({
@@ -469,7 +477,10 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
         allTags.push({ label: record.isResponse ? 'Res' : 'Req', tooltip: record.isResponse ? 'Response' : 'Request' });
 
         const hasStatusTag =
-          allTags[0]?.label === 'Paused' || allTags[0]?.label === 'Cached' || allTags[0]?.label === 'Missing' || allTags[0]?.label === 'Empty';
+          allTags[0]?.label === 'Paused' ||
+          allTags[0]?.label === 'Cached' ||
+          allTags[0]?.label === 'Missing' ||
+          allTags[0]?.label === 'Empty';
         return renderTagOverflow(allTags, hasStatusTag ? 1 : 2);
       },
     },
@@ -510,22 +521,25 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
             ? 'Enabled but tag group is paused — not being injected'
             : 'Enable/disable rule';
         return (
-        <Tooltip title={tooltip}>
-          <Switch
-            checked={enabled}
-            disabled={!isConnected}
-            onChange={async () => {
-              const { runtime } = await import('../../utils/browser-api');
-              runtime.sendMessage({ type: 'toggleRule', ruleId: record.id, enabled: !enabled }, (response: unknown) => {
-                const resp = response as { success?: boolean } | undefined;
-                if (!resp?.success) {
-                  message.error('Failed to toggle rule');
-                }
-              });
-            }}
-            size="small"
-          />
-        </Tooltip>
+          <Tooltip title={tooltip}>
+            <Switch
+              checked={enabled}
+              disabled={!isConnected}
+              onChange={async () => {
+                const { runtime } = await import('../../utils/browser-api');
+                runtime.sendMessage(
+                  { type: 'toggleRule', ruleId: record.id, enabled: !enabled },
+                  (response: unknown) => {
+                    const resp = response as { success?: boolean } | undefined;
+                    if (!resp?.success) {
+                      message.error('Failed to toggle rule');
+                    }
+                  },
+                );
+              }}
+              size="small"
+            />
+          </Tooltip>
         );
       },
     },
@@ -764,7 +778,12 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
           scroll={{ x: 920, y: 290 }}
           onChange={handleChange}
           onRow={(_record: TableRecord, index) => ({
-            onClick: () => { if (index !== undefined) { setFocusedRowIndex(index); (document.activeElement as HTMLElement)?.blur(); } },
+            onClick: () => {
+              if (index !== undefined) {
+                setFocusedRowIndex(index);
+                (document.activeElement as HTMLElement)?.blur();
+              }
+            },
           })}
           rowClassName={(record: TableRecord, index: number) => {
             const classes: string[] = [];

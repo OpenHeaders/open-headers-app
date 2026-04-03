@@ -125,9 +125,7 @@ function compileAndCachePattern(pattern: string): void {
   // 3. Anchor at start only (^) — no end anchor ($)
   //    This replicates urlFilter semantics where the pattern
   //    matches if the URL starts with the expanded pattern.
-  const regexPattern = urlFilter
-    .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
-    .replace(/\*/g, '.*');
+  const regexPattern = urlFilter.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
 
   const regex = new RegExp(`^${regexPattern}`, 'i');
   compiledPatternCache.set(pattern, regex);

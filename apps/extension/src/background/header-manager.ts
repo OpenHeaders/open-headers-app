@@ -326,4 +326,3 @@ function createResponseHeaderDnrRules(entry: ResolvedEntry, startId: number): He
 
   return rules;
 }
-

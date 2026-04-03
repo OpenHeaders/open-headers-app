@@ -86,13 +86,7 @@ export function useKeyboardDispatch(options: UseKeyboardDispatchOptions): void {
     focusLastRowOnPageChange,
   } = options;
 
-  const {
-    onToggleRow,
-    onEditRow,
-    onCopyRow,
-    onDeleteRow,
-    onAddRule,
-  } = rowActions;
+  const { onToggleRow, onEditRow, onCopyRow, onDeleteRow, onAddRule } = rowActions;
 
   const { onToggleRecording, onToggleRulesPause, onToggleOptions } = footerActions;
 

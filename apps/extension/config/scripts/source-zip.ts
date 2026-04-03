@@ -17,7 +17,7 @@ const VERSION: string = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json
 
 const EXCLUDE = [
   'node_modules/**',
-  '.*/**',           // all hidden directories (.git, .idea, .tmp, etc.)
+  '.*/**', // all hidden directories (.git, .idea, .tmp, etc.)
   'dist/**',
   'build/**',
   'releases/**',
