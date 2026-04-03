@@ -364,7 +364,7 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ open, onClose }) => {
             </div>
           </StepDescription>
         ),
-        target: () => getTarget('.entries-list')!,
+        target: () => getTarget('.ant-tabs-tabpane-active .header-rules-table')!,
         placement: 'top' as const,
         scrollIntoViewOptions: false,
         ...sharedStepProps,
