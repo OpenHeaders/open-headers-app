@@ -562,17 +562,8 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
         style={{ padding: '40px 0' }}
       />
     );
-  if (!currentTab.domain || currentTab.url.startsWith('chrome://') || currentTab.url.startsWith('edge://'))
-    return (
-      <div style={{ padding: '20px' }}>
-        <Alert
-          title="System Page"
-          description="Header rules do not apply to browser system pages"
-          type="info"
-          showIcon
-        />
-      </div>
-    );
+  const isSystemPage = !currentTab.domain ||
+    /^(chrome|chrome-extension|edge|moz-extension|about|opera|vivaldi|brave):/.test(currentTab.url);
 
   const enabledCount = activeRules.filter((r) => r.isEnabled !== false).length;
 
@@ -880,7 +871,20 @@ const ActiveRules: React.FC<ActiveRulesProps> = ({
             rowExpandable: () => true,
           }}
           locale={{
-            emptyText: (
+            emptyText: isSystemPage ? (
+              <Empty
+                image={<ExclamationCircleOutlined style={{ fontSize: 24, color: 'var(--text-tertiary)' }} />}
+                description={
+                  <Space orientation="vertical" size={4}>
+                    <Text type="secondary">System Page</Text>
+                    <Text type="secondary" style={{ fontSize: '11px' }}>
+                      Header rules do not apply to browser system pages
+                    </Text>
+                  </Space>
+                }
+                style={{ padding: '24px 0' }}
+              />
+            ) : (
               <Empty
                 image={<FileTextOutlined style={{ fontSize: 24, color: 'var(--text-tertiary)' }} />}
                 description={
