@@ -61,7 +61,8 @@ CI will:
 - Build desktop for all platforms (macOS, Windows, Linux)
 - Sign macOS (notarized) and Windows (SSL.com eSigner, production only)
 - Build extension for all browsers (Chrome, Firefox, Edge, Safari)
-- Create one GitHub Release with all artifacts
+- Create one GitHub Release with all artifacts in `open-headers-app`
+- Cross-publish extension zips to `OpenHeaders/open-headers-browser-extension`
 - Generate `latest*.yml` for electron-updater
 
 ### Desktop Auto-Update
@@ -113,7 +114,7 @@ Browser stores require numeric-only `version` in manifest.json:
 | Source version | Manifest `version` | `__APP_VERSION__` (popup footer) |
 |---|---|---|
 | `4.0.0` | `4.0.0` | `4.0.0` |
-| `4.0.1-beta.1` | `4.0.1.1` | `4.0.1-beta.1` |
+| `4.0.1-beta.1` | `4.0.1.1` | `4.0.1.1` |
 
 ---
 

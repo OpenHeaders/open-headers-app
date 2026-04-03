@@ -445,3 +445,43 @@ jobs:
           append_body: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate extension release body
+        run: |
+          EXT_VERSION="${{ steps.ext_ver.outputs.version }}"
+          IS_PRERELEASE="${{ steps.release_type.outputs.is_prerelease }}"
+          EXT_TAG="ext-v${EXT_VERSION}"
+          DL="https://github.com/OpenHeaders/open-headers-browser-extension/releases/download/${EXT_TAG}"
+
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            echo '> **This is a beta build for early testing.** It may contain bugs.' > ext_release_body.md
+            echo '' >> ext_release_body.md
+          fi
+
+          {
+            echo "## Browser Extension Downloads"
+            echo ""
+            echo "- [Chrome](${DL}/open-headers-chrome-v${EXT_VERSION}.zip)"
+            echo "- [Firefox](${DL}/open-headers-firefox-v${EXT_VERSION}.zip)"
+            echo "- [Edge](${DL}/open-headers-edge-v${EXT_VERSION}.zip)"
+            echo "- [Safari](${DL}/open-headers-safari-v${EXT_VERSION}.zip)"
+            echo ""
+            echo "### Installation"
+            echo "1. Download the zip for your browser"
+            echo "2. Extract to a folder"
+            echo '3. Chrome/Edge: Go to `chrome://extensions`, enable Developer mode, click Load unpacked'
+            echo '4. Firefox: Go to `about:debugging#/runtime/this-firefox`, click Load Temporary Add-on'
+          } >> ext_release_body.md
+
+      - name: Publish extension to browser extension repo
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: OpenHeaders/open-headers-browser-extension
+          tag_name: "ext-v${{ steps.ext_ver.outputs.version }}"
+          draft: false
+          prerelease: ${{ steps.release_type.outputs.is_prerelease == 'true' }}
+          name: "ext-v${{ steps.ext_ver.outputs.version }}"
+          files: dist/extension-packages/*.zip
+          body_path: ext_release_body.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.EXTENSION_REPO_PAT }}
