@@ -69,7 +69,7 @@ async function updateBadgeForCurrentTab(): Promise<void> {
         return;
       }
 
-      const allMatchingRules: ActiveRule[] = await getActiveRulesForTab(currentTab?.id, currentUrl);
+      const { activeRules: allMatchingRules } = await getActiveRulesForTab(currentTab?.id, currentUrl);
       const disabledGroups = new Set(getDisabledTagGroups());
       const activeRules = allMatchingRules.filter(
         (r) => r.isEnabled !== false && !disabledGroups.has((r.tag as string) || '__no_tag__'),

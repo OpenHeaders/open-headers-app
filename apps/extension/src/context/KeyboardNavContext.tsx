@@ -16,6 +16,7 @@ export interface KeyboardNavContextValue {
   pendingDeleteIndex: number;
   expandedRowKey: string | number | null;
   nestedFocusIndex: number;
+  setNestedFocusIndex: (index: number | ((prev: number) => number)) => void;
   isShortcutsOverlayVisible: boolean;
   setIsShortcutsOverlayVisible: (visible: boolean | ((prev: boolean) => boolean)) => void;
   isTourOpen: boolean;
@@ -144,6 +145,7 @@ export const KeyboardNavProvider: React.FC<KeyboardNavProviderProps> = ({
     pendingDeleteIndex,
     expandedRowKey,
     nestedFocusIndex: focus.nestedFocusIndex,
+    setNestedFocusIndex: focus.setNestedFocusIndex,
     isShortcutsOverlayVisible,
     setIsShortcutsOverlayVisible,
     isTourOpen,

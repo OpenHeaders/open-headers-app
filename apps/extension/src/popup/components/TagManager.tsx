@@ -39,6 +39,7 @@ interface NestedRuleRecord {
 }
 
 interface TagManagerProps {
+  isActive?: boolean;
   focusedRowIndex?: number;
   pendingDeleteIndex?: number;
   onPageInfoChange?: (info: PageInfo) => void;
@@ -46,6 +47,7 @@ interface TagManagerProps {
 }
 
 const TagManager: React.FC<TagManagerProps> = ({
+  isActive = true,
   focusedRowIndex = -1,
   pendingDeleteIndex = -1,
   onPageInfoChange,
@@ -94,8 +96,11 @@ const TagManager: React.FC<TagManagerProps> = ({
     });
   }, [headerEntries, disabledTagGroups]);
 
-  // Filter by search
+  // Filter by search — track rule-level matches separately from group name matches
+  const ruleMatchCountMap = useMemo(() => new Map<string, number>(), []);
+
   const filteredGroups = useMemo(() => {
+    ruleMatchCountMap.clear();
     if (!searchText) return groupedRules;
     const q = searchText.toLowerCase();
     return groupedRules
@@ -107,6 +112,9 @@ const TagManager: React.FC<TagManagerProps> = ({
             (r.domains || []).some((d) => d.toLowerCase().includes(q)) ||
             (r.tag || '').toLowerCase().includes(q),
         );
+        if (matchingRules.length > 0) {
+          ruleMatchCountMap.set(group.groupKey, matchingRules.length);
+        }
         if (nameMatch) return group;
         if (matchingRules.length > 0) {
           const enabled = matchingRules.filter((r) => r.isEnabled !== false).length;
@@ -121,7 +129,7 @@ const TagManager: React.FC<TagManagerProps> = ({
         return null;
       })
       .filter((g): g is TagGroupRecord => g !== null);
-  }, [groupedRules, searchText]);
+  }, [groupedRules, searchText, ruleMatchCountMap]);
 
   const dataSourceRef = useRef<TagGroupRecord[]>([]);
   dataSourceRef.current = filteredGroups;
@@ -296,28 +304,46 @@ const TagManager: React.FC<TagManagerProps> = ({
       <div className="table-toolbar">
         <div className="header-rules-title">
           <div>
-            <Space align="center" size={8}>
-              <Text style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Tags</Text>
-              <Text type="secondary" style={{ fontSize: '12px' }}>
-                {filteredGroups.length} group{filteredGroups.length !== 1 ? 's' : ''}, {totalRules} rule
-                {totalRules !== 1 ? 's' : ''}
-              </Text>
-            </Space>
+            <Text style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Tags</Text>
+            <Text type="secondary" style={{ fontSize: '11px', display: 'block' }}>
+              {filteredGroups.length} group{filteredGroups.length !== 1 ? 's' : ''}, {totalRules} rule
+              {totalRules !== 1 ? 's' : ''}
+            </Text>
           </div>
-          <Input.Search
-            placeholder="Search anything..."
-            allowClear
-            size="small"
-            style={{ width: 300 }}
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape' && searchText) {
-                e.stopPropagation();
-                setSearchText('');
-              }
-            }}
-          />
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', height: 36 }}>
+              <Input.Search
+                placeholder="Search anything..."
+                allowClear
+                size="small"
+                style={{ width: 300 }}
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape' && searchText) {
+                    e.stopPropagation();
+                    setSearchText('');
+                  }
+                }}
+              />
+            </div>
+            <div style={{ textAlign: 'right', marginTop: 2 }}>
+              <Text type="secondary" style={{ fontSize: '11px' }}>
+                {(() => {
+                  if (!searchText) return `${totalRules} rule${totalRules !== 1 ? 's' : ''}`;
+                  const parts: string[] = [];
+                  parts.push(
+                    `${filteredGroups.length} of ${groupedRules.length} group${groupedRules.length !== 1 ? 's' : ''}`,
+                  );
+                  if (ruleMatchCountMap.size > 0) {
+                    const matchedRules = Array.from(ruleMatchCountMap.values()).reduce((sum, c) => sum + c, 0);
+                    parts.push(`${matchedRules} of ${totalRules} rule${totalRules !== 1 ? 's' : ''}`);
+                  }
+                  return `${parts.join(', ')} matched`;
+                })()}
+              </Text>
+            </div>
+          </div>
         </div>
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, paddingBottom: '8px' }}>
@@ -344,9 +370,17 @@ const TagManager: React.FC<TagManagerProps> = ({
           expandable={{
             columnWidth: 40,
             expandRowByClick: true,
-            expandedRowKeys: expandedRowKey !== null ? [expandedRowKey] : [],
+            expandedRowKeys: isActive && expandedRowKey !== null ? [expandedRowKey] : [],
             expandIcon: ({ record, onExpand }) => {
               const badgeCount = record.totalCount;
+              const hasRuleMatches = searchText && ruleMatchCountMap.has(record.groupKey);
+              const bgColor = record.isGroupDisabled
+                ? 'var(--ant-color-warning)'
+                : hasRuleMatches
+                  ? '#1677ff'
+                  : badgeCount > 0
+                    ? '#8c8c8c'
+                    : '#d9d9d9';
               return (
                 <Tooltip title={`${badgeCount} rule${badgeCount !== 1 ? 's' : ''} in this group — click to expand`}>
                   <span
@@ -359,11 +393,7 @@ const TagManager: React.FC<TagManagerProps> = ({
                       height: 18,
                       padding: '0 5px',
                       borderRadius: 5,
-                      backgroundColor: record.isGroupDisabled
-                        ? 'var(--ant-color-warning)'
-                        : badgeCount > 0
-                          ? '#8c8c8c'
-                          : '#d9d9d9',
+                      backgroundColor: bgColor,
                       color: '#fff',
                       fontSize: '11px',
                       fontWeight: 600,

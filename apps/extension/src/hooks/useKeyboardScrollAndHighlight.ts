@@ -58,15 +58,18 @@ export function useKeyboardScrollAndHighlight(
         // Scroll the bottom of the expanded content into view
         scrollIntoScrollContainer(expandedRow, activePane);
 
-        // Also highlight and scroll to the specific nested row
+        // Virtual nested tables use React rowClassName + scrollTo ref — skip DOM manipulation
+        const isVirtual = expandedRow.querySelector('.ant-table-virtual') !== null;
+        if (isVirtual) return;
+
+        // For non-virtual nested tables, highlight and scroll via DOM
         container.querySelectorAll('.keyboard-focused-nested-row').forEach((el) => {
           el.classList.remove('keyboard-focused-nested-row');
         });
-        const nestedRows = expandedRow.querySelectorAll('.ant-table-tbody > tr.ant-table-row');
+        const nestedRows = expandedRow.querySelectorAll('.ant-table-row[data-row-key]');
         const nestedRow = nestedRows[nestedFocusIndex] as HTMLElement | undefined;
         if (nestedRow) {
           nestedRow.classList.add('keyboard-focused-nested-row');
-          // Scroll within the nested table's own scroll container (if it has one)
           const nestedScrollContainer = expandedRow.querySelector('.ant-table-body');
           if (nestedScrollContainer) {
             const nestedContainerRect = nestedScrollContainer.getBoundingClientRect();

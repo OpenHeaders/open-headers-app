@@ -341,8 +341,8 @@ export function handleGeneralMessage(
       const tabUrl = message.tabUrl as string;
 
       getActiveRulesForTab(tabId, tabUrl)
-        .then((activeRules) => {
-          safeResponse({ activeRules });
+        .then((result) => {
+          safeResponse({ activeRules: result.activeRules, uniqueRequestCount: result.uniqueRequestCount });
         })
         .catch((error: Error) => {
           logger.error('MessageHandler', 'Error getting active rules:', error);

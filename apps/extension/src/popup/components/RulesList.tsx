@@ -15,6 +15,7 @@ const RulesList: React.FC = () => {
       label: 'This Page',
       children: (
         <ThisPageRules
+          isActive={activeTab === 'active-rules'}
           focusedRowIndex={activeTab === 'active-rules' ? focusedRowIndex : -1}
           pendingDeleteIndex={activeTab === 'active-rules' ? pendingDeleteIndex : -1}
           onPageInfoChange={activeTab === 'active-rules' ? setPageInfo : undefined}
@@ -41,6 +42,7 @@ const RulesList: React.FC = () => {
       label: 'Tags',
       children: (
         <TagManager
+          isActive={activeTab === 'tag-manager'}
           focusedRowIndex={activeTab === 'tag-manager' ? focusedRowIndex : -1}
           pendingDeleteIndex={activeTab === 'tag-manager' ? pendingDeleteIndex : -1}
           onPageInfoChange={activeTab === 'tag-manager' ? setPageInfo : undefined}

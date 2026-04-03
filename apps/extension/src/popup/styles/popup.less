@@ -652,12 +652,24 @@ body {
 }
 
 /* Nested (expanded sub-table) focused row */
-.keyboard-focused-nested-row > td {
+.keyboard-focused-nested-row > td,
+.keyboard-focused-nested-row > .ant-table-cell {
   background: #e6f4ff !important;
+  transition: none !important;
 }
 
-[data-theme='dark'] .keyboard-focused-nested-row > td {
+[data-theme='dark'] .keyboard-focused-nested-row > td,
+[data-theme='dark'] .keyboard-focused-nested-row > .ant-table-cell {
   background: #112a45 !important;
+  transition: none !important;
+}
+
+/* Prevent flicker on virtual table row recycling */
+.ant-table-virtual .ant-table-row {
+  transition: none !important;
+}
+.ant-table-virtual .ant-table-row > .ant-table-cell {
+  transition: none !important;
 }
 
 /* Keyboard shortcuts overlay */
