@@ -110,6 +110,7 @@ jobs:
       - name: Publish to extension repo
         uses: softprops/action-gh-release@v2
         with:
+          token: ${{ secrets.EXTENSION_REPO_PAT }}
           repository: OpenHeaders/open-headers-browser-extension
           tag_name: ${{ github.ref_name }}
           draft: false
@@ -117,5 +118,3 @@ jobs:
           name: "${{ github.ref_name }}"
           files: apps/extension/releases/*.zip
           body_path: release_body.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.EXTENSION_REPO_PAT }}
