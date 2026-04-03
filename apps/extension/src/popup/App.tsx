@@ -3,7 +3,6 @@ import { HeaderProvider } from '@context/HeaderContext';
 import { KeyboardNavProvider, useKeyboardNav } from '@context/KeyboardNavContext';
 import { useTheme } from '@context/ThemeContext';
 import { runtime } from '@utils/browser-api';
-import { sendMessage } from '@utils/messaging';
 import { Layout } from 'antd';
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
@@ -25,21 +24,15 @@ const AppInner: React.FC = () => {
   const [tourOpen, setTourOpen] = useState<boolean | null>(null);
   // When tour closes via OnboardingTour, reset local trigger state
   const handleTourClose = useCallback(() => setTourOpen(null), []);
-
-  const handleOpenSetupGuide = async (): Promise<void> => {
-    const response = await sendMessage({ type: 'forceOpenWelcomePage' });
-    if (!response.error) {
-      window.close();
-    }
-  };
+  const handleShowTour = useCallback(() => setTourOpen(true), []);
 
   return (
     <div ref={containerRef} tabIndex={-1} style={{ outline: 'none', height: '100%' }}>
       <Layout className="app-container" data-theme={isDarkMode ? 'dark' : 'light'}>
         <Header
-          onOpenSetupGuide={handleOpenSetupGuide}
+          onOpenSetupGuide={handleShowTour}
           onShowShortcuts={() => setIsShortcutsOverlayVisible(true)}
-          onShowTour={() => setTourOpen(true)}
+          onShowTour={handleShowTour}
         />
         <Content className="content">
           <ConnectionInfo />

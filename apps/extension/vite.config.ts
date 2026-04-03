@@ -1,5 +1,5 @@
-import fs from 'node:fs';
-import path from 'node:path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig, build as viteBuild } from 'vite';
 
@@ -40,9 +40,6 @@ function copyAssetsPlugin() {
     { from: 'src/assets/images/icon48.png', to: 'images/icon48.png' },
     { from: 'src/assets/images/icon128.png', to: 'images/icon128.png' },
     { from: 'src/assets/images/companion-app.png', to: 'images/companion-app.png' },
-    // Welcome page
-    { from: 'src/assets/welcome/welcome.html', to: 'welcome.html' },
-    { from: 'src/assets/welcome/welcome.js', to: 'js/welcome.js' },
     // Recording
     { from: 'src/assets/recording/inject/recorder-rrweb.js', to: 'js/recording/inject/recorder.js' },
     { from: 'src/assets/recording/inject/recording-widget.js', to: 'js/recording/inject/recording-widget.js' },
@@ -156,7 +153,7 @@ export default defineConfig({
           beautify: false,
           comments: false,
         },
-      },
+      } as Record<string, unknown>,
     }),
     sourcemap: browser === 'firefox' ? 'inline' : false,
     // Disable module preload polyfill — it references `document` which

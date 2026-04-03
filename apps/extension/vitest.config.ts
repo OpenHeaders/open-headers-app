@@ -17,7 +17,6 @@ export default defineConfig({
       include: ['src/**'],
       exclude: [
         'src/assets/lib/**',
-        'src/assets/welcome/**',
         'src/assets/recording/inject/**',
         'src/assets/recording/content/**',
       ],

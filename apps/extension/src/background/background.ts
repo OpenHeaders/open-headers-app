@@ -39,7 +39,6 @@ import {
 import { getCurrentSources, hydrateFromStorage } from './modules/sources-store';
 import { setupPeriodicCleanup, setupTabListeners } from './modules/tab-listeners';
 import { generateSavedDataHash, generateSourcesHash } from './modules/utils';
-import { checkFirefoxFirstRun, openWelcomePageOnInstall } from './modules/welcome-page';
 import {
   connectWebSocket,
   getReconnectAttempts,
@@ -307,23 +306,8 @@ runtime.onInstalled.addListener((details: chrome.runtime.InstalledDetails) => {
     isFirefox ? 'Firefox' : isChrome ? 'Chrome' : isEdge ? 'Edge' : isSafari ? 'Safari' : 'Unknown',
   );
 
-  if (details.reason === 'install') {
-    logger.info('Background', 'Fresh install detected, opening welcome page');
-    setTimeout(() => openWelcomePageOnInstall(), 500);
-  } else if (isFirefox && details.reason === 'update') {
-    storage.local.get(['hasSeenWelcome', 'setupCompleted'], (result: Record<string, unknown>) => {
-      if (!result.setupCompleted) {
-        logger.info('Background', 'Firefox update detected but setup not completed, opening welcome page');
-        storage.local.set({ hasSeenWelcome: true }, () => {
-          setTimeout(() => openWelcomePageOnInstall(), 500);
-        });
-      }
-    });
-  }
-
   void initializeExtension();
 });
 
 logger.info('Background', 'Background script started, initializing...');
 void initializeExtension();
-checkFirefoxFirstRun();
