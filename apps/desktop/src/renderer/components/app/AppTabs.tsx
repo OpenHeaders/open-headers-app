@@ -8,13 +8,10 @@ import {
 } from '@ant-design/icons';
 import type { Recording, Source } from '@openheaders/core';
 import { Alert, Tabs } from 'antd';
-import {
-  RecordViewerSkeleton,
-  SourceListSkeleton,
-} from '@/renderer/components/common/skeletons/WorkspaceSkeleton';
+import { RecordViewerSkeleton, SourceListSkeleton } from '@/renderer/components/common/skeletons/WorkspaceSkeleton';
 import Environments from '@/renderer/components/features/environments';
-import Workspaces from '@/renderer/components/features/workspaces';
 import { WorkflowDetails, WorkflowRecording } from '@/renderer/components/features/workflow-recording';
+import Workspaces from '@/renderer/components/features/workspaces';
 import Rules from '@/renderer/components/rules/Rules';
 import ServerConfig from '@/renderer/components/server-config/ServerConfig';
 import SourceForm from '@/renderer/components/sources/SourceForm';
@@ -140,11 +137,7 @@ export function AppTabs({
           Rules
         </span>
       ),
-      children: (
-        <div className="content-container">
-          {isReady ? <Rules /> : null}
-        </div>
-      ),
+      children: <div className="content-container">{isReady ? <Rules /> : null}</div>,
     },
     {
       key: 'sources',
@@ -202,11 +195,7 @@ export function AppTabs({
           Environments
         </span>
       ),
-      children: (
-        <div className="content-container">
-          {isReady ? <Environments /> : null}
-        </div>
-      ),
+      children: <div className="content-container">{isReady ? <Environments /> : null}</div>,
     },
     {
       key: 'workspaces',
@@ -216,11 +205,7 @@ export function AppTabs({
           Workspaces
         </span>
       ),
-      children: (
-        <div className="content-container">
-          {isReady ? <Workspaces /> : null}
-        </div>
-      ),
+      children: <div className="content-container">{isReady ? <Workspaces /> : null}</div>,
     },
     {
       key: 'server-config',
@@ -231,9 +216,7 @@ export function AppTabs({
         </span>
       ),
       children: (
-        <div className="content-container">
-          {isReady ? <ServerConfig activeParentTab={activeTab} /> : null}
-        </div>
+        <div className="content-container">{isReady ? <ServerConfig activeParentTab={activeTab} /> : null}</div>
       ),
     },
   ];

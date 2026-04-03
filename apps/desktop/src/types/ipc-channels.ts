@@ -247,4 +247,3 @@ export const IPC_PUSH = {
 } as const;
 
 // ── Type helpers ────────────────────────────────────────────────────
-

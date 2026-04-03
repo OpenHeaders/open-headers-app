@@ -913,7 +913,7 @@ function processIncrementalSnapshot(
     // Style sheet event - collect font URLs
     if (data.adds && Array.isArray(data.adds)) {
       data.adds.forEach((add: RRWebAdd) => {
-        if (add.rule && add.rule.includes('@font-face')) {
+        if (add.rule?.includes('@font-face')) {
           extractFontUrlsFromCss(add.rule, fontUrls, null, baseUrl, resourceMap);
         }
       });

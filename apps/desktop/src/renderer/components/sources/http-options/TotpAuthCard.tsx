@@ -79,11 +79,7 @@ const TotpAuthCard: React.FC<TotpAuthCardProps> = ({
                       status={totpError ? 'error' : ''}
                       size="small"
                     />
-                    <Button
-                      size="small"
-                      onClick={handleTestTotp}
-                      loading={totpTesting}
-                    >
+                    <Button size="small" onClick={handleTestTotp} loading={totpTesting}>
                       Test
                     </Button>
                   </Space.Compact>

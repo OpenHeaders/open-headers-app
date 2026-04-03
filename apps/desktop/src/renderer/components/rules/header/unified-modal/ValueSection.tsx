@@ -118,7 +118,11 @@ const ValueSection: React.FC<ValueSectionProps> = ({ mode, valueType, setValueTy
             onChange={setValueType}
             options={[
               { value: 'static', label: 'Static' },
-              { value: 'dynamic', label: `Dynamic${sources && sources.length === 0 ? ' (No sources)' : ''}`, disabled: !sources || sources.length === 0 },
+              {
+                value: 'dynamic',
+                label: `Dynamic${sources && sources.length === 0 ? ' (No sources)' : ''}`,
+                disabled: !sources || sources.length === 0,
+              },
             ]}
           />
         </Form.Item>
@@ -138,12 +142,18 @@ const ValueSection: React.FC<ValueSectionProps> = ({ mode, valueType, setValueTy
               size="small"
               showSearch
               options={(() => {
-                const opts: DefaultOptionType[] = sources && sources.length > 0
-                  ? sources.map((source) => ({
-                      value: source.sourceId,
-                      label: <>{getSourceIcon(source)}{formatSourceDisplay(source)}</>,
-                    }))
-                  : [{ value: '', label: 'No sources available', disabled: true }];
+                const opts: DefaultOptionType[] =
+                  sources && sources.length > 0
+                    ? sources.map((source) => ({
+                        value: source.sourceId,
+                        label: (
+                          <>
+                            {getSourceIcon(source)}
+                            {formatSourceDisplay(source)}
+                          </>
+                        ),
+                      }))
+                    : [{ value: '', label: 'No sources available', disabled: true }];
                 return opts;
               })()}
             />

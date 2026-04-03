@@ -160,7 +160,6 @@ describe('FileOperations', () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain('non-empty string');
     });
-
   });
 
   // ========================================================================

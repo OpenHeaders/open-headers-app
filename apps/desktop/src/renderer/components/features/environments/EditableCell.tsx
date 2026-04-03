@@ -3,8 +3,8 @@
  * Supports different input types based on the data being edited
  */
 
-import type { TextAreaRef } from 'antd/es/input/TextArea';
 import { Form, Input, Radio } from 'antd';
+import type { TextAreaRef } from 'antd/es/input/TextArea';
 import type React from 'react';
 import { forwardRef } from 'react';
 import { VARIABLE_NAME_RULES } from './EnvironmentTypes';
@@ -15,18 +15,16 @@ const { TextArea } = Input;
 /**
  * Dynamic value input that switches between TextArea and SecretInput based on isSecret
  */
-const DynamicValueInput = forwardRef<TextAreaRef, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
-  (props, ref) => {
-    const form = Form.useFormInstance();
-    const isSecret = Form.useWatch('isSecret', form);
+const DynamicValueInput = forwardRef<TextAreaRef, React.TextareaHTMLAttributes<HTMLTextAreaElement>>((props, ref) => {
+  const form = Form.useFormInstance();
+  const isSecret = Form.useWatch('isSecret', form);
 
-    if (isSecret) {
-      return <SecretInput ref={ref} useGlobalPreference="edit" showButton={true} {...props} />;
-    }
+  if (isSecret) {
+    return <SecretInput ref={ref} useGlobalPreference="edit" showButton={true} {...props} />;
+  }
 
-    return <TextArea ref={ref} placeholder="Enter value" autoSize={{ minRows: 1, maxRows: 14 }} {...props} />;
-  },
-);
+  return <TextArea ref={ref} placeholder="Enter value" autoSize={{ minRows: 1, maxRows: 14 }} {...props} />;
+});
 
 /**
  * EditableCell component for inline editing in the variables table

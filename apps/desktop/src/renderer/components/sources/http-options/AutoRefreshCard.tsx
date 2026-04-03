@@ -17,7 +17,6 @@
 import type { FormInstance } from 'antd';
 import { Card, Col, Form, Input, InputNumber, Radio, Row, Select, Space, Switch } from 'antd';
 
-
 /**
  * Auto-Refresh card component for refresh configuration
  *

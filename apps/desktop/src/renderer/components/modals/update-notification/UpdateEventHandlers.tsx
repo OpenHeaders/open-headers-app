@@ -325,9 +325,7 @@ export const createUpdateEventHandlers = ({
     const unsubscribeAvailable = window.electronAPI.onUpdateAvailable((data) => handleUpdateAvailable(data));
     const unsubscribeProgress = window.electronAPI.onUpdateProgress((data) => handleUpdateProgress(data));
     const unsubscribeDownloaded = window.electronAPI.onUpdateDownloaded((data) => handleUpdateDownloaded(data));
-    const unsubscribeError = window.electronAPI.onUpdateError((data) =>
-      handleUpdateError(data?.message ?? ''),
-    );
+    const unsubscribeError = window.electronAPI.onUpdateError((data) => handleUpdateError(data?.message ?? ''));
     const unsubscribeNotAvailable = window.electronAPI.onUpdateNotAvailable(handleUpdateNotAvailable);
 
     // Return cleanup function

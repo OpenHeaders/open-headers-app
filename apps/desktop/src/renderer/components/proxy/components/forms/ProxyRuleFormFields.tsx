@@ -2,12 +2,11 @@ import { LinkOutlined, SolutionOutlined } from '@ant-design/icons';
 import type { Source } from '@openheaders/core';
 import type { FormInstance } from 'antd';
 import { Form, Input, Radio, Select, Space, Tag, Typography } from 'antd';
+import type { DefaultOptionType } from 'antd/es/select';
 import type React from 'react';
 import DomainTags from '@/renderer/components/features/domain-tags';
 import type { HeaderRule } from '@/renderer/components/proxy/components/tables/ProxyRuleTableColumns';
 import { formatSourceDisplay, getSourceIcon } from '@/renderer/components/proxy/utils';
-
-import type { DefaultOptionType } from 'antd/es/select';
 
 const { Text } = Typography;
 
@@ -87,37 +86,38 @@ export const ExistingHeaderRuleSelector: React.FC<ExistingHeaderRuleSelectorProp
       style={{ width: '100%' }}
       optionLabelProp="label"
       options={(() => {
-        const opts: DefaultOptionType[] = headerRules.length > 0
-          ? headerRules.map((rule) => {
-              const isDisabled = !rule.isEnabled;
-              return {
-                value: rule.id,
-                disabled: isDisabled,
-                label: (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <Space>
-                      <Text strong={!isDisabled} type={isDisabled ? 'secondary' : undefined}>
-                        {rule.headerName}
+        const opts: DefaultOptionType[] =
+          headerRules.length > 0
+            ? headerRules.map((rule) => {
+                const isDisabled = !rule.isEnabled;
+                return {
+                  value: rule.id,
+                  disabled: isDisabled,
+                  label: (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <Space>
+                        <Text strong={!isDisabled} type={isDisabled ? 'secondary' : undefined}>
+                          {rule.headerName}
+                        </Text>
+                        {rule.isDynamic && (
+                          <Tag color="blue" style={{ marginLeft: 8 }}>
+                            Dynamic
+                          </Tag>
+                        )}
+                        {isDisabled && <Tag color="default">Disabled</Tag>}
+                      </Space>
+                      <Text type="secondary" style={{ fontSize: 11, marginLeft: 2 }}>
+                        {rule.domains?.length
+                          ? rule.domains.length > 3
+                            ? `${rule.domains.slice(0, 3).join(', ')}... (+${rule.domains.length - 3} more)`
+                            : rule.domains.join(', ')
+                          : 'all domains'}
                       </Text>
-                      {rule.isDynamic && (
-                        <Tag color="blue" style={{ marginLeft: 8 }}>
-                          Dynamic
-                        </Tag>
-                      )}
-                      {isDisabled && <Tag color="default">Disabled</Tag>}
-                    </Space>
-                    <Text type="secondary" style={{ fontSize: 11, marginLeft: 2 }}>
-                      {rule.domains?.length
-                        ? rule.domains.length > 3
-                          ? `${rule.domains.slice(0, 3).join(', ')}... (+${rule.domains.length - 3} more)`
-                          : rule.domains.join(', ')
-                        : 'all domains'}
-                    </Text>
-                  </div>
-                ),
-              };
-            })
-          : [{ value: '', label: 'No header rules available', disabled: true }];
+                    </div>
+                  ),
+                };
+              })
+            : [{ value: '', label: 'No header rules available', disabled: true }];
         return opts;
       })()}
     />
@@ -145,7 +145,11 @@ export const CustomHeaderConfig: React.FC<CustomHeaderConfigProps> = ({
         onChange={setValueType}
         options={[
           { value: 'static', label: 'Static' },
-          { value: 'dynamic', label: `Dynamic${sources && sources.length === 0 ? ' (No sources)' : ''}`, disabled: !sources || sources.length === 0 },
+          {
+            value: 'dynamic',
+            label: `Dynamic${sources && sources.length === 0 ? ' (No sources)' : ''}`,
+            disabled: !sources || sources.length === 0,
+          },
         ]}
       />
     </Form.Item>
@@ -172,12 +176,18 @@ export const DynamicValueConfig: React.FC<DynamicValueConfigProps> = ({ sources 
         size="small"
         showSearch
         options={(() => {
-          const opts: DefaultOptionType[] = sources && sources.length > 0
-            ? sources.map((source) => ({
-                value: source.sourceId,
-                label: <>{getSourceIcon(source)}{formatSourceDisplay(source)}</>,
-              }))
-            : [{ value: '', label: 'No sources available', disabled: true }];
+          const opts: DefaultOptionType[] =
+            sources && sources.length > 0
+              ? sources.map((source) => ({
+                  value: source.sourceId,
+                  label: (
+                    <>
+                      {getSourceIcon(source)}
+                      {formatSourceDisplay(source)}
+                    </>
+                  ),
+                }))
+              : [{ value: '', label: 'No sources available', disabled: true }];
           return opts;
         })()}
       />

@@ -16,8 +16,8 @@
  * @since 3.0.0
  */
 
-import type { ChangeEvent, ClipboardEvent, KeyboardEvent, RefObject } from 'react';
 import type { InputRef } from 'antd';
+import type { ChangeEvent, ClipboardEvent, KeyboardEvent, RefObject } from 'react';
 import { showMessage } from '@/renderer/utils/ui/messageUtil';
 import { validateDomain } from './DomainValidation';
 

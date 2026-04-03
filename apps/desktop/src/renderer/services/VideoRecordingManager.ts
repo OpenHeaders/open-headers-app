@@ -336,7 +336,6 @@ class VideoRecordingManager {
       return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
-
 }
 
 // Create singleton instance

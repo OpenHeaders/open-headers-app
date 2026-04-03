@@ -111,5 +111,3 @@ export const createViewButton = (onClick: () => void, tooltip = 'View details') 
     </Tooltip>
   );
 };
-
-

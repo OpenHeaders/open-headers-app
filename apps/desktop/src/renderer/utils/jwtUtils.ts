@@ -67,7 +67,9 @@ export function encodeJWT(header: JsonObject, payload: JsonObject, signature = '
  */
 export async function signJWT(header: JsonObject, payload: JsonObject, secret: string, algorithm = 'HS256') {
   if (algorithm !== 'HS256' && algorithm !== 'RS256') {
-    throw new Error(`Failed to sign JWT: Algorithm ${algorithm} not supported. Only HS256 and RS256 are currently supported.`);
+    throw new Error(
+      `Failed to sign JWT: Algorithm ${algorithm} not supported. Only HS256 and RS256 are currently supported.`,
+    );
   }
 
   try {

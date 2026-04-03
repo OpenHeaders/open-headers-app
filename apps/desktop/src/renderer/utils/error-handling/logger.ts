@@ -118,7 +118,6 @@ class Logger {
       console.error(prefix, message);
     }
   }
-
 }
 
 // Factory function to create logger instances

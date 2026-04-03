@@ -22,8 +22,8 @@
  * @since 3.0.0
  */
 
-import type { RefObject } from 'react';
 import type { FormInstance } from 'antd';
+import type { RefObject } from 'react';
 import { createLogger } from '@/renderer/utils/error-handling/logger';
 
 const log = createLogger('HttpConfig');

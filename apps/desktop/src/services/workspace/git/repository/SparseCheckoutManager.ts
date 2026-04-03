@@ -17,7 +17,6 @@ interface SparseCheckoutResult {
   patterns?: string[];
 }
 
-
 class SparseCheckoutManager {
   private executor: GitExecutor;
 

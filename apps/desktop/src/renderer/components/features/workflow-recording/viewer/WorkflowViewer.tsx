@@ -5,7 +5,7 @@
 
 import type { Recording } from '@openheaders/core';
 import { Spin } from 'antd';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { RecordPlayer } from '@/renderer/components/record';
 import type { RecordData } from '@/renderer/components/record/player/hooks/usePlayerManager';
 import { useSettings } from '@/renderer/contexts';

@@ -5,12 +5,7 @@ import { WSRecordingHandler } from '@/services/websocket/ws-recording-handler';
 
 /** Build a valid WorkflowRecordingPayload for tests, with sensible defaults. */
 function buildPayload(
-  overrides: {
-    metadata?: RecordingMetadata;
-    events?: RecordingEvent[];
-    id?: string;
-    url?: string;
-  } = {},
+  overrides: { metadata?: RecordingMetadata; events?: RecordingEvent[]; id?: string; url?: string } = {},
 ): WorkflowRecordingPayload {
   const id = overrides.id ?? 'recording_test';
   const url = overrides.url ?? 'https://app.openheaders.io';
@@ -299,7 +294,9 @@ describe('WSRecordingHandler', () => {
     it('uses existing recordId when present', () => {
       const mockWs = createMockWs();
       const recordId = 'record-1709123456789-x7y8z9a1b';
-      const payload = buildPayload({ metadata: { startTime: 1709123456789, recordId, url: 'https://app.openheaders.io/dashboard' } });
+      const payload = buildPayload({
+        metadata: { startTime: 1709123456789, recordId, url: 'https://app.openheaders.io/dashboard' },
+      });
 
       handler.handleSaveRecording = vi.fn().mockResolvedValue({ success: true, recordId });
       handler.notifyRecordingProcessing = vi.fn();
@@ -312,7 +309,9 @@ describe('WSRecordingHandler', () => {
     it('focuses app with record-viewer tab and highlight action', () => {
       const mockWs = createMockWs();
       const recordId = 'record-1709123456789-a1b2c3d4e';
-      const payload = buildPayload({ metadata: { startTime: 1709123456789, recordId, url: 'https://app.openheaders.io/recordings' } });
+      const payload = buildPayload({
+        metadata: { startTime: 1709123456789, recordId, url: 'https://app.openheaders.io/recordings' },
+      });
 
       handler.handleSaveRecording = vi.fn().mockResolvedValue({ success: true, recordId });
       handler.notifyRecordingProcessing = vi.fn();
@@ -331,7 +330,12 @@ describe('WSRecordingHandler', () => {
       const recordId = 'record-1709123456789-f5g6h7i8j';
       const payload = buildPayload({
         url: 'https://auth.openheaders.internal:8443/oauth2/authorize',
-        metadata: { startTime: 1709123456789, recordId, url: 'https://auth.openheaders.internal:8443/oauth2/authorize', timestamp: 1709123456789 },
+        metadata: {
+          startTime: 1709123456789,
+          recordId,
+          url: 'https://auth.openheaders.internal:8443/oauth2/authorize',
+          timestamp: 1709123456789,
+        },
         events: [
           { type: 'rrweb', timestamp: 1709123456789 },
           { type: 'rrweb', timestamp: 1709123456800 },
@@ -366,7 +370,9 @@ describe('WSRecordingHandler', () => {
     it('handles saveWorkflow type the same as saveRecording', () => {
       const mockWs = createMockWs();
       const recordId = 'record-1709123456789-workflow';
-      const payload = buildPayload({ metadata: { startTime: 1709123456789, recordId, url: 'https://app.openheaders.io/workflows' } });
+      const payload = buildPayload({
+        metadata: { startTime: 1709123456789, recordId, url: 'https://app.openheaders.io/workflows' },
+      });
 
       handler.handleSaveRecording = vi.fn().mockResolvedValue({ success: true, recordId });
       handler.notifyRecordingProcessing = vi.fn();
