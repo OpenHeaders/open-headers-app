@@ -2,9 +2,9 @@ import { AppstoreTwoTone, TagsTwoTone, ThunderboltTwoTone } from '@ant-design/ic
 import { useKeyboardNav } from '@context/KeyboardNavContext';
 import { Tabs } from 'antd';
 import type React from 'react';
-import ActiveRules from './ActiveRules';
 import HeaderTable from './HeaderTable';
 import TagManager from './TagManager';
+import ThisPageRules from './ThisPageRules';
 
 const RulesList: React.FC = () => {
   const { activeTab, onTabChange, focusedRowIndex, pendingDeleteIndex, setPageInfo, setRowActions } = useKeyboardNav();
@@ -14,7 +14,7 @@ const RulesList: React.FC = () => {
       key: 'active-rules',
       label: 'This Page',
       children: (
-        <ActiveRules
+        <ThisPageRules
           focusedRowIndex={activeTab === 'active-rules' ? focusedRowIndex : -1}
           pendingDeleteIndex={activeTab === 'active-rules' ? pendingDeleteIndex : -1}
           onPageInfoChange={activeTab === 'active-rules' ? setPageInfo : undefined}

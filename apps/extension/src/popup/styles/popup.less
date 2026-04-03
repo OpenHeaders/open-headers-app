@@ -93,6 +93,11 @@ body {
   .ant-tabs-tabpane-active {
     height: 100%;
   }
+  .ant-tabs-tabpane:focus,
+  .ant-tabs-tabpane:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
 }
 
 /* Header Rules Section */
@@ -102,6 +107,12 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
 
   .table-toolbar {
     height: 70px;
@@ -142,6 +153,12 @@ body {
   .header-rules-table {
     .ant-table {
       border-radius: 0;
+    }
+
+    /* Remove browser focus outline — keyboard nav uses row highlights instead */
+    .ant-table-body:focus-visible,
+    .ant-table-content:focus-visible {
+      outline: none;
     }
 
     .ant-table-cell-fix-left,
