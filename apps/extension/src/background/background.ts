@@ -13,7 +13,7 @@ import type { SavedDataMap } from '@openheaders/core';
 import { alarms, isChrome, isEdge, isFirefox, isSafari, runtime, storage, tabs } from '@utils/browser-api.js';
 import { logger } from '@utils/logger';
 import { getChunkedData } from '@utils/storage-chunking.js';
-import type { ActiveRule, HotkeyCommand } from '@/types/browser';
+import type { HotkeyCommand } from '@/types/browser';
 import type { IRecordingService } from '@/types/recording';
 import { getDisabledTagGroups, initPauseState, setDisabledTagGroups, setRulesPaused } from './header-manager';
 import { updateExtensionBadge } from './modules/badge-manager';

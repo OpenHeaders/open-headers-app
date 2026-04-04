@@ -303,17 +303,6 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
     }
   };
 
-  const clearAll = () => {
-    setSearchText('');
-    setFilteredInfo({});
-    setSortedInfo({});
-    if (updateUiState) {
-      updateUiState({
-        tableState: { searchText: '', filteredInfo: {}, sortedInfo: {} as unknown as Record<string, unknown> },
-      });
-    }
-  };
-
   function getPlaceholderTooltip(type: PlaceholderType, sourceId?: string | number | null): string {
     switch (type) {
       case 'source_not_found':
