@@ -3,7 +3,7 @@ name: Release Extension
 on:
   push:
     tags:
-      - 'ext-v*'
+      - 'v*-ext*'
 
 permissions:
   contents: write
@@ -28,10 +28,25 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Parse extension version from tag
+        id: parse_tag
+        run: |
+          RAW="${GITHUB_REF_NAME#v}"
+          # v4.1.4-ext-beta.1 → 4.1.4-beta.1 (beta), v4.1.4-ext → 4.1.4 (stable)
+          if [[ "$RAW" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-ext-beta\.([0-9]+)$ ]]; then
+            TAG="${BASH_REMATCH[1]}-beta.${BASH_REMATCH[2]}"
+          elif [[ "$RAW" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-ext$ ]]; then
+            TAG="${BASH_REMATCH[1]}"
+          else
+            echo "::error::Tag $GITHUB_REF_NAME does not match expected pattern v*-ext or v*-ext-beta.N"
+            exit 1
+          fi
+          echo "version=$TAG" >> $GITHUB_OUTPUT
+
       - name: Verify extension version matches tag
         working-directory: apps/extension
         run: |
-          TAG="${GITHUB_REF_NAME/ext-v/}"
+          TAG="${{ steps.parse_tag.outputs.version }}"
           PKG_VERSION=$(node -p "require('./package.json').version")
 
           # Extract base version (strip -beta.N suffix)
@@ -52,7 +67,7 @@ jobs:
       - name: Align manifests with version
         working-directory: apps/extension
         run: |
-          TAG="${GITHUB_REF_NAME/ext-v/}"
+          TAG="${{ steps.parse_tag.outputs.version }}"
 
           if [[ "$TAG" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-beta\.([0-9]+)$ ]]; then
             MANIFEST_VERSION="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
@@ -74,7 +89,7 @@ jobs:
       - name: Determine release type
         id: release_type
         run: |
-          if [[ "${{ github.ref_name }}" =~ -beta[.0-9]*$ ]]; then
+          if [[ "${{ github.ref_name }}" =~ -ext-beta\.[0-9]+$ ]]; then
             echo "is_prerelease=true" >> $GITHUB_OUTPUT
           else
             echo "is_prerelease=false" >> $GITHUB_OUTPUT
@@ -83,7 +98,7 @@ jobs:
       - name: Generate Release Body
         id: ext_repo
         run: |
-          TAG="${GITHUB_REF_NAME/ext-v/}"
+          TAG="${{ steps.parse_tag.outputs.version }}"
           EXT_REPO_TAG="v${TAG}"
           echo "tag=${EXT_REPO_TAG}" >> $GITHUB_OUTPUT
           IS_PRERELEASE="${{ steps.release_type.outputs.is_prerelease }}"

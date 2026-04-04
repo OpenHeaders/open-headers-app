@@ -37,4 +37,4 @@ For full CI functionality, you also need:
 - `ES_PASSWORD` - SSL.com eSigner password
 - `CREDENTIAL_ID` - SSL.com credential ID
 - `ES_TOTP_SECRET` - SSL.com TOTP secret for 2FA
-- `EXTENSION_REPO_PAT` - PAT with `contents: write` on `OpenHeaders/open-headers-browser-extension` (for cross-publishing extension releases from both `v*` and `ext-v*` tags)
+- `EXTENSION_REPO_PAT` - PAT with `contents: write` on `OpenHeaders/open-headers-browser-extension` (for cross-publishing extension releases from both `v*` and `v*-ext*` tags)

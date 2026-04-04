@@ -10,15 +10,20 @@ Desktop and extension have **independent versions**. The desktop version comes f
 |-----|------------|----------------|---------------------|
 | `v4.0.0` | Desktop + Extension | `open-headers-app` | Yes (production) |
 | `v4.0.0-beta.1` | Desktop + Extension | `open-headers-app` (prerelease) | Yes (beta channel) |
-| `ext-v4.0.1-beta.1` | Extension only | `open-headers-browser-extension` | No |
-| `ext-v4.0.1` | Extension only | `open-headers-browser-extension` | No |
+| `v4.0.1-ext-beta.1` | Extension only | `open-headers-browser-extension` | No |
+| `v4.0.1-ext` | Extension only | `open-headers-browser-extension` | No |
+
+> **Why `-ext` suffix?** The `-ext` prerelease identifier makes the tag valid semver with a
+> custom channel. `electron-updater` reads the GitHub releases atom feed and skips tags whose
+> prerelease channel isn't `beta` or `latest`, so extension-only tags never interfere with
+> desktop auto-updates.
 
 ## Versioning Convention
 
 Versions are independent. The extension version only bumps when extension code changes.
 
 - **`v*` tags** (full releases): Desktop version = tag. Extension version = `apps/extension/package.json`.
-- **`ext-v*` tags** (extension-only): Extension version = tag. Desktop not built.
+- **`v*-ext` / `v*-ext-beta.N` tags** (extension-only): Extension version = base version (beta if `-beta.N` suffix). Desktop not built.
 
 ### Version Progression Example
 
@@ -26,16 +31,16 @@ Versions are independent. The extension version only bumps when extension code c
 v4.0.0              ← desktop 4.0.0, extension 4.0.0 (initial match)
 v4.1.0              ← desktop 4.1.0, extension still 4.0.0 (no ext changes)
 v4.2.0              ← desktop 4.2.0, extension still 4.0.0
-ext-v4.1.0-beta.1   ← extension 4.1.0-beta.1 (testing on browser-extension repo)
-ext-v4.1.0          ← extension 4.1.0 (submit to stores)
+v4.1.0-ext-beta.1   ← extension 4.1.0-beta.1 (testing on browser-extension repo)
+v4.1.0-ext          ← extension 4.1.0 (submit to stores)
 v4.3.0              ← desktop 4.3.0, extension 4.1.0 (reads from package.json)
 ```
 
 ### Convention to avoid version collisions
 
 - **Desktop uses minor/major bumps**: `v4.0.0` → `v4.1.0` → `v4.2.0`
-- **Extension uses patch bumps for independent releases**: `ext-v4.0.1`, `ext-v4.0.2`
-- **Next `v*` tag always jumps past any `ext-v*` patches**
+- **Extension uses patch bumps for independent releases**: `v4.0.1-ext`, `v4.0.2-ext`
+- **Next `v*` tag always jumps past any `v*-ext` patches**
 
 When bumping the extension version, update `apps/extension/package.json` and commit before tagging.
 
@@ -56,6 +61,8 @@ git push origin v4.0.0
 git tag v4.1.0-beta.1
 git push origin v4.1.0-beta.1
 ```
+
+> **Note:** Tags containing `-ext` are excluded from this workflow. They trigger the extension-only release instead.
 
 CI will:
 - Build desktop for all platforms (macOS, Windows, Linux)
@@ -84,9 +91,9 @@ Users choose their channel in **Settings > General**:
 
 ---
 
-## Extension-Only Release (`ext-v*`)
+## Extension-Only Release (`v*-ext`)
 
-For shipping extension changes without a desktop release. Published to `OpenHeaders/open-headers-browser-extension` so electron-updater is never affected.
+For shipping extension changes without a desktop release. Published to `OpenHeaders/open-headers-browser-extension`. The `-ext` semver prerelease identifier ensures `electron-updater` skips these tags during desktop auto-update checks.
 
 ### Creating an Extension-Only Release
 
@@ -95,8 +102,11 @@ For shipping extension changes without a desktop release. Published to `OpenHead
 # 2. Commit the change
 # 3. Tag and push
 
-git tag ext-v4.0.1-beta.1
-git push origin ext-v4.0.1-beta.1
+git tag v4.0.1-ext-beta.1    # beta → builds extension 4.0.1-beta.1
+git push origin v4.0.1-ext-beta.1
+
+git tag v4.0.1-ext           # stable → builds extension 4.0.1
+git push origin v4.0.1-ext
 ```
 
 CI will:
@@ -131,7 +141,7 @@ git push origin v4.1.0-beta.1
 ## Deleting a Bad Release
 
 1. Delete the GitHub release
-2. Delete the git tag: `git push origin :refs/tags/v4.1.0-beta.1`
+2. Delete the git tag: `git push origin :refs/tags/<tag-name>`
 3. Users who already downloaded keep that version until a newer one ships
 
 ## Required CI Secrets
