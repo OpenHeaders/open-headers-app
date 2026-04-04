@@ -99,6 +99,10 @@ class AutoUpdaterManager {
   applyUpdateSettings(settings: AppSettings) {
     autoUpdater.autoDownload = settings.autoUpdate !== false;
     autoUpdater.allowPrerelease = settings.updateChannel === 'beta';
+    // Explicitly set channel so electron-updater's atom feed parser filters
+    // by channel name. Without this, it takes the first feed entry — which
+    // may be an extension-only tag (v*-ext) that has no desktop artifacts.
+    autoUpdater.channel = settings.updateChannel === 'beta' ? 'beta' : 'latest';
     log.info(
       `Update settings applied: autoUpdate=${settings.autoUpdate}, channel=${settings.updateChannel}, allowPrerelease=${autoUpdater.allowPrerelease}`,
     );

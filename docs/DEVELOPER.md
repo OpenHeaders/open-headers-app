@@ -309,7 +309,7 @@ Runs on push to `main` and PRs:
 ### Release Pipelines
 
 - **Full release**: Tag `v*` triggers `release.yml` — builds desktop (3 platforms, signed) + extension (4 browsers) into one GitHub Release. Desktop version = tag, extension version = its own `package.json`.
-- **Extension-only**: Tag `ext-v*` triggers `release-extension.yml` — builds extension only, publishes to `OpenHeaders/open-headers-browser-extension`. Fails if tag doesn't match `apps/extension/package.json`.
+- **Extension-only**: Tag `v*-ext` / `v*-ext-beta.N` triggers `release-extension.yml` — builds extension only, publishes to `OpenHeaders/open-headers-browser-extension`. Fails if tag doesn't match `apps/extension/package.json`.
 
 Desktop and extension have **independent versions**. See [RELEASES.md](RELEASES.md) for full release process.
 

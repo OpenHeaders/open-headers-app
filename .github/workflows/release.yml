@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   build-desktop:
+    if: ${{ !contains(github.ref_name, '-ext') }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -255,6 +256,7 @@ jobs:
             apps/desktop/dist/install-open-headers.sh
 
   build-extension:
+    if: ${{ !contains(github.ref_name, '-ext') }}
     runs-on: ubuntu-latest
 
     steps:
@@ -324,6 +326,7 @@ jobs:
             apps/extension/releases/EXT_VERSION.txt
 
   release:
+    if: ${{ !contains(github.ref_name, '-ext') }}
     needs: [build-desktop, build-extension]
     runs-on: ubuntu-latest
 
