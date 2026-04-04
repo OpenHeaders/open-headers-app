@@ -155,6 +155,7 @@ function renderHighlightedUrl(url: string, pattern: string): React.ReactNode {
 }
 
 interface ThisPageRulesProps {
+  isActive?: boolean;
   focusedRowIndex?: number;
   pendingDeleteIndex?: number;
   onPageInfoChange?: (info: PageInfo) => void;
@@ -162,6 +163,7 @@ interface ThisPageRulesProps {
 }
 
 const ThisPageRules: React.FC<ThisPageRulesProps> = ({
+  isActive = true,
   focusedRowIndex = -1,
   pendingDeleteIndex = -1,
   onPageInfoChange,
@@ -170,11 +172,24 @@ const ThisPageRules: React.FC<ThisPageRulesProps> = ({
   const { message } = App.useApp();
   const { isConnected, disabledTagGroups } = useHeader();
   const appLauncher = getAppLauncher();
-  const { expandedRowKey, setNestedRowCount, toggleExpandedRow, setFocusedRowIndex } = useKeyboardNav();
+  const {
+    expandedRowKey,
+    nestedFocusIndex,
+    setNestedRowCount,
+    toggleExpandedRow,
+    setFocusedRowIndex,
+    setNestedFocusIndex,
+  } = useKeyboardNav();
+  const nestedTableRef = useRef<{
+    nativeElement: HTMLDivElement;
+    scrollTo: (config: { index?: number; key?: React.Key; top?: number }) => void;
+  } | null>(null);
   const [currentTab, setCurrentTab] = useState<CurrentTabInfo | null>(null);
   const [activeRules, setActiveRules] = useState<ActiveRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedRowId, setCopiedRowId] = useState<string | number | null>(null);
+  const [uniqueRequestCount, setUniqueRequestCount] = useState(0);
+  const expandCountRef = useRef(0);
   const [searchText, setSearchText] = useState('');
   const [filteredInfo, setFilteredInfo] = useState<Record<string, FilterValue | null>>({});
   const [sortedInfo, setSortedInfo] = useState<SorterResult<TableRecord>>({});
@@ -187,13 +202,14 @@ const ThisPageRules: React.FC<ThisPageRulesProps> = ({
         if (tabs[0]) {
           const tab = tabs[0];
           const url = new URL(tab.url!);
-          const response = await new Promise<{ activeRules?: ActiveRule[] }>((resolve) => {
+          const response = await new Promise<{ activeRules?: ActiveRule[]; uniqueRequestCount?: number }>((resolve) => {
             browserAPI.runtime.sendMessage({ type: 'getActiveRulesForTab', tabId: tab.id, tabUrl: tab.url }, (resp) => {
-              resolve((resp as { activeRules?: ActiveRule[] }) || { activeRules: [] });
+              resolve((resp as { activeRules?: ActiveRule[]; uniqueRequestCount?: number }) || { activeRules: [] });
             });
           });
           setCurrentTab({ id: tab.id!, url: tab.url!, domain: url.hostname, title: tab.title || '' });
           setActiveRules(response.activeRules || []);
+          setUniqueRequestCount(response.uniqueRequestCount || 0);
         }
       } catch (error) {
         console.error(new Date().toISOString(), 'ERROR', '[ThisPageRules]', 'Error getting active rules:', error);
@@ -232,6 +248,19 @@ const ThisPageRules: React.FC<ThisPageRulesProps> = ({
       browserAPI.runtime.onMessage.removeListener(handleRuntimeMessage);
     };
   }, []);
+
+  // Scroll virtual nested table to focused row (also resets on expand)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: expandedRowKey intentionally resets scroll on re-expand
+  useEffect(() => {
+    if (nestedFocusIndex < 0) return;
+    // Wait a frame for the new nested table to mount when switching rules
+    const frame = requestAnimationFrame(() => {
+      if (nestedTableRef.current) {
+        nestedTableRef.current.scrollTo({ index: nestedFocusIndex });
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [nestedFocusIndex, expandedRowKey]);
 
   const dataSourceRef = useRef<TableRecord[]>([]);
 
@@ -518,7 +547,12 @@ const ThisPageRules: React.FC<ThisPageRulesProps> = ({
               size="small"
               disabled={!isConnected}
               onClick={async () => {
-                await appLauncher.launchOrFocus({ tab: 'rules', subTab: 'headers', action: 'edit', itemId: record.id });
+                await appLauncher.launchOrFocus({
+                  tab: 'rules',
+                  subTab: 'headers',
+                  action: 'edit',
+                  itemId: record.id,
+                });
                 void message.info('Opening edit dialog in OpenHeaders app');
               }}
             />
@@ -575,78 +609,130 @@ const ThisPageRules: React.FC<ThisPageRulesProps> = ({
 
   return (
     <div className="header-rules-section" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div className="table-toolbar" style={{ position: 'relative' }}>
-        <div
-          style={{
-            position: 'absolute',
-            top: 4,
-            left: 0,
-            right: 0,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          <Badge status="processing" />
-          <Text type="secondary" style={{ fontSize: '11px' }}>
-            Live — monitoring requests
-          </Text>
-        </div>
+      <div className="table-toolbar">
         <div className="header-rules-title">
           <div>
-            <Space align="center" size={8}>
-              <Tooltip title={currentTab.domain.length > 30 ? currentTab.domain : undefined}>
-                <Text style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  {currentTab.domain.length > 30
-                    ? `${currentTab.domain.substring(0, 20)}...${currentTab.domain.substring(currentTab.domain.length - 7)}`
-                    : currentTab.domain}
-                </Text>
-              </Tooltip>
-              <Text type="secondary" style={{ fontSize: '12px' }}>
+            <Tooltip
+              title={currentTab.domain.length > 30 ? currentTab.domain : undefined}
+              styles={{ root: { maxWidth: 500 } }}
+            >
+              <Text style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                {currentTab.domain.length > 30
+                  ? `${currentTab.domain.substring(0, 20)}...${currentTab.domain.substring(currentTab.domain.length - 7)}`
+                  : currentTab.domain}
+              </Text>
+            </Tooltip>
+            <Space size={4} style={{ display: 'flex' }}>
+              <Text type="secondary" style={{ fontSize: '11px' }}>
                 {enabledCount} of {activeRules.length} enabled
               </Text>
+              {(() => {
+                const pausedCount = activeRules.filter((r) => disabledTagGroups.has(r.tag || '__no_tag__')).length;
+                return pausedCount > 0 ? (
+                  <>
+                    <Text type="secondary" style={{ fontSize: '11px' }}>
+                      ·
+                    </Text>
+                    <Text type="warning" style={{ fontSize: '11px' }}>
+                      {pausedCount} rule{pausedCount !== 1 ? 's' : ''} paused by tag group
+                    </Text>
+                  </>
+                ) : null;
+              })()}
+            </Space>
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 36 }}>
+              <Space size={6} align="center">
+                <Badge status="processing" />
+                <Text type="secondary" style={{ fontSize: '11px' }}>
+                  Live — monitoring requests
+                </Text>
+              </Space>
+              <Input.Search
+                placeholder="Search anything..."
+                allowClear
+                size="small"
+                style={{ width: 300 }}
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape' && searchText) {
+                    e.stopPropagation();
+                    setSearchText('');
+                  }
+                }}
+              />
+            </div>
+            <div
+              className="value-cell"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: 6,
+                marginTop: 2,
+              }}
+            >
               <Text type="secondary" style={{ fontSize: '11px' }}>
                 {(() => {
-                  const totalRequests = activeRules.reduce((sum, r) => sum + (r.matchedUrls || []).length, 0);
                   if (!searchText) {
-                    return `${totalRequests} request${totalRequests !== 1 ? 's' : ''}`;
+                    return `${uniqueRequestCount} request${uniqueRequestCount !== 1 ? 's' : ''}`;
                   }
-                  const filteredRequests =
-                    urlMatchCountMap.size > 0
-                      ? Array.from(urlMatchCountMap.values()).reduce((sum, c) => sum + c, 0)
-                      : 0;
-                  return filteredRequests > 0
-                    ? `${filteredRequests} of ${totalRequests} request${totalRequests !== 1 ? 's' : ''} matched`
-                    : `${sortedFilteredRules.length} rule${sortedFilteredRules.length !== 1 ? 's' : ''} matched`;
+                  const q = searchText.toLowerCase();
+                  const filteredRequests = new Set<string>();
+                  for (const r of sortedFilteredRules) {
+                    for (const m of r.matchedUrls || []) {
+                      if (m.url.toLowerCase().includes(q)) filteredRequests.add(`${m.url}\0${m.timestamp}`);
+                    }
+                  }
+                  const parts: string[] = [];
+                  parts.push(
+                    `${sortedFilteredRules.length} of ${activeRules.length} rule${activeRules.length !== 1 ? 's' : ''}`,
+                  );
+                  if (filteredRequests.size > 0) {
+                    parts.push(
+                      `${filteredRequests.size} of ${uniqueRequestCount} request${uniqueRequestCount !== 1 ? 's' : ''}`,
+                    );
+                  }
+                  return `${parts.join(', ')} matched`;
                 })()}
               </Text>
-            </Space>
-            {(() => {
-              const pausedCount = activeRules.filter((r) => disabledTagGroups.has(r.tag || '__no_tag__')).length;
-              return pausedCount > 0 ? (
-                <div>
-                  <Text type="warning" style={{ fontSize: '11px' }}>
-                    {pausedCount} rule{pausedCount !== 1 ? 's' : ''} paused by tag group
-                  </Text>
-                </div>
-              ) : null;
-            })()}
+              {copiedRowId === '__stats__' ? (
+                <CheckOutlined style={{ fontSize: '11px', color: '#52c41a', cursor: 'default' }} />
+              ) : (
+                <Tooltip title="Copy requests as TSV">
+                  <CopyTwoTone
+                    className="value-copy-icon"
+                    style={{ fontSize: '11px', cursor: 'pointer' }}
+                    onClick={() => {
+                      const seen = new Set<string>();
+                      const rows: string[] = [];
+                      const q = searchText.toLowerCase();
+                      const fmt = (ts: number) => {
+                        const d = new Date(ts);
+                        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}.${String(d.getMilliseconds()).padStart(3, '0')}`;
+                      };
+                      for (const r of sortedFilteredRules) {
+                        for (const m of r.matchedUrls || []) {
+                          if (q && !m.url.toLowerCase().includes(q)) continue;
+                          const key = `${m.url}\0${m.timestamp}`;
+                          if (seen.has(key)) continue;
+                          seen.add(key);
+                          const type = m.url === currentTab?.url ? 'Page' : 'Resource';
+                          rows.push(`${fmt(m.timestamp)}\t${m.url}\t${type}\t${m.pattern}`);
+                        }
+                      }
+                      rows.sort((a, b) => b.localeCompare(a));
+                      void navigator.clipboard.writeText(`Time\tRequest URL\tType\tPattern\n${rows.join('\n')}`);
+                      setCopiedRowId('__stats__');
+                      setTimeout(() => setCopiedRowId(null), 1000);
+                    }}
+                  />
+                </Tooltip>
+              )}
+            </div>
           </div>
-          <Input.Search
-            placeholder="Search anything..."
-            allowClear
-            size="small"
-            style={{ width: 300 }}
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape' && searchText) {
-                e.stopPropagation();
-                setSearchText('');
-              }
-            }}
-          />
         </div>
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, paddingBottom: '8px' }}>
@@ -674,8 +760,8 @@ const ThisPageRules: React.FC<ThisPageRulesProps> = ({
           }}
           expandable={{
             columnWidth: 40,
-            expandRowByClick: true,
-            expandedRowKeys: expandedRowKey !== null ? [expandedRowKey] : [],
+            expandRowByClick: false,
+            expandedRowKeys: isActive && expandedRowKey !== null ? [expandedRowKey] : [],
             expandIcon: ({ record, onExpand }) => {
               const totalRequests = (record.matchedUrls || []).length;
               const searchUrlMatches = searchText && record.id ? urlMatchCountMap.get(record.id) || 0 : 0;
@@ -719,6 +805,7 @@ const ThisPageRules: React.FC<ThisPageRulesProps> = ({
               );
             },
             onExpand: (_expanded: boolean, record: TableRecord) => {
+              expandCountRef.current += 1;
               const fullIndex = dataSource.findIndex((r) => r.key === record.key);
               const pageStart = (paginationConfig.current - 1) * paginationConfig.pageSize;
               const pageRelativeIndex = fullIndex - pageStart;
@@ -726,6 +813,8 @@ const ThisPageRules: React.FC<ThisPageRulesProps> = ({
               (document.activeElement as HTMLElement)?.blur();
             },
             expandedRowRender: (record: TableRecord) => {
+              // Only render content for the active expanded row — destroys stale virtual tables
+              if (record.key !== expandedRowKey) return null;
               const allMatches = record.matchedUrls || [];
               // If this rule has URL matches for the search, filter to those URLs.
               // If the rule matched only by properties (name/value/domain/tag), show all URLs.
@@ -879,23 +968,68 @@ const ThisPageRules: React.FC<ThisPageRulesProps> = ({
                 },
               ];
 
+              const formatTimestamp = (ts: number) => {
+                const d = new Date(ts);
+                const hh = String(d.getHours()).padStart(2, '0');
+                const mm = String(d.getMinutes()).padStart(2, '0');
+                const ss = String(d.getSeconds()).padStart(2, '0');
+                const ms = String(d.getMilliseconds()).padStart(3, '0');
+                return `${hh}:${mm}:${ss}.${ms}`;
+              };
+
+              const copyAllRequests = () => {
+                const header = 'Time\tRequest URL\tType\tPattern';
+                const rows = matchedData.map(
+                  (m) =>
+                    `${formatTimestamp(m.timestamp)}\t${m.url}\t${m.type === 'direct' ? 'Page' : 'Resource'}\t${m.pattern}`,
+                );
+                void navigator.clipboard.writeText(`${header}\n${rows.join('\n')}`);
+                setCopiedRowId('__all_requests__');
+                setTimeout(() => setCopiedRowId(null), 1000);
+              };
+
               return (
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <div
+                    className="value-cell"
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}
+                  >
                     <Text type="secondary" style={{ fontSize: '11px' }}>
                       {hasUrlMatches
                         ? `${matches.length} of ${allMatches.length} request${allMatches.length !== 1 ? 's' : ''} matching "${searchText}"`
                         : `${matches.length} request${matches.length !== 1 ? 's' : ''} matched`}
                     </Text>
                     <Badge status="processing" />
+                    {copiedRowId === '__all_requests__' ? (
+                      <CheckOutlined style={{ fontSize: '11px', color: '#52c41a', cursor: 'default' }} />
+                    ) : (
+                      <Tooltip title="Copy requests as TSV">
+                        <CopyTwoTone
+                          className="value-copy-icon"
+                          style={{ fontSize: '11px', cursor: 'pointer' }}
+                          onClick={copyAllRequests}
+                        />
+                      </Tooltip>
+                    )}
                   </div>
                   <Table<MatchedRequestRecord>
+                    key={`${record.key}-${expandCountRef.current}`}
+                    ref={nestedTableRef}
                     columns={matchedColumns}
                     dataSource={matchedData}
                     pagination={false}
                     size="small"
+                    virtual
                     scroll={matches.length > 3 ? { y: 120 } : undefined}
                     showHeader={matches.length > 1}
+                    rowClassName={(_record, index) => (index === nestedFocusIndex ? 'keyboard-focused-nested-row' : '')}
+                    onRow={(_record, index) => ({
+                      onClick: () => {
+                        if (index !== undefined) {
+                          setNestedFocusIndex(index);
+                        }
+                      },
+                    })}
                   />
                 </div>
               );

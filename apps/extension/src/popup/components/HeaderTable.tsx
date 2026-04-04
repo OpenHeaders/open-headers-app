@@ -710,34 +710,37 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
       <div className="table-toolbar">
         <div className="header-rules-title">
           <div>
-            <Space align="center" size={8}>
-              <Text style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Header Rules</Text>
-              {totalCount > 0 && (
-                <Text type="secondary" style={{ fontSize: '12px' }}>
+            <Text style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Header Rules</Text>
+            {totalCount > 0 && (
+              <Space size={4} style={{ display: 'flex' }}>
+                <Text type="secondary" style={{ fontSize: '11px' }}>
                   {injectingCount} of {totalCount} enabled
                   {injectingCount < enabledCount ? `, ${enabledCount - injectingCount} unresolved` : ''}
                 </Text>
-              )}
-            </Space>
-            {pausedCount > 0 && (
-              <div>
-                <Text type="warning" style={{ fontSize: '11px' }}>
-                  {pausedCount} rule{pausedCount !== 1 ? 's' : ''} paused by tag group
-                </Text>
-              </div>
+                {pausedCount > 0 && (
+                  <>
+                    <Text type="secondary" style={{ fontSize: '11px' }}>
+                      ·
+                    </Text>
+                    <Text type="warning" style={{ fontSize: '11px' }}>
+                      {pausedCount} rule{pausedCount !== 1 ? 's' : ''} paused by tag group
+                    </Text>
+                  </>
+                )}
+              </Space>
             )}
           </div>
-          <Space>
-            <Dropdown menu={{ items: addRuleMenuItems }} placement="bottomRight" trigger={['click']}>
-              <Button type="primary" size="middle" className="add-rule-button">
-                <Space>
-                  <PlusOutlined />
-                  Add Rule
-                  <DownOutlined style={{ fontSize: '10px' }} />
-                </Space>
-              </Button>
-            </Dropdown>
-            <div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 36 }}>
+              <Dropdown menu={{ items: addRuleMenuItems }} placement="bottomRight" trigger={['click']}>
+                <Button type="primary" size="middle" className="add-rule-button">
+                  <Space>
+                    <PlusOutlined />
+                    Add Rule
+                    <DownOutlined style={{ fontSize: '10px' }} />
+                  </Space>
+                </Button>
+              </Dropdown>
               <Search
                 placeholder="Search anything..."
                 allowClear
@@ -752,20 +755,15 @@ const HeaderTable: React.FC<HeaderTableProps> = ({
                   }
                 }}
               />
-              {(searchText || Object.keys(filteredInfo).length > 0 || sortedInfo.columnKey) && (
-                <div style={{ textAlign: 'right', marginTop: 2 }}>
-                  <Button
-                    onClick={clearAll}
-                    type="link"
-                    size="small"
-                    style={{ fontSize: '11px', padding: 0, height: 'auto' }}
-                  >
-                    Clear filters and sorting
-                  </Button>
-                </div>
-              )}
             </div>
-          </Space>
+            <div style={{ textAlign: 'right', marginTop: 2 }}>
+              <Text type="secondary" style={{ fontSize: '11px' }}>
+                {searchText
+                  ? `${filteredData.length} of ${totalCount} rule${totalCount !== 1 ? 's' : ''} matched`
+                  : `${totalCount} rule${totalCount !== 1 ? 's' : ''}`}
+              </Text>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -108,9 +108,14 @@ export async function checkIfUrlMatchesAnyRule(url: string): Promise<boolean> {
  * Returns both enabled and disabled rules so the Active tab can show
  * everything that matches this domain and let the user toggle them.
  */
-export async function getActiveRulesForTab(tabId: number | undefined, tabUrl: string): Promise<ActiveRule[]> {
+export interface ActiveRulesResult {
+  activeRules: ActiveRule[];
+  uniqueRequestCount: number;
+}
+
+export async function getActiveRulesForTab(tabId: number | undefined, tabUrl: string): Promise<ActiveRulesResult> {
   if (!tabUrl || !isTrackableUrl(tabUrl)) {
-    return [];
+    return { activeRules: [], uniqueRequestCount: 0 };
   }
 
   // Get tracked resource URLs with timestamps for this tab (indirect matches)
@@ -122,9 +127,10 @@ export async function getActiveRulesForTab(tabId: number | undefined, tabUrl: st
     }
   }
 
-  return new Promise<ActiveRule[]>((resolve) => {
+  return new Promise<ActiveRulesResult>((resolve) => {
     ensureCache((savedData: SavedDataMap) => {
       const activeRules: ActiveRule[] = [];
+      const now = Date.now(); // Shared timestamp for tab URL across all rules
 
       for (const id in savedData) {
         const entry: HeaderEntry = savedData[id];
@@ -134,8 +140,6 @@ export async function getActiveRulesForTab(tabId: number | undefined, tabUrl: st
 
         // Collect matched URLs with the pattern that matched them
         const matchedUrls: MatchedRequest[] = [];
-
-        const now = Date.now();
 
         // Check if rule applies to all domains
         if (domains.length === 0) {
@@ -179,7 +183,15 @@ export async function getActiveRulesForTab(tabId: number | undefined, tabUrl: st
         }
       }
 
-      resolve(activeRules);
+      // Count unique requests across all rules (dedup by url+timestamp)
+      const uniqueRequests = new Set<string>();
+      for (const rule of activeRules) {
+        for (const m of rule.matchedUrls) {
+          uniqueRequests.add(`${m.url}\0${m.timestamp}`);
+        }
+      }
+
+      resolve({ activeRules, uniqueRequestCount: uniqueRequests.size });
     });
   });
 }

@@ -240,11 +240,11 @@ export function useKeyboardDispatch(options: UseKeyboardDispatchOptions): void {
           // Copy nested row URL — this is the one place we touch DOM for a user action
           const activePane = containerRef.current?.querySelector('.ant-tabs-tabpane-active') ?? containerRef.current;
           if (activePane) {
-            const parentRows = activePane.querySelectorAll('.ant-table-tbody > tr.ant-table-row');
+            const parentRows = activePane.querySelectorAll('tr.ant-table-row[data-row-key]');
             const parentRow = parentRows[focusedRowIndex];
             const expandedRow = parentRow?.nextElementSibling;
             if (expandedRow?.classList.contains('ant-table-expanded-row')) {
-              const nestedRows = expandedRow.querySelectorAll('.ant-table-tbody > tr.ant-table-row');
+              const nestedRows = expandedRow.querySelectorAll('.ant-table-row[data-row-key]');
               const nestedRow = nestedRows[nestedFocusIndex];
               const copyIcon = nestedRow?.querySelector('.value-copy-icon') as HTMLElement | null;
               if (copyIcon) copyIcon.click();
@@ -257,11 +257,11 @@ export function useKeyboardDispatch(options: UseKeyboardDispatchOptions): void {
           // Toggle the switch in the focused nested row
           const activePane = containerRef.current?.querySelector('.ant-tabs-tabpane-active') ?? containerRef.current;
           if (activePane) {
-            const parentRows = activePane.querySelectorAll('.ant-table-tbody > tr.ant-table-row');
+            const parentRows = activePane.querySelectorAll('tr.ant-table-row[data-row-key]');
             const parentRow = parentRows[focusedRowIndex];
             const expandedRow = parentRow?.nextElementSibling;
             if (expandedRow?.classList.contains('ant-table-expanded-row')) {
-              const nestedRows = expandedRow.querySelectorAll('.ant-table-tbody > tr.ant-table-row');
+              const nestedRows = expandedRow.querySelectorAll('.ant-table-row[data-row-key]');
               const nestedRow = nestedRows[nestedFocusIndex];
               const toggle = nestedRow?.querySelector('.ant-switch') as HTMLButtonElement | null;
               if (toggle) toggle.click();
