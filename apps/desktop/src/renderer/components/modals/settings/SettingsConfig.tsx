@@ -29,6 +29,10 @@ import { Tooltip } from 'antd';
 import { THEME_MODES } from '@/renderer/contexts';
 import type { AppSettings, ScreenRecordingPermission } from '@/types/settings';
 
+const V4_MAINTENANCE_TOOLTIP =
+  "Auto-updates are disabled in this final v4 release. Use 'Check for updates' to manually receive v4 patches. " +
+  'v5 is a separate, non-backwards-compatible release.';
+
 /**
  * Settings configuration factory
  *
@@ -97,7 +101,9 @@ export const getSettingsConfig = (
       title: 'Auto-update',
       description: 'Automatically check for and download updates',
       fieldName: 'autoUpdate',
-      value: formValues.autoUpdate !== false,
+      value: formValues.autoUpdate === true,
+      disabled: true,
+      tooltip: V4_MAINTENANCE_TOOLTIP,
     },
     {
       icon: BranchesOutlined,
@@ -125,6 +131,8 @@ export const getSettingsConfig = (
       ),
       fieldName: 'updateChannel',
       type: 'select',
+      disabled: true,
+      tooltip: V4_MAINTENANCE_TOOLTIP,
       value: formValues.updateChannel || 'production',
       options: [
         {

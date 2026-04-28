@@ -38,7 +38,7 @@ const defaultSettings: AppSettings = {
   recordingHotkey: 'CommandOrControl+Shift+E',
   recordingHotkeyEnabled: false,
   logLevel: 'info',
-  autoUpdate: true,
+  autoUpdate: false,
   updateChannel: 'production',
 };
 

@@ -45,14 +45,28 @@ function getDefaultSettings(): AppSettings {
     recordingHotkey: 'CommandOrControl+Shift+E',
     recordingHotkeyEnabled: false,
     logLevel: 'info',
-    autoUpdate: true,
+    // v4 is in maintenance mode: never auto-update by default, since the next
+    // major (v5) is not backwards-compatible. Existing installs are migrated
+    // to false in load() via MAINTENANCE_MODE_MIGRATION_KEY.
+    autoUpdate: false,
     updateChannel: isRunningBeta ? 'beta' : 'production',
   };
+}
+
+// Settings key recording that the one-time v4-maintenance migration
+// (force autoUpdate=false) has been applied for this install. Without this,
+// existing users who previously enabled auto-update would keep silently
+// jumping versions — including across the v4→v5 boundary.
+const MAINTENANCE_MODE_MIGRATION_KEY = '_v4MaintenanceMigrated';
+
+interface PersistedSettings extends Partial<AppSettings> {
+  [MAINTENANCE_MODE_MIGRATION_KEY]?: boolean;
 }
 
 class SettingsCache {
   private settings: AppSettings | null = null;
   private _isFirstRun = false;
+  private _maintenanceMigrated = false;
 
   private getSettingsPath(): string {
     return path.join(app.getPath('userData'), 'settings.json');
@@ -71,15 +85,30 @@ class SettingsCache {
     try {
       await fs.promises.access(settingsPath);
       const data = await fs.promises.readFile(settingsPath, 'utf8');
-      const parsed = JSON.parse(data) as Partial<AppSettings>;
-      this.settings = { ...defaults, ...parsed };
+      const parsed = JSON.parse(data) as PersistedSettings;
+
+      // One-time migration for existing installs: force autoUpdate=false so
+      // v4 never silently jumps to a release that no longer exists for it.
+      // Strip the migration marker before merging so it never lands in the
+      // typed AppSettings object.
+      const { [MAINTENANCE_MODE_MIGRATION_KEY]: alreadyMigrated, ...settingsOnly } = parsed;
+      this.settings = { ...defaults, ...settingsOnly };
+      this._maintenanceMigrated = true;
+      if (!alreadyMigrated) {
+        this.settings.autoUpdate = false;
+        await this._writeToDisk();
+        log.info('Applied v4 maintenance migration: autoUpdate forced to false');
+      }
       this._isFirstRun = false;
       log.info('Settings loaded from disk');
     } catch {
-      // File doesn't exist or is corrupted — first run
+      // File doesn't exist or is corrupted — first run. Defaults already
+      // include autoUpdate=false, so the migration is effectively pre-applied
+      // for new installs; persist the marker from the start.
       this._isFirstRun = true;
       this.settings = { ...defaults };
-      await atomicWriter.writeJson(settingsPath, this.settings, { pretty: true });
+      this._maintenanceMigrated = true;
+      await this._writeToDisk();
       log.info('First run detected, created default settings');
     }
 
@@ -113,11 +142,24 @@ class SettingsCache {
    */
   async save(updates: Partial<AppSettings>): Promise<AppSettings> {
     this.settings = { ...this.get(), ...updates };
-    const settingsPath = this.getSettingsPath();
-    await atomicWriter.writeJson(settingsPath, this.settings, { pretty: true });
+    await this._writeToDisk();
     log.info('Settings saved to disk');
     this._pushToRenderers(this.settings);
     return this.settings;
+  }
+
+  /**
+   * Persist current settings to disk, preserving the maintenance-migration
+   * marker so the migration only runs once per install (otherwise every
+   * normal save() would clobber the marker and re-trigger the migration).
+   */
+  private async _writeToDisk(): Promise<void> {
+    if (!this.settings) return;
+    const persisted: PersistedSettings = { ...this.settings };
+    if (this._maintenanceMigrated) {
+      persisted[MAINTENANCE_MODE_MIGRATION_KEY] = true;
+    }
+    await atomicWriter.writeJson(this.getSettingsPath(), persisted, { pretty: true });
   }
 
   /**

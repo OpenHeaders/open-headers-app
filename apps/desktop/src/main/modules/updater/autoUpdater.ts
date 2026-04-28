@@ -62,6 +62,11 @@ class AutoUpdaterManager {
   CHECK_INTERVAL: number;
   private readonly TRANSIENT_RETRY_DELAY = 2 * 60 * 1000; // 2 minutes
 
+  // v4 maintenance mode: this build will never apply an update whose major
+  // version is greater than this value. v5 is intentionally not
+  // backwards-compatible, so v4 installs must stay on the v4 line.
+  private readonly MAX_ALLOWED_MAJOR = 4;
+
   constructor() {
     this.updateCheckInProgress = false;
     this.updateDownloadInProgress = false;
@@ -97,7 +102,11 @@ class AutoUpdaterManager {
   // ── Settings ─────────────────────────────────────────────────
 
   applyUpdateSettings(settings: AppSettings) {
-    autoUpdater.autoDownload = settings.autoUpdate !== false;
+    // v4 maintenance mode: never auto-download. We hold the download until
+    // 'update-available' fires and we've confirmed the version is still on
+    // the v4 line (see setupEventListeners). Without this, electron-updater
+    // would happily download a v5 release as soon as it sees the tag.
+    autoUpdater.autoDownload = false;
     autoUpdater.allowPrerelease = settings.updateChannel === 'beta';
     // Explicitly set channel so electron-updater's atom feed parser filters
     // by channel name. Without this, it takes the first feed entry — which
@@ -124,10 +133,34 @@ class AutoUpdaterManager {
 
     autoUpdater.on('update-available', (info: UpdateInfo) => {
       this.updateCheckInProgress = false;
-      this.updateDownloadInProgress = true;
       this.clearPendingRetry();
+
+      // v4 maintenance cap: refuse anything past v4.x. Treat it as
+      // up-to-date so the UI shows a clean "no update" instead of a
+      // half-completed download flow. The version-string parser is
+      // intentionally minimal to avoid pulling in semver for one final
+      // release — electron-updater has already validated info.version
+      // before firing this event.
+      if (!this.isVersionAllowed(info.version)) {
+        log.info(
+          `Ignoring update ${info.version}: exceeds v4 maintenance cap (max major ${this.MAX_ALLOWED_MAJOR}). ` +
+            'This build will not auto-upgrade across the v5 boundary.',
+        );
+        trayManager.setUpdateState('up-to-date');
+        windowManager.sendToWindow('update-not-available', info);
+        windowManager.sendToWindow('clear-update-checking-notification');
+        return;
+      }
+
+      this.updateDownloadInProgress = true;
       trayManager.setUpdateState('downloading', { version: info.version, percent: 0 });
       windowManager.sendToWindow('update-available', info);
+
+      // autoDownload is forced off (see applyUpdateSettings); kick off the
+      // download manually now that we've confirmed the version is in range.
+      autoUpdater.downloadUpdate().catch((err: Error) => {
+        log.debug('downloadUpdate rejected (handled by error event):', err.message);
+      });
     });
 
     autoUpdater.on('update-not-available', (info: UpdateInfo) => {
@@ -310,20 +343,24 @@ class AutoUpdaterManager {
 
   // ── Check triggers ───────────────────────────────────────────
 
+  /**
+   * Parse the major version out of a release tag and decide whether this
+   * build is allowed to apply it. Returns false for anything past
+   * MAX_ALLOWED_MAJOR or for unparseable input (fail closed — better to
+   * miss an update than cross the v5 boundary unintentionally).
+   */
+  private isVersionAllowed(version: string): boolean {
+    const major = Number.parseInt(version.split('.')[0] ?? '', 10);
+    if (!Number.isFinite(major)) return false;
+    return major <= this.MAX_ALLOWED_MAJOR;
+  }
+
   scheduleUpdates() {
-    const settings = settingsCache.get();
-    if (settings.autoUpdate === false) {
-      log.info('Auto-update disabled, skipping scheduled checks');
-      return;
-    }
-
-    // Check on startup (with delay)
-    setTimeout(() => this.checkForUpdates(), 3000);
-
-    // Periodic checks
-    this.scheduledCheckTimer = setInterval(() => {
-      this.checkForUpdates();
-    }, this.CHECK_INTERVAL);
+    // v4 maintenance mode: no background or startup checks. The user must
+    // explicitly opt in via the tray menu or the settings "Check for
+    // updates" button. This prevents long-running v4 installs from being
+    // surprised by v5 release activity on GitHub.
+    log.info('v4 maintenance mode: scheduled update checks disabled. Manual checks remain available.');
   }
 
   /**
